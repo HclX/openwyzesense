@@ -85,67 +85,66 @@ def test_ows_flash_updates_a_sensor_over_the_air(tmp_path):
     a5, a6, b6 = slot(0, 5), slot(0, 6), slot(1, 6)
     for name, img in (('a5', a5), ('a6', a6), ('b6', b6)):
         (tmp_path / f'{name}.img').write_bytes(img)
-    log = open(tmp_path / 'stderr.log', 'ab')
-    gw = subprocess.Popen(
-        [str(BIN / 'ows-host-gateway'), '--air', air, '--console', 'pty', '--pty-link', str(tmp_path / 'gw.tty')]
-        + ['--nv', str(tmp_path / 'gw.nv')],
-        stdin=subprocess.DEVNULL,
-        stdout=log,
-        stderr=log,
-    )
-    sensor = Proc(
-        [
-            str(BIN / 'ows-host-sensor'),
-            '--air',
-            air,
-            '--nv',
-            str(tmp_path / 's.nv'),
-            '--slot-a',
-            str(tmp_path / 'a5.img'),
-        ],
-        log,
-    )
-    try:
-        mac = sensor.wait(' MAC ', 5).split('MAC ')[1][:8].encode()
-        for _ in range(50):
-            if (tmp_path / 'gw.tty').exists():
-                break
-            time.sleep(0.1)
-        # pair it, wyzesense2mqtt-style (the console's "join": no OTA window)
-        link = HostLink(str(tmp_path / 'gw.tty'))
-        link.handshake()
-        assert link.call(host.SET_SCAN, b'\x01')
-        sensor.say('join')
-        scan = link.wait_for(host.SCAN_RESULT, 15)
-        assert scan and scan[0]['payload'][1:9] == mac
-        assert link.call(host.GET_R1, mac + app.R1_TOKEN, timeout=10)
-        link.call(host.SET_SCAN, b'\x00')
-        assert link.call(host.VERIFY_SENSOR, mac + b'\xff\x04')
-        sensor.wait('joined', 15)
-        link.close()
-
-        n = len(sensor.lines)
-        ota = subprocess.Popen(
-            [str(OWS_FLASH), 'ota', mac.decode(), str(tmp_path / 'a6.img'), str(tmp_path / 'b6.img')]
-            + ['--device', str(tmp_path / 'gw.tty'), '--seconds', '90'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
+    with open(tmp_path / 'stderr.log', 'ab') as log:
+        gw = subprocess.Popen(
+            [str(BIN / 'ows-host-gateway'), '--air', air, '--console', 'pty', '--pty-link', str(tmp_path / 'gw.tty')]
+            + ['--nv', str(tmp_path / 'gw.nv')],
+            stdin=subprocess.DEVNULL,
+            stdout=log,
+            stderr=log,
         )
-        out = []
-        for raw in iter(ota.stdout.readline, b''):
-            line = raw.decode(errors='replace').rstrip()
-            out.append(line)
-            if line.startswith('staged for'):
-                sensor.say('!input button 1')  # a short press: its OTA window
-                time.sleep(0.3)
-                sensor.say('!input button 0')
-        assert ota.wait(30) == 0, '\n'.join(out)
-        assert f'result {mac.decode()}: ok' in out, '\n'.join(out)
-        sensor.wait('slot B', 30, since=n)  # it starts again, from the new slot
-    finally:
-        sensor.stop()
-        gw.terminate()
-        gw.wait(5)
-        log.close()
-        if os.environ.get('OWS_KEEP'):
-            shutil.copytree(tmp_path, pathlib.Path(os.environ['OWS_KEEP']), dirs_exist_ok=True)
+        sensor = Proc(
+            [
+                str(BIN / 'ows-host-sensor'),
+                '--air',
+                air,
+                '--nv',
+                str(tmp_path / 's.nv'),
+                '--slot-a',
+                str(tmp_path / 'a5.img'),
+            ],
+            log,
+        )
+        try:
+            mac = sensor.wait(' MAC ', 5).split('MAC ')[1][:8].encode()
+            for _ in range(50):
+                if (tmp_path / 'gw.tty').exists():
+                    break
+                time.sleep(0.1)
+            # pair it, wyzesense2mqtt-style (the console's "join": no OTA window)
+            link = HostLink(str(tmp_path / 'gw.tty'))
+            link.handshake()
+            assert link.call(host.SET_SCAN, b'\x01')
+            sensor.say('join')
+            scan = link.wait_for(host.SCAN_RESULT, 15)
+            assert scan and scan[0]['payload'][1:9] == mac
+            assert link.call(host.GET_R1, mac + app.R1_TOKEN, timeout=10)
+            link.call(host.SET_SCAN, b'\x00')
+            assert link.call(host.VERIFY_SENSOR, mac + b'\xff\x04')
+            sensor.wait('joined', 15)
+            link.close()
+
+            n = len(sensor.lines)
+            ota = subprocess.Popen(
+                [str(OWS_FLASH), 'ota', mac.decode(), str(tmp_path / 'a6.img'), str(tmp_path / 'b6.img')]
+                + ['--device', str(tmp_path / 'gw.tty'), '--seconds', '90'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+            out = []
+            for raw in iter(ota.stdout.readline, b''):
+                line = raw.decode(errors='replace').rstrip()
+                out.append(line)
+                if line.startswith('staged for'):
+                    sensor.say('!input button 1')  # a short press: its OTA window
+                    time.sleep(0.3)
+                    sensor.say('!input button 0')
+            assert ota.wait(30) == 0, '\n'.join(out)
+            assert f'result {mac.decode()}: ok' in out, '\n'.join(out)
+            sensor.wait('slot B', 30, since=n)  # it starts again, from the new slot
+        finally:
+            sensor.stop()
+            gw.terminate()
+            gw.wait(5)
+            if os.environ.get('OWS_KEEP'):
+                shutil.copytree(tmp_path, pathlib.Path(os.environ['OWS_KEEP']), dirs_exist_ok=True)
