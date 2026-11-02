@@ -1,0 +1,4 @@
+# TI XDS110 debug probe (LAUNCHXL-CC1310): JTAG for OpenOCD and its two UARTs, for users in plugdev.
+# ID_MM_DEVICE_IGNORE keeps ModemManager from probing the UARTs (it holds them and sends AT commands).
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0451", ATTRS{idProduct}=="bef3", MODE="0660", GROUP="plugdev", TAG+="uaccess", ENV{ID_MM_DEVICE_IGNORE}="1"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0451", ATTRS{idProduct}=="bef3", MODE="0660", GROUP="plugdev", TAG+="uaccess", ENV{ID_MM_DEVICE_IGNORE}="1"

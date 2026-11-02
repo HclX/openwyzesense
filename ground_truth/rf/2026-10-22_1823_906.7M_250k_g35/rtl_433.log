@@ -1,0 +1,9 @@
+rtl_433 version 23.11 (2023-11-28) inputs file rtl_tcp RTL-SDR SoapySDR
+
+New defaults active, use "-Y classic -s 250k" if you need the old defaults
+
+Found Rafael Micro R820T tuner
+[102;92m[[30mSDR[92m][0m Using device 0: Realtek, RTL2838UHIDIR, SN: 00000001, "Generic RTL2832U OEM"
+Exact sample rate is: 250000.000414 Hz
+[R82XX] PLL not locked!
+Allocating 15 zero-copy buffers

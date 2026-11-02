@@ -1,0 +1,1784 @@
+rtl_433 version 23.11 (2023-11-28) inputs file rtl_tcp RTL-SDR SoapySDR
+
+New defaults active, use "-Y classic -s 250k" if you need the old defaults
+
+Found Rafael Micro R820T tuner
+[102;92m[[30mSDR[92m][0m Using device 0: Realtek, RTL2838UHIDIR, SN: 00000001, "Generic RTL2832U OEM"
+[R82XX] PLL not locked!
+Allocating 15 zero-copy buffers
+[103;93m[[30mAuto Level[93m][0m Estimated noise level is -17.1 dB, adjusting minimum detection level to -14.1 dB
+[103;93m[[30mAuto Level[93m][0m Estimated noise level is -18.9 dB, adjusting minimum detection level to -15.9 dB
+[103;93m[[30mAuto Level[93m][0m Estimated noise level is -20.4 dB, adjusting minimum detection level to -17.4 dB
+[103;93m[[30mAuto Level[93m][0m Estimated noise level is -21.7 dB, adjusting minimum detection level to -18.7 dB
+[103;93m[[30mAuto Level[93m][0m Estimated noise level is -22.9 dB, adjusting minimum detection level to -19.9 dB
+[103;93m[[30mAuto Level[93m][0m Estimated noise level is -23.9 dB, adjusting minimum detection level to -20.9 dB
+[103;93m[[30mAuto Level[93m][0m Estimated noise level is -25.6 dB, adjusting minimum detection level to -22.6 dB
+[103;93m[[30mAuto Level[93m][0m Estimated noise level is -26.9 dB, adjusting minimum detection level to -23.9 dB
+[103;93m[[30mAuto Level[93m][0m Estimated noise level is -28.3 dB, adjusting minimum detection level to -25.3 dB
+[103;93m[[30mAuto Level[93m][0m Estimated noise level is -29.5 dB, adjusting minimum detection level to -26.5 dB
+[103;93m[[30mAuto Level[93m][0m Estimated noise level is -30.6 dB, adjusting minimum detection level to -27.6 dB
+Detected OOK package	2026-10-21 21:41:53.117306
+Analyzing pulses...
+Total count:    3,  width: 0.26 ms		(  632 S)
+Pulse width distribution:
+ [ 0] count:    2,  width:    4 us [4;4]	(  10 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:  231 us [231;231]	( 555 S)
+ [ 1] count:    1,  width:   24 us [24;24]	(  57 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:  235 us [235;235]	( 565 S)
+ [ 1] count:    1,  width:   28 us [28;28]	(  67 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:    4 us [4;4]	(  10 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 2] count:    1,  width:  231 us [231;231]	( 555 S)
+ [ 3] count:    1,  width:   24 us [24;24]	(  57 S)
+ [ 4] count:    1,  width:    1 us [1;1]	(   3 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:     351,      0	(+12.9 kHz, +0.0 kHz)
+Guessing modulation: Pulse Position Modulation with fixed pulse width
+view at https://triq.org/pdv/#AAB1050004000000E70017000182839455
+Attempting demodulation... short_width: 24, long_width: 231, reset_limit: 232, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PPM,s=24,l=231,g=232,r=232'
+[104;94m[[37mpulse_slicer_ppm[94m][0m Analyzer Device
+codes     : {2}8
+
+*** Saving signal to file g001_904.4M_2400k.cu8 (33403 samples, 131072 bytes)
+Detected FSK package	2026-10-21 21:41:54.989396
+Analyzing pulses...
+Total count: 1069,  width: 5.76 ms		(13820 S)
+Pulse width distribution:
+ [ 0] count:  422,  width:    0 us [0;0]	(   1 S)
+ [ 1] count:  231,  width:    1 us [1;1]	(   2 S)
+ [ 2] count:   62,  width:    5 us [5;7]	(  13 S)
+ [ 3] count:   51,  width:    4 us [3;5]	(   9 S)
+ [ 4] count:   43,  width:    2 us [2;2]	(   4 S)
+ [ 5] count:   34,  width:   10 us [8;12]	(  24 S)
+ [ 6] count:   57,  width:    2 us [2;2]	(   5 S)
+ [ 7] count:   75,  width:    1 us [1;1]	(   3 S)
+ [ 8] count:   28,  width:    3 us [3;3]	(   7 S)
+ [ 9] count:   10,  width:    8 us [7;8]	(  18 S)
+ [10] count:   30,  width:   16 us [14;20]	(  39 S)
+ [11] count:    8,  width:   27 us [23;30]	(  64 S)
+ [12] count:    3,  width:   47 us [41;55]	( 113 S)
+ [13] count:    3,  width:   20 us [20;22]	(  49 S)
+ [14] count:   11,  width:   13 us [12;13]	(  31 S)
+ [15] count:    1,  width:   37 us [37;37]	(  88 S)
+Gap width distribution:
+ [ 0] count:  106,  width:    3 us [2;4]	(   7 S)
+ [ 1] count:   47,  width:    2 us [2;2]	(   5 S)
+ [ 2] count:  194,  width:    1 us [1;1]	(   2 S)
+ [ 3] count:  347,  width:    0 us [0;0]	(   1 S)
+ [ 4] count:   57,  width:    2 us [2;2]	(   4 S)
+ [ 5] count:    9,  width:   23 us [20;28]	(  56 S)
+ [ 6] count:    1,  width:   74 us [74;74]	( 177 S)
+ [ 7] count:   15,  width:   17 us [14;21]	(  40 S)
+ [ 8] count:   29,  width:   11 us [10;14]	(  27 S)
+ [ 9] count:   68,  width:    6 us [5;8]	(  15 S)
+ [10] count:   20,  width:    8 us [8;10]	(  20 S)
+ [11] count:   92,  width:    1 us [1;1]	(   3 S)
+ [12] count:   79,  width:    4 us [4;5]	(  10 S)
+ [13] count:    4,  width:   43 us [38;48]	( 104 S)
+Pulse period distribution:
+ [ 0] count:  210,  width:    4 us [3;5]	(   9 S)
+ [ 1] count:  164,  width:    2 us [2;3]	(   5 S)
+ [ 2] count:  134,  width:    2 us [2;2]	(   4 S)
+ [ 3] count:  142,  width:    6 us [5;8]	(  15 S)
+ [ 4] count:   16,  width:   26 us [22;30]	(  62 S)
+ [ 5] count:    2,  width:   67 us [60;74]	( 161 S)
+ [ 6] count:   29,  width:    1 us [1;1]	(   2 S)
+ [ 7] count:  107,  width:    1 us [1;1]	(   3 S)
+ [ 8] count:   76,  width:   11 us [9;13]	(  26 S)
+ [ 9] count:   56,  width:   17 us [14;21]	(  40 S)
+ [10] count:   34,  width:    8 us [8;10]	(  19 S)
+ [11] count:   32,  width:    5 us [5;5]	(  12 S)
+ [12] count:   58,  width:    3 us [3;3]	(   7 S)
+ [13] count:    8,  width:   43 us [38;49]	( 103 S)
+Pulse timing distribution:
+ [ 0] count:  770,  width:    0 us [0;0]	(   1 S)
+ [ 1] count:  425,  width:    1 us [1;1]	(   2 S)
+ [ 2] count:  146,  width:    5 us [5;7]	(  13 S)
+ [ 3] count:  122,  width:    4 us [3;5]	(   9 S)
+ [ 4] count:  100,  width:    2 us [2;2]	(   4 S)
+ [ 5] count:   66,  width:   10 us [8;12]	(  24 S)
+ [ 6] count:  132,  width:    2 us [2;2]	(   5 S)
+ [ 7] count:  167,  width:    1 us [1;1]	(   3 S)
+ [ 8] count:   74,  width:    3 us [3;3]	(   7 S)
+ [ 9] count:   42,  width:    7 us [7;8]	(  17 S)
+ [10] count:   47,  width:   16 us [14;20]	(  39 S)
+ [11] count:   15,  width:   26 us [22;30]	(  62 S)
+ [12] count:    8,  width:   44 us [37;55]	( 105 S)
+ [13] count:    5,  width:   20 us [20;22]	(  49 S)
+ [14] count:   18,  width:   12 us [12;13]	(  30 S)
+Level estimates [high, low]:    393,     37
+RSSI: -16.2 dB SNR: 10.3 dB Noise: -26.5 dB
+Frequency offsets [F1, F2]:   15898,  16696	(+582.2 kHz, +611.4 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {13821}8060cfffdffc3d84000000000000000200000000000000000000000000000000000000000000a5ffffff9fbb080000000000010000000207c3ff6fefffffdffdbffffffdffffdfffdee4c8000400000220000081610c001006006000303109000189dcfffff7feffdffffffdfbfef0808000000000010000000100400000800020000002000000180506061e77fffffdffbcb80110006040800040002008080004000040000000001000020000c0008000200000702001017000808010008068204200110002100fefdfffffffff3301200307b3bbfff7fffffffffffffffbff98000800005efffdfffffffffffffffffffffffffffffffff0011000800600000000402600100380880410408840020000100808000308806400460020001100000006460000400441013001839ffffff7fffffe2003060800317dfff3fff6fe7200031000080000000000084e9ed9f8f9fbffb7f66e7fcc0000002020633f7fff7ffdffcfffbffff379820800900020800000040320e00901000000400800022007667feff7fefe0c040000000cf7fdfffdfffffffffffffff6340300111000080004081026dffeffffffffffff3bfff7fff7ffffffdff9010000001004cff6fffdfffffbffffffffeffffbefdfffffffffffe6ff7fffe9f37ff67ffffe7ffffdff480000040018ffffffffffeeffdfbf7fff730800000000000000440000000000100108070010090180c0082000043800dffffffffffe3024224000cb7fffffffffded00000000001fe7feffeeb7cfbbefffffeffdfffff7ff7d9c0000000c01ddffffff7dfffdffffffffffff000000000000180604000c14040080400734fffffffeffffffffffffffff8118080834f7fffffffffffffffff7ffefffffffffff7ffffffffffffffffffffffffffda518133000cdfffffffffffffffffffffe7930100000024000000000109f9fffffffffff7f7cfff99f8c0000c000000000000000000000000000040000000601201f77ffffffffbfffdffffdfbeffffffffffed6420c2641087bffffffffffe18000200000200000800088ffffffffffffffffe6fffffbcc00004000000000000000080df9ffbffbfffffffbffcfedff77bfffffffffdfffefdff86082008000000000000011000084000044011befffffff3ce9800180c0600400040100984f7fffffbfdffffffffffffffffbff7fe7cffffff9fffbe7ff7ffbffffffccc8404041000041c42982809bfffffbff7fba30000000000000a000078040000100380008c10c80201c0621120a1870080040006020320200000180001c418006087fffffffff9ff8000000400100000002000013f3fff7f7fe6240000000000001100c00184cfffffffff77b10000101003bfffffbddffefffffffffbbcc300000000200006000100309ffffffffffffefffcfffdf821000000100000000000000000000000804000008006023037ffffffffffffffffbfffff301000000113bfff9fffffffefffff6fcfdffdff3fff2670000000000000000000000000000201800003dfffffffffe704460622003840880000c0060000000000010020001800000c0030080381ff7ffffffdffbf9ffbffffbb800100008800404c000200166ff7ffffffecc0844008020622000100080010000000e0801000018008d9fdffffffffbfbfffffffdffdfb7ff7bff7706602004000005ffbf7f7fe670000100000113ffffffffefffffffffffffeff6f3ffefff9880008030000377ff7fefee3400000000018f73bbfbfbfffffbfffffff3f7ffcfdfffbdfffdfff7f9ff7dfefdeffffffffffb3ffffff3ffedfffbf99ffffeffffffef3fffff7fff7dbfffffffdfc6000072010c080440180003667fd2ffff3fbbf3ffffffff7feff7dfffffffefffe7fef3f8000002080070000000018031fffffffffff7fffefdfafffdffbffdffffbfffffffffff3183800000101e3ffffffffc68c000100004430004010020002000000006000042030104810000800008000c040661621effffffffffed62000000000000001101819c0406042020041003083898090b814c640b7ff7ffdfffe3c440000000000eedf7fd9fffb7fffffffff78100000000103c77fff7f7fff4bc00010000004000000000400840000240110001000804f1fdfffffffff60000000018d9bfcfffb7bfffdfffffffe7dffffffffbffffefffefffffff9fbffffffbb20062020004b9fff3fffffff6063042401808000cc4c267e7fffffffffcff80c400c0042000042001003f3fffffff27c00000000000000000000000087fffdfbff39e00100004000000004020190bfffffffefffffffff7ffffefffeff7ffffcdc0040000c42330318100204840024640023ffffffffffffffffffffffff78ff677a3e6f7679d3f1f23f37f07e70
+
+*** Saving signal to file g002_904.4M_2400k.cu8 (406342 samples, 917504 bytes)
+Detected OOK package	2026-10-21 21:41:57.220701
+Analyzing pulses...
+Total count:    3,  width: 0.09 ms		(  220 S)
+Pulse width distribution:
+ [ 0] count:    2,  width:    5 us [5;5]	(  12 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   74 us [74;74]	( 178 S)
+ [ 1] count:    1,  width:    8 us [8;8]	(  18 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   80 us [80;80]	( 191 S)
+ [ 1] count:    1,  width:   12 us [12;12]	(  29 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:    5 us [5;5]	(  12 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 2] count:    1,  width:   74 us [74;74]	( 178 S)
+ [ 3] count:    1,  width:    8 us [8;8]	(  18 S)
+ [ 4] count:    1,  width:    3 us [3;3]	(   7 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:    -770,      0	(-28.2 kHz, +0.0 kHz)
+Guessing modulation: Pulse Position Modulation with fixed pulse width
+view at https://triq.org/pdv/#AAB10500050000004A0007000282839455
+Attempting demodulation... short_width: 8, long_width: 74, reset_limit: 75, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PPM,s=8,l=74,g=75,r=75'
+[104;94m[[37mpulse_slicer_ppm[94m][0m Analyzer Device
+codes     : {2}8
+
+*** Saving signal to file g003_904.4M_2400k.cu8 (32995 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:42:00.802970
+Analyzing pulses...
+Total count:    3,  width: 0.07 ms		(  165 S)
+Pulse width distribution:
+ [ 0] count:    2,  width:    5 us [4;5]	(  11 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   12 us [12;12]	(  28 S)
+ [ 1] count:    1,  width:   48 us [48;48]	( 115 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   17 us [17;17]	(  40 S)
+ [ 1] count:    1,  width:   52 us [52;52]	( 125 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:    5 us [4;5]	(  11 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 2] count:    1,  width:   12 us [12;12]	(  28 S)
+ [ 3] count:    1,  width:   48 us [48;48]	( 115 S)
+ [ 4] count:    1,  width:    2 us [2;2]	(   5 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:     403,      0	(+14.8 kHz, +0.0 kHz)
+Guessing modulation: Pulse Position Modulation with fixed pulse width
+view at https://triq.org/pdv/#AAB10500040000000B002F000282839455
+Attempting demodulation... short_width: 12, long_width: 48, reset_limit: 48, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PPM,s=12,l=48,g=48,r=48'
+[104;94m[[37mpulse_slicer_ppm[94m][0m Analyzer Device
+codes     : {2}4
+
+*** Saving signal to file g004_904.4M_2400k.cu8 (32938 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:42:02.586369
+Analyzing pulses...
+Total count:    3,  width: 0.18 ms		(  433 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    4 us [4;4]	(  10 S)
+ [ 1] count:    1,  width:    6 us [6;6]	(  15 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   42 us [42;42]	( 100 S)
+ [ 1] count:    1,  width:  128 us [128;128]	( 308 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   46 us [46;46]	( 110 S)
+ [ 1] count:    1,  width:  135 us [135;135]	( 323 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:    4 us [4;4]	(  10 S)
+ [ 1] count:    1,  width:    6 us [6;6]	(  15 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:   42 us [42;42]	( 100 S)
+ [ 4] count:    1,  width:  128 us [128;128]	( 308 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:     341,      0	(+12.5 kHz, +0.0 kHz)
+Guessing modulation: No clue...
+view at https://triq.org/pdv/#AAB105000400060000002900808394A055
+
+*** Saving signal to file g005_904.4M_2400k.cu8 (33211 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:42:06.190689
+Analyzing pulses...
+Total count:    3,  width: 0.13 ms		(  307 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    8 us [8;8]	(  19 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  11 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   28 us [28;28]	(  66 S)
+ [ 1] count:    1,  width:   88 us [88;88]	( 211 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   35 us [35;35]	(  85 S)
+ [ 1] count:    1,  width:   92 us [92;92]	( 222 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:    8 us [8;8]	(  19 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  11 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:   28 us [28;28]	(  66 S)
+ [ 4] count:    1,  width:   88 us [88;88]	( 211 S)
+ [ 5] count:    1,  width:    3 us [3;3]	(   8 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:    1108,      0	(+40.6 kHz, +0.0 kHz)
+Guessing modulation: No clue...
+view at https://triq.org/pdv/#AAB106000700040000001B005700038394A555
+
+*** Saving signal to file g006_904.4M_2400k.cu8 (33083 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:42:07.998505
+Analyzing pulses...
+Total count:    3,  width: 0.16 ms		(  390 S)
+Pulse width distribution:
+ [ 0] count:    2,  width:    5 us [5;6]	(  13 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:  136 us [136;136]	( 327 S)
+ [ 1] count:    1,  width:   15 us [15;15]	(  36 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:  142 us [142;142]	( 340 S)
+ [ 1] count:    1,  width:   21 us [21;21]	(  50 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:    5 us [5;6]	(  13 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 2] count:    1,  width:  136 us [136;136]	( 327 S)
+ [ 3] count:    1,  width:   15 us [15;15]	(  36 S)
+ [ 4] count:    1,  width:    2 us [2;2]	(   5 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:   -2160,      0	(-79.1 kHz, +0.0 kHz)
+Guessing modulation: Pulse Position Modulation with fixed pulse width
+view at https://triq.org/pdv/#AAB105000500000088000F000282839455
+Attempting demodulation... short_width: 15, long_width: 136, reset_limit: 137, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PPM,s=15,l=136,g=137,r=137'
+[104;94m[[37mpulse_slicer_ppm[94m][0m Analyzer Device
+codes     : {2}8
+
+*** Saving signal to file g007_904.4M_2400k.cu8 (33163 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:42:09.065309
+Analyzing pulses...
+Total count:    3,  width: 0.29 ms		(  684 S)
+Pulse width distribution:
+ [ 0] count:    2,  width:    5 us [5;6]	(  13 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   27 us [27;27]	(  64 S)
+ [ 1] count:    1,  width:  247 us [247;247]	( 593 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   32 us [32;32]	(  78 S)
+ [ 1] count:    1,  width:  252 us [252;252]	( 606 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:    5 us [5;6]	(  13 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 2] count:    1,  width:   27 us [27;27]	(  64 S)
+ [ 3] count:    1,  width:  247 us [247;247]	( 593 S)
+ [ 4] count:    1,  width:    2 us [2;2]	(   4 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:   -1053,      0	(-38.6 kHz, +0.0 kHz)
+Guessing modulation: Pulse Position Modulation with fixed pulse width
+view at https://triq.org/pdv/#AAB10500050000001A00F7000182839455
+Attempting demodulation... short_width: 27, long_width: 247, reset_limit: 248, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PPM,s=27,l=247,g=248,r=248'
+[104;94m[[37mpulse_slicer_ppm[94m][0m Analyzer Device
+codes     : {2}4
+
+*** Saving signal to file g008_904.4M_2400k.cu8 (33456 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:42:18.612247
+Analyzing pulses...
+Total count:    3,  width: 0.10 ms		(  236 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:   10 us [10;10]	(  23 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  12 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   24 us [24;24]	(  57 S)
+ [ 1] count:    1,  width:   60 us [60;60]	( 144 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   33 us [33;33]	(  80 S)
+ [ 1] count:    1,  width:   65 us [65;65]	( 156 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:   10 us [10;10]	(  23 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  12 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:   24 us [24;24]	(  57 S)
+ [ 4] count:    1,  width:   60 us [60;60]	( 144 S)
+ [ 5] count:    1,  width:    2 us [2;2]	(   4 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:   -1144,      0	(-41.9 kHz, +0.0 kHz)
+Guessing modulation: No clue...
+view at https://triq.org/pdv/#AAB1060009000500000017003C00018394A555
+
+*** Saving signal to file g009_904.4M_2400k.cu8 (33008 samples, 131072 bytes)
+Detected FSK package	2026-10-21 21:42:19.097754
+Analyzing pulses...
+Total count:   88,  width: 6.99 ms		(16786 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 1] count:    1,  width:    8 us [8;8]	(  18 S)
+ [ 2] count:    4,  width:    0 us [0;0]	(   1 S)
+ [ 3] count:    1,  width:    3 us [3;3]	(   8 S)
+ [ 4] count:    1,  width:    1 us [1;1]	(   3 S)
+ [ 5] count:   17,  width:   52 us [52;54]	( 125 S)
+ [ 6] count:   53,  width:   26 us [25;27]	(  62 S)
+ [ 7] count:    1,  width:  312 us [312;312]	( 750 S)
+ [ 8] count:    2,  width:  104 us [104;104]	( 249 S)
+ [ 9] count:    4,  width:   78 us [78;78]	( 187 S)
+ [10] count:    1,  width:  130 us [130;130]	( 312 S)
+ [11] count:    1,  width:   16 us [16;16]	(  39 S)
+ [12] count:    1,  width:    2 us [2;2]	(   4 S)
+Gap width distribution:
+ [ 0] count:    4,  width:    1 us [1;1]	(   2 S)
+ [ 1] count:    3,  width:    1 us [1;1]	(   3 S)
+ [ 2] count:    2,  width:    0 us [0;0]	(   1 S)
+ [ 3] count:   46,  width:   26 us [25;27]	(  62 S)
+ [ 4] count:    2,  width:  235 us [209;260]	( 563 S)
+ [ 5] count:   17,  width:   52 us [51;52]	( 124 S)
+ [ 6] count:   11,  width:   78 us [78;78]	( 187 S)
+ [ 7] count:    1,  width:  130 us [130;130]	( 312 S)
+ [ 8] count:    1,  width:  182 us [182;182]	( 436 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:    1 us [1;1]	(   2 S)
+ [ 1] count:    1,  width:    9 us [9;9]	(  21 S)
+ [ 2] count:    2,  width:    1 us [1;1]	(   3 S)
+ [ 3] count:    1,  width:    4 us [4;4]	(   9 S)
+ [ 4] count:    1,  width:    2 us [2;2]	(   5 S)
+ [ 5] count:    2,  width:    2 us [2;2]	(   4 S)
+ [ 6] count:   22,  width:   78 us [78;80]	( 187 S)
+ [ 7] count:   32,  width:   52 us [52;53]	( 125 S)
+ [ 8] count:    2,  width:  274 us [261;287]	( 657 S)
+ [ 9] count:    1,  width:  365 us [365;365]	( 875 S)
+ [10] count:   12,  width:  106 us [104;130]	( 255 S)
+ [11] count:    8,  width:  146 us [130;156]	( 351 S)
+ [12] count:    1,  width:  208 us [208;208]	( 499 S)
+ [13] count:    1,  width:   17 us [17;17]	(  40 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 1] count:    1,  width:    8 us [8;8]	(  18 S)
+ [ 2] count:    6,  width:    0 us [0;0]	(   1 S)
+ [ 3] count:    1,  width:    3 us [3;3]	(   8 S)
+ [ 4] count:    4,  width:    1 us [1;1]	(   3 S)
+ [ 5] count:   34,  width:   52 us [51;54]	( 125 S)
+ [ 6] count:   99,  width:   26 us [25;27]	(  62 S)
+ [ 7] count:    2,  width:  286 us [260;312]	( 687 S)
+ [ 8] count:    2,  width:  104 us [104;104]	( 249 S)
+ [ 9] count:   15,  width:   78 us [78;78]	( 187 S)
+ [10] count:    2,  width:  130 us [130;130]	( 312 S)
+ [11] count:    1,  width:   16 us [16;16]	(  39 S)
+ [12] count:    1,  width:    2 us [2;2]	(   4 S)
+ [13] count:    4,  width:    1 us [1;1]	(   2 S)
+ [14] count:    2,  width:  195 us [182;209]	( 468 S)
+ [15] count:    1,  width:    2 us [2;2]	(   5 S)
+Level estimates [high, low]:  15710,      8
+RSSI: -0.2 dB SNR: 32.9 dB Noise: -33.1 dB
+Frequency offsets [F1, F2]:    -716,    814	(-26.2 kHz, +29.8 kHz)
+Guessing modulation: No clue...
+
+*** Saving signal to file g010_904.4M_2400k.cu8 (49601 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:42:19.104763
+Analyzing pulses...
+Total count:    2,  width: 12.55 ms		(30130 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    8 us [8;8]	(  20 S)
+ [ 1] count:    1,  width: 7068 us [7068;7068]	(16962 S)
+Gap width distribution:
+ [ 0] count:    1,  width: 5478 us [5478;5478]	(13148 S)
+Pulse period distribution:
+ [ 0] count:    1,  width: 5487 us [5487;5487]	(13168 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:    8 us [8;8]	(  20 S)
+ [ 1] count:    1,  width: 7068 us [7068;7068]	(16962 S)
+ [ 2] count:    1,  width: 5478 us [5478;5478]	(13148 S)
+ [ 3] count:    1,  width: 70675 us [70675;70675]	(169621 S)
+Level estimates [high, low]:  15669,     10
+RSSI: -0.2 dB SNR: 32.0 dB Noise: -32.1 dB
+Frequency offsets [F1, F2]:    -736,      0	(-27.0 kHz, +0.0 kHz)
+Guessing modulation: Pulse Width Modulation with fixed gap
+view at https://triq.org/pdv/#AAB10400081B9B1566FFFF829355
+Attempting demodulation... short_width: 8, long_width: 7068, reset_limit: 5479, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PWM,s=8,l=7068,r=5479,g=0,t=2824,y=0'
+[104;94m[[37mpulse_slicer_pwm[94m][0m Analyzer Device
+codes     : {2}8
+
+Detected FSK package	2026-10-21 21:42:19.187993
+Analyzing pulses...
+Total count:  982,  width: 2.07 ms		( 4961 S)
+Pulse width distribution:
+ [ 0] count:  179,  width:    1 us [1;1]	(   3 S)
+ [ 1] count:  381,  width:    1 us [1;1]	(   2 S)
+ [ 2] count:  213,  width:    0 us [0;0]	(   1 S)
+ [ 3] count:  110,  width:    2 us [2;2]	(   4 S)
+ [ 4] count:   67,  width:    2 us [2;2]	(   5 S)
+ [ 5] count:   20,  width:    3 us [3;3]	(   7 S)
+ [ 6] count:   10,  width:    4 us [4;4]	(   9 S)
+ [ 7] count:    2,  width:    5 us [5;5]	(  12 S)
+Gap width distribution:
+ [ 0] count:  341,  width:    1 us [1;1]	(   2 S)
+ [ 1] count:  104,  width:    2 us [2;2]	(   4 S)
+ [ 2] count:  297,  width:    0 us [0;0]	(   1 S)
+ [ 3] count:  147,  width:    1 us [1;1]	(   3 S)
+ [ 4] count:   71,  width:    2 us [2;3]	(   5 S)
+ [ 5] count:   17,  width:    3 us [3;3]	(   7 S)
+ [ 6] count:    4,  width:    4 us [4;5]	(  10 S)
+Pulse period distribution:
+ [ 0] count:  281,  width:    2 us [2;2]	(   5 S)
+ [ 1] count:  219,  width:    2 us [2;2]	(   4 S)
+ [ 2] count:  134,  width:    3 us [3;3]	(   7 S)
+ [ 3] count:  204,  width:    1 us [1;1]	(   3 S)
+ [ 4] count:   58,  width:    1 us [1;1]	(   2 S)
+ [ 5] count:   78,  width:    4 us [4;5]	(   9 S)
+ [ 6] count:    5,  width:    5 us [5;6]	(  12 S)
+ [ 7] count:    2,  width:    6 us [6;6]	(  15 S)
+Pulse timing distribution:
+ [ 0] count:  327,  width:    1 us [1;1]	(   3 S)
+ [ 1] count:  722,  width:    1 us [1;1]	(   2 S)
+ [ 2] count:  510,  width:    0 us [0;0]	(   1 S)
+ [ 3] count:  214,  width:    2 us [2;2]	(   4 S)
+ [ 4] count:  133,  width:    2 us [2;2]	(   5 S)
+ [ 5] count:   42,  width:    3 us [3;3]	(   7 S)
+ [ 6] count:   14,  width:    4 us [4;5]	(   9 S)
+ [ 7] count:    2,  width:    5 us [5;5]	(  12 S)
+Level estimates [high, low]:    139,     11
+RSSI: -20.7 dB SNR: 11.0 dB Noise: -31.7 dB
+Frequency offsets [F1, F2]:    -386,    260	(-14.1 kHz, +9.5 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+view at https://triq.org/pdv/#AAB01508010001000000000001000200020003000581918355+AAB0150801000100000000000100020002000300059192A355+AAB01B080100010000000000010002000200030005A190B291919292A09355+AAB014080100010000000000010002000200030005928355+AAB022080100010000000000010002000200030005B0928191A182A19080A0929192A2C2C555+AAB01708010001000000000001000200020003000581819290C355+AAB01408010001000000000001000200020003000580B455+AAB01608010001000000000001000200020003000580B190A355+AAB0130801000100000000000100020002000300059455+AAB016080100010000000000010002000200030005C191A19555+AAB016080100010000000000010002000200030005919081A455+AAB0130801000100000000000100020002000300058555+AAB014080100010000000000010002000200030005A29355+AAB014080100010000000000010002000200030005A19455+AAB013080100010000000000010002000200030005A455+AAB014080100010000000000010002000200030005B18555+AAB016080100010000000000010002000200030005C0A1828455+AAB017080100010000000000010002000200030005B2A091B29555+AAB014080100010000000000010002000200030005D19355+AAB0160801000100000000000100020002000300059291A2A355+AAB01B080100010000000000010002000200030005818191A190A1C1A19555+AAB013080100010000000000010002000200030005B455+AAB0130801000100000000000100020002000300058455+AAB0160801000100000000000100020002000300059181A29555+AAB01808010001000000000001000200020003000591918291928355+AAB046080100010000000000010002000200030005B2A1B2918292B2A18282B1829291D1E2B191D1818282928282C18292E2B1B290B291B1B291B2B091B19292829182928192B0929355+AAB01D080100010000000000010002000200030005C0A1919191A292909281D355+AAB021080100010000000000010002000200030005929291A1918282B2B1C2918291819355+AAB01708010001000000000001000200020003000591A1C1A09455+AAB0130802000100000000000100020002000300059355+AAB01D080100010000000000010002000200030005929190A0A1A1B0C1A1928355+AAB01408010001000000000001000200020003000580A455
+Too many pulse groups (787 pulses missed in rfraw)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {4964}e670cd098f666d186e1e373274c711b35f7c0739b1f871e0e3cc4303f3260198e40e01613020f380f89dc0f467b01fcc3650e732627c980f03833960199d9b87a7b3b7a7779db3f9ff799fe73bb777cedff79ec7b3cf67bc679b7676e6f1b0fc4cccb6373f86d933bbde7ecece6193e4606186cc449e3e4dc3883301ce0e4b2c1098cd66c63e6cdb7109b876f1e19c3bff19f8e1f36173cd861e383e0dde4b07f64da6d876373fec1ce4e5830f3ec3cec3189fce823a086661c0f06003720380c0c7270131200388f283078c0dd83c112cec3670ce1c6190fcf272fb16e767fdf82c7c636f6931c0e3709e499c05272319fccd78d97b7bb19ede330ed8e93fd38986723be637f0fe618c3bf1c3fcff7cf2cfbdbe7cfb70fc667998dfe78f9fb7e5f1d199ac1f9ebf098fe60e766c90cb63cde4de619ca06470f1c33043b79641a70c3c467c6802f30e7079dbf1fe3f5eccdffe2777c7f36c1f08719338e301d03748270ece103307a019c43c0c6789cc63de301332660cb3fa1b2cc2383687c3f06d732326cf44c3ecf283c1e30077301873856761e1e93d3d89bc73a7461a79cc34871e51b3ece719ccf8331ac0369b0731f33018c8cda3139e48cc34389025c86180cf8961f0c1f23e11dc6cdc737cfc6dff9787b2c8c0f0b9e6e1f91e36787df0eccf0dd0ce4786678d80673c3a16902359139063164c38cc33e7386301de3f0e71b3fb60f1fb873b707819e2fbccffbfbffe6e3c765bf6f87be27fdafbce7f0f6379e0f4e59b270ecf27199ff3cd946838101c1c98c120c084670d89e39ce671617e0fc7646b82f330c7364793619cfcb0dec9778f6d8b7c66ffc2cf73dbb19f731c34279a58e631e7078
+
+*** Saving signal to file g011_904.4M_2400k.cu8 (253136 samples, 524288 bytes)
+Detected OOK package	2026-10-21 21:42:22.276492
+Analyzing pulses...
+Total count:    3,  width: 0.12 ms		(  293 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:   15 us [15;15]	(  36 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  13 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    2,  width:   51 us [48;53]	( 122 S)
+Pulse period distribution:
+ [ 0] count:    2,  width:   61 us [59;63]	( 146 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:   15 us [15;15]	(  36 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  13 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    2,  width:   51 us [48;53]	( 122 S)
+ [ 4] count:    1,  width:    2 us [2;2]	(   6 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:    2383,      0	(+87.3 kHz, +0.0 kHz)
+Guessing modulation: Pulse Width Modulation with fixed gap
+view at https://triq.org/pdv/#AAB105000F00050000003200028393A455
+Attempting demodulation... short_width: 5, long_width: 15, reset_limit: 54, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PWM,s=5,l=15,r=54,g=0,t=4,y=0'
+[104;94m[[37mpulse_slicer_pwm[94m][0m Analyzer Device
+codes     : {2}4
+
+*** Saving signal to file g012_904.4M_2400k.cu8 (33067 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:42:24.499990
+Analyzing pulses...
+Total count:    3,  width: 0.07 ms		(  175 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:   12 us [12;12]	(  28 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  13 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   32 us [32;32]	(  77 S)
+ [ 1] count:    1,  width:   24 us [24;24]	(  57 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   44 us [44;44]	( 105 S)
+ [ 1] count:    1,  width:   29 us [29;29]	(  70 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:   12 us [12;12]	(  28 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  13 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:   32 us [32;32]	(  77 S)
+ [ 4] count:    1,  width:   24 us [24;24]	(  57 S)
+ [ 5] count:    1,  width:    2 us [2;2]	(   4 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:     415,      0	(+15.2 kHz, +0.0 kHz)
+Guessing modulation: No clue...
+view at https://triq.org/pdv/#AAB106000B000500000020001700018394A555
+
+*** Saving signal to file g013_904.4M_2400k.cu8 (32947 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:42:27.996752
+Analyzing pulses...
+Total count:    3,  width: 0.08 ms		(  193 S)
+Pulse width distribution:
+ [ 0] count:    2,  width:    5 us [4;5]	(  11 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   54 us [54;54]	( 129 S)
+ [ 1] count:    1,  width:   18 us [18;18]	(  42 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   58 us [58;58]	( 139 S)
+ [ 1] count:    1,  width:   22 us [22;22]	(  54 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:    5 us [4;5]	(  11 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 2] count:    1,  width:   54 us [54;54]	( 129 S)
+ [ 3] count:    1,  width:   18 us [18;18]	(  42 S)
+ [ 4] count:    1,  width:    2 us [2;2]	(   5 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:    1286,      0	(+47.1 kHz, +0.0 kHz)
+Guessing modulation: Pulse Position Modulation with fixed pulse width
+view at https://triq.org/pdv/#AAB1050004000000350011000282839455
+Attempting demodulation... short_width: 18, long_width: 54, reset_limit: 54, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PPM,s=18,l=54,g=54,r=54'
+[104;94m[[37mpulse_slicer_ppm[94m][0m Analyzer Device
+codes     : {2}8
+
+*** Saving signal to file g014_904.4M_2400k.cu8 (32966 samples, 131072 bytes)
+Detected FSK package	2026-10-21 21:42:29.682535
+Analyzing pulses...
+Total count:  827,  width: 2.28 ms		( 5468 S)
+Pulse width distribution:
+ [ 0] count:   91,  width:    2 us [2;2]	(   4 S)
+ [ 1] count:  197,  width:    0 us [0;0]	(   1 S)
+ [ 2] count:  129,  width:    1 us [1;1]	(   3 S)
+ [ 3] count:  105,  width:    2 us [2;2]	(   5 S)
+ [ 4] count:  213,  width:    1 us [1;1]	(   2 S)
+ [ 5] count:   32,  width:    3 us [3;3]	(   7 S)
+ [ 6] count:   34,  width:    4 us [4;5]	(  10 S)
+ [ 7] count:   16,  width:    6 us [5;7]	(  14 S)
+ [ 8] count:    6,  width:   11 us [10;13]	(  26 S)
+ [ 9] count:    1,  width:   18 us [18;18]	(  43 S)
+ [10] count:    3,  width:    8 us [8;8]	(  19 S)
+Gap width distribution:
+ [ 0] count:  207,  width:    0 us [0;0]	(   1 S)
+ [ 1] count:   90,  width:    2 us [2;2]	(   4 S)
+ [ 2] count:  250,  width:    1 us [1;1]	(   2 S)
+ [ 3] count:   80,  width:    2 us [2;2]	(   5 S)
+ [ 4] count:  145,  width:    1 us [1;1]	(   3 S)
+ [ 5] count:   31,  width:    3 us [3;3]	(   7 S)
+ [ 6] count:   13,  width:    4 us [4;5]	(   9 S)
+ [ 7] count:    9,  width:    5 us [5;7]	(  13 S)
+ [ 8] count:    1,  width:    7 us [7;7]	(  17 S)
+Pulse period distribution:
+ [ 0] count:  229,  width:    2 us [2;2]	(   5 S)
+ [ 1] count:  153,  width:    3 us [3;3]	(   7 S)
+ [ 2] count:  127,  width:    4 us [4;5]	(   9 S)
+ [ 3] count:   33,  width:    1 us [1;1]	(   2 S)
+ [ 4] count:  102,  width:    1 us [1;1]	(   3 S)
+ [ 5] count:   24,  width:    5 us [5;6]	(  12 S)
+ [ 6] count:   24,  width:    7 us [6;8]	(  16 S)
+ [ 7] count:  124,  width:    2 us [2;2]	(   4 S)
+ [ 8] count:    6,  width:   12 us [10;14]	(  28 S)
+ [ 9] count:    1,  width:   18 us [18;18]	(  44 S)
+ [10] count:    3,  width:    8 us [8;9]	(  20 S)
+Pulse timing distribution:
+ [ 0] count:  181,  width:    2 us [2;2]	(   4 S)
+ [ 1] count:  404,  width:    0 us [0;0]	(   1 S)
+ [ 2] count:  274,  width:    1 us [1;1]	(   3 S)
+ [ 3] count:  185,  width:    2 us [2;2]	(   5 S)
+ [ 4] count:  464,  width:    1 us [1;1]	(   2 S)
+ [ 5] count:   63,  width:    3 us [3;3]	(   7 S)
+ [ 6] count:   49,  width:    4 us [4;5]	(  10 S)
+ [ 7] count:   24,  width:    6 us [5;7]	(  14 S)
+ [ 8] count:    6,  width:   11 us [10;13]	(  26 S)
+ [ 9] count:    1,  width:   18 us [18;18]	(  43 S)
+ [10] count:    3,  width:    8 us [8;8]	(  19 S)
+Level estimates [high, low]:    126,     12
+RSSI: -21.1 dB SNR: 10.2 dB Noise: -31.4 dB
+Frequency offsets [F1, F2]:   -8301,  -6389	(-304.0 kHz, -234.0 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {5470}f43ce1c1f3e618c0f070e787cbf3f8d3fce3ffbff7ffe3efc7f3f7ff97ef7d9fffcf9fc63fcfcdf8c99f1fb9ef1ffbbf2ffeffff7e5edf3f9fec79bc3f4e3e1c7e38f87bdf61fb3ce038efde1ffaf3ff7df9ffff7e7fe3fffffcfffffff9fff9ffffffeffff9efdffbfff1effffffffffefdfffdfeffffffff7dfbff7efbfdfcffdecff7efbfff7fcfffffef9df3cf73cf7fb3fffff8fee67ff8f3f3bdfdfbf77ff3fcfcfc7fdfffb3f371d9ddf3c8de59c3cfc73f7f1fcfffe9e7bff9ff7ffcffffcdff7ff2ffff9ffffef7f9ffffdffbf7bfbffcffe7effdff9f3e7fffbff3fe7e8ff1fc3ff7dff7ff9e19b8fddf38d39b99cfb1e26cee60e200e2220118713838f47c719f3e39efbb23bf0f8f0f0de26707e4b6cfc6cbcffcf3808240400e218811822647880f0f0e1f2781ba793e3703dc2f870f1307c30c224c3787dfbccf9f8f8721c6c7820f9f9801c221c4b325e1c9f849c18783c0f63190f210d804187812009a0c40584318088818000800331e0c191f074e3f064e07f18e7246926701000e188202070c06188300180e061c06060900181c031c006058066019803c0c071208061981000304018c020f020742c3a18f05e461e73183870080c08104000380c28044c306442780c180818386031080138004110c108ef8c18003830088620e04844706430003c1cdf8f07671fcf1f1f9f7f9b8b1c619807811cc9ecd3b393f31f49e1327391e430e8c818f2e819c4e67276393c686c4ce077205198d0b4f61b30726272647c61c1f8dd810e32738e3dcc3393e76de0e37edfcfcfffbfe7cfe75f89cfe7fb8efd9fff8fcfc7b7fd97e78d9e3f9fc99f8f3ffdfe4e7cf8da0f398f1e0d9c63e9070e1f3cfcb0ef867833f973f0ff87bc7819b0e678b8010c3031611c631005811100008420610c05c2c06c88300300006460206281b371ccfc4345e3c1ec2c619f0
+
+*** Saving signal to file g015_904.4M_2400k.cu8 (149151 samples, 393216 bytes)
+Detected OOK package	2026-10-21 21:42:30.101324
+Analyzing pulses...
+Total count:    3,  width: 0.20 ms		(  482 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    4 us [4;4]	(  10 S)
+ [ 1] count:    1,  width:    6 us [6;6]	(  15 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:  155 us [155;155]	( 371 S)
+ [ 1] count:    1,  width:   36 us [36;36]	(  86 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:  159 us [159;159]	( 381 S)
+ [ 1] count:    1,  width:   42 us [42;42]	( 101 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:    4 us [4;4]	(  10 S)
+ [ 1] count:    1,  width:    6 us [6;6]	(  15 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:  155 us [155;155]	( 371 S)
+ [ 4] count:    1,  width:   36 us [36;36]	(  86 S)
+ [ 5] count:    1,  width:    2 us [2;2]	(   5 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:     940,      0	(+34.4 kHz, +0.0 kHz)
+Guessing modulation: No clue...
+view at https://triq.org/pdv/#AAB106000400060000009A002300028394A555
+
+*** Saving signal to file g016_904.4M_2400k.cu8 (33255 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:42:31.862966
+Analyzing pulses...
+Total count:    3,  width: 0.13 ms		(  311 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:   10 us [10;10]	(  23 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  11 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   35 us [35;35]	(  84 S)
+ [ 1] count:    1,  width:   80 us [80;80]	( 193 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   45 us [45;45]	( 107 S)
+ [ 1] count:    1,  width:   85 us [85;85]	( 204 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:   10 us [10;10]	(  23 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  11 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:   35 us [35;35]	(  84 S)
+ [ 4] count:    1,  width:   80 us [80;80]	( 193 S)
+ [ 5] count:    1,  width:    2 us [2;2]	(   6 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:     406,      0	(+14.9 kHz, +0.0 kHz)
+Guessing modulation: No clue...
+view at https://triq.org/pdv/#AAB1060009000400000023005000028394A555
+
+*** Saving signal to file g017_904.4M_2400k.cu8 (33085 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:42:33.881335
+Analyzing pulses...
+Total count:    3,  width: 0.18 ms		(  433 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    4 us [4;4]	(  10 S)
+ [ 1] count:    1,  width:    7 us [7;7]	(  16 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   37 us [37;37]	(  88 S)
+ [ 1] count:    1,  width:  133 us [133;133]	( 319 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   41 us [41;41]	(  98 S)
+ [ 1] count:    1,  width:  140 us [140;140]	( 335 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:    4 us [4;4]	(  10 S)
+ [ 1] count:    1,  width:    7 us [7;7]	(  16 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:   37 us [37;37]	(  88 S)
+ [ 4] count:    1,  width:  133 us [133;133]	( 319 S)
+ [ 5] count:    1,  width:    1 us [1;1]	(   3 S)
+Level estimates [high, low]:     28,      2
+RSSI: -27.7 dB SNR: 11.5 dB Noise: -39.1 dB
+Frequency offsets [F1, F2]:    1099,      0	(+40.2 kHz, +0.0 kHz)
+Guessing modulation: No clue...
+view at https://triq.org/pdv/#AAB1060004000600000024008400018394A555
+
+*** Saving signal to file g018_904.4M_2400k.cu8 (33204 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:42:37.426245
+Analyzing pulses...
+Total count:    3,  width: 0.64 ms		( 1533 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    4 us [4;4]	(  10 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  13 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    2,  width:  315 us [298;331]	( 755 S)
+Pulse period distribution:
+ [ 0] count:    2,  width:  319 us [303;335]	( 766 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:    4 us [4;4]	(  10 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  13 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    2,  width:  315 us [298;331]	( 755 S)
+Level estimates [high, low]:     32,      4
+RSSI: -27.1 dB SNR: 9.0 dB Noise: -36.1 dB
+Frequency offsets [F1, F2]:   -1251,      0	(-45.8 kHz, +0.0 kHz)
+Guessing modulation: Pulse Width Modulation with fixed gap
+view at https://triq.org/pdv/#AAB104000400050000013A8393A055
+Attempting demodulation... short_width: 4, long_width: 5, reset_limit: 332, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PWM,s=4,l=5,r=332,g=0,t=0,y=0'
+[104;94m[[37mpulse_slicer_pwm[94m][0m Analyzer Device
+codes     : {2}8
+
+*** Saving signal to file g019_904.4M_2400k.cu8 (34311 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:42:40.225824
+Analyzing pulses...
+Total count:    3,  width: 0.14 ms		(  332 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    4 us [4;4]	(  10 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  13 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   88 us [88;88]	( 210 S)
+ [ 1] count:    1,  width:   41 us [41;41]	(  99 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   92 us [92;92]	( 220 S)
+ [ 1] count:    1,  width:   47 us [47;47]	( 112 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:    4 us [4;4]	(  10 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  13 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:   88 us [88;88]	( 210 S)
+ [ 4] count:    1,  width:   41 us [41;41]	(  99 S)
+ [ 5] count:    1,  width:    2 us [2;2]	(   6 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:     578,      0	(+21.2 kHz, +0.0 kHz)
+Guessing modulation: No clue...
+view at https://triq.org/pdv/#AAB1060004000500000057002900028394A555
+
+*** Saving signal to file g020_904.4M_2400k.cu8 (33106 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:42:42.529369
+Analyzing pulses...
+Total count:    3,  width: 0.96 ms		( 2307 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    7 us [7;7]	(  17 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  11 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   92 us [92;92]	( 222 S)
+ [ 1] count:    1,  width:  857 us [857;857]	(2057 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:  100 us [100;100]	( 239 S)
+ [ 1] count:    1,  width:  862 us [862;862]	(2068 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:    7 us [7;7]	(  17 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  11 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:   92 us [92;92]	( 222 S)
+ [ 4] count:    1,  width:  857 us [857;857]	(2057 S)
+ [ 5] count:    1,  width:    3 us [3;3]	(   8 S)
+Level estimates [high, low]:     32,      4
+RSSI: -27.1 dB SNR: 9.0 dB Noise: -36.1 dB
+Frequency offsets [F1, F2]:    -329,      0	(-12.0 kHz, +0.0 kHz)
+Guessing modulation: No clue...
+view at https://triq.org/pdv/#AAB106000700040000005C035900038394A555
+
+*** Saving signal to file g021_904.4M_2400k.cu8 (35083 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:42:43.053105
+Analyzing pulses...
+Total count:    3,  width: 0.06 ms		(  135 S)
+Pulse width distribution:
+ [ 0] count:    2,  width:    5 us [5;5]	(  11 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   40 us [40;40]	(  97 S)
+ [ 1] count:    1,  width:    7 us [7;7]	(  16 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   45 us [45;45]	( 108 S)
+ [ 1] count:    1,  width:   11 us [11;11]	(  27 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:    5 us [5;5]	(  11 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 2] count:    1,  width:   40 us [40;40]	(  97 S)
+ [ 3] count:    1,  width:    7 us [7;7]	(  16 S)
+ [ 4] count:    1,  width:    3 us [3;3]	(   7 S)
+Level estimates [high, low]:     28,      2
+RSSI: -27.7 dB SNR: 11.5 dB Noise: -39.1 dB
+Frequency offsets [F1, F2]:    -650,      0	(-23.8 kHz, +0.0 kHz)
+Guessing modulation: Pulse Position Modulation with fixed pulse width
+view at https://triq.org/pdv/#AAB1050004000000280006000282839455
+Attempting demodulation... short_width: 7, long_width: 40, reset_limit: 41, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PPM,s=7,l=40,g=41,r=41'
+[104;94m[[37mpulse_slicer_ppm[94m][0m Analyzer Device
+codes     : {2}8
+
+*** Saving signal to file g022_904.4M_2400k.cu8 (32910 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:42:54.244956
+Analyzing pulses...
+Total count:    3,  width: 0.17 ms		(  409 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    4 us [4;4]	(  10 S)
+ [ 1] count:    1,  width:    8 us [8;8]	(  19 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:  116 us [116;116]	( 278 S)
+ [ 1] count:    1,  width:   42 us [42;42]	( 102 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:  120 us [120;120]	( 288 S)
+ [ 1] count:    1,  width:   50 us [50;50]	( 121 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:    4 us [4;4]	(  10 S)
+ [ 1] count:    1,  width:    8 us [8;8]	(  19 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:  116 us [116;116]	( 278 S)
+ [ 4] count:    1,  width:   42 us [42;42]	( 102 S)
+ [ 5] count:    1,  width:    2 us [2;2]	(   4 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:     -43,      0	(-1.6 kHz, +0.0 kHz)
+Guessing modulation: No clue...
+view at https://triq.org/pdv/#AAB1060004000700000073002A00018394A555
+
+*** Saving signal to file g023_904.4M_2400k.cu8 (33181 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:42:56.772959
+Analyzing pulses...
+Total count:    3,  width: 0.29 ms		(  695 S)
+Pulse width distribution:
+ [ 0] count:    2,  width:    5 us [5;5]	(  12 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:  172 us [172;172]	( 413 S)
+ [ 1] count:    1,  width:  108 us [108;108]	( 258 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:  177 us [177;177]	( 425 S)
+ [ 1] count:    1,  width:  112 us [112;112]	( 270 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:    5 us [5;5]	(  12 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 2] count:    1,  width:  172 us [172;172]	( 413 S)
+ [ 3] count:    1,  width:  108 us [108;108]	( 258 S)
+ [ 4] count:    1,  width:    2 us [2;2]	(   5 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:     639,      0	(+23.4 kHz, +0.0 kHz)
+Guessing modulation: Pulse Position Modulation with fixed pulse width
+view at https://triq.org/pdv/#AAB1050005000000AC006B000282839455
+Attempting demodulation... short_width: 108, long_width: 172, reset_limit: 172, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PPM,s=108,l=172,g=172,r=172'
+[104;94m[[37mpulse_slicer_ppm[94m][0m Analyzer Device
+codes     : {2}8
+
+*** Saving signal to file g024_904.4M_2400k.cu8 (33468 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:42:57.155462
+Analyzing pulses...
+Total count:    3,  width: 0.11 ms		(  265 S)
+Pulse width distribution:
+ [ 0] count:    2,  width:    5 us [5;5]	(  12 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   12 us [12;12]	(  29 S)
+ [ 1] count:    1,  width:   88 us [88;88]	( 212 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   17 us [17;17]	(  40 S)
+ [ 1] count:    1,  width:   94 us [94;94]	( 225 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:    5 us [5;5]	(  12 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 2] count:    1,  width:   12 us [12;12]	(  29 S)
+ [ 3] count:    1,  width:   88 us [88;88]	( 212 S)
+ [ 4] count:    1,  width:    1 us [1;1]	(   3 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:    1595,      0	(+58.4 kHz, +0.0 kHz)
+Guessing modulation: Pulse Position Modulation with fixed pulse width
+view at https://triq.org/pdv/#AAB10500050000000C0058000182839455
+Attempting demodulation... short_width: 12, long_width: 88, reset_limit: 89, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PPM,s=12,l=88,g=89,r=89'
+[104;94m[[37mpulse_slicer_ppm[94m][0m Analyzer Device
+codes     : {2}4
+
+*** Saving signal to file g025_904.4M_2400k.cu8 (33036 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:04.299497
+Analyzing pulses...
+Total count:    3,  width: 0.04 ms		(   99 S)
+Pulse width distribution:
+ [ 0] count:    2,  width:    4 us [4;5]	(  10 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:    7 us [7;7]	(  17 S)
+ [ 1] count:    1,  width:   25 us [25;25]	(  61 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   11 us [11;11]	(  27 S)
+ [ 1] count:    1,  width:   30 us [30;30]	(  72 S)
+Pulse timing distribution:
+ [ 0] count:    3,  width:    4 us [4;5]	(  10 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 2] count:    1,  width:    7 us [7;7]	(  17 S)
+ [ 3] count:    1,  width:   25 us [25;25]	(  61 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:    2283,      0	(+83.6 kHz, +0.0 kHz)
+Guessing modulation: Pulse Position Modulation with fixed pulse width
+view at https://triq.org/pdv/#AAB104000400000007001982839055
+Attempting demodulation... short_width: 7, long_width: 25, reset_limit: 26, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PPM,s=7,l=25,g=26,r=26'
+[104;94m[[37mpulse_slicer_ppm[94m][0m Analyzer Device
+codes     : {2}4
+
+*** Saving signal to file g026_904.4M_2400k.cu8 (32877 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:09.997466
+Analyzing pulses...
+Total count:    3,  width: 0.12 ms		(  294 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:   11 us [11;11]	(  26 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  11 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   20 us [20;20]	(  47 S)
+ [ 1] count:    1,  width:   88 us [88;88]	( 210 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   30 us [30;30]	(  73 S)
+ [ 1] count:    1,  width:   92 us [92;92]	( 221 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:   11 us [11;11]	(  26 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  11 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:   20 us [20;20]	(  47 S)
+ [ 4] count:    1,  width:   88 us [88;88]	( 210 S)
+ [ 5] count:    1,  width:    2 us [2;2]	(   5 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:    -298,      0	(-10.9 kHz, +0.0 kHz)
+Guessing modulation: No clue...
+view at https://triq.org/pdv/#AAB106000A000400000013005700028394A555
+
+*** Saving signal to file g027_904.4M_2400k.cu8 (33067 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:11.248340
+Analyzing pulses...
+Total count:    3,  width: 0.11 ms		(  262 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:   12 us [12;12]	(  30 S)
+ [ 1] count:    1,  width:    4 us [4;4]	(  10 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   15 us [15;15]	(  37 S)
+ [ 1] count:    1,  width:   77 us [77;77]	( 185 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   28 us [28;28]	(  67 S)
+ [ 1] count:    1,  width:   81 us [81;81]	( 195 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:   14 us [12;15]	(  33 S)
+ [ 1] count:    1,  width:    4 us [4;4]	(  10 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:   77 us [77;77]	( 185 S)
+ [ 4] count:    1,  width:    2 us [2;2]	(   4 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:     891,      0	(+32.6 kHz, +0.0 kHz)
+Guessing modulation: No clue...
+view at https://triq.org/pdv/#AAB105000D00040000004D00018093A455
+
+*** Saving signal to file g028_904.4M_2400k.cu8 (33034 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:15.127096
+Analyzing pulses...
+Total count:    3,  width: 0.12 ms		(  290 S)
+Pulse width distribution:
+ [ 0] count:    2,  width:    4 us [4;4]	(  10 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    2,  width:   56 us [52;60]	( 135 S)
+Pulse period distribution:
+ [ 0] count:    2,  width:   60 us [57;64]	( 145 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:    4 us [4;4]	(  10 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 2] count:    2,  width:   56 us [52;60]	( 135 S)
+ [ 3] count:    1,  width:    1 us [1;1]	(   3 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:     842,      0	(+30.8 kHz, +0.0 kHz)
+Guessing modulation: Un-modulated signal. Maybe a preamble...
+view at https://triq.org/pdv/#AAB104000400000038000182829355
+
+*** Saving signal to file g029_904.4M_2400k.cu8 (33061 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:17.961928
+Analyzing pulses...
+Total count:    3,  width: 0.09 ms		(  217 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    4 us [4;4]	(  10 S)
+ [ 1] count:    1,  width:    6 us [6;6]	(  14 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   75 us [75;75]	( 180 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  13 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   79 us [79;79]	( 190 S)
+ [ 1] count:    1,  width:   11 us [11;11]	(  27 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:    4 us [4;4]	(  10 S)
+ [ 1] count:    2,  width:    5 us [5;6]	(  13 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:   75 us [75;75]	( 180 S)
+ [ 4] count:    1,  width:    2 us [2;2]	(   6 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:   -2405,      0	(-88.1 kHz, +0.0 kHz)
+Guessing modulation: No clue...
+view at https://triq.org/pdv/#AAB105000400050000004B00028391A455
+
+*** Saving signal to file g030_904.4M_2400k.cu8 (32991 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:19.977513
+Analyzing pulses...
+Total count:    3,  width: 0.12 ms		(  279 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    6 us [6;6]	(  15 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  11 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   10 us [10;10]	(  23 S)
+ [ 1] count:    1,  width:   96 us [96;96]	( 230 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   16 us [16;16]	(  38 S)
+ [ 1] count:    1,  width:  100 us [100;100]	( 241 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:    6 us [6;6]	(  15 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  11 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:   10 us [10;10]	(  23 S)
+ [ 4] count:    1,  width:   96 us [96;96]	( 230 S)
+ [ 5] count:    1,  width:    2 us [2;2]	(   6 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:    -958,      0	(-35.1 kHz, +0.0 kHz)
+Guessing modulation: No clue...
+view at https://triq.org/pdv/#AAB1060006000400000009005F00028394A555
+
+*** Saving signal to file g031_904.4M_2400k.cu8 (33053 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:22.107577
+Analyzing pulses...
+Total count:    3,  width: 0.15 ms		(  355 S)
+Pulse width distribution:
+ [ 0] count:    2,  width:    4 us [4;4]	(  10 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:  109 us [109;109]	( 261 S)
+ [ 1] count:    1,  width:   31 us [31;31]	(  74 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:  113 us [113;113]	( 271 S)
+ [ 1] count:    1,  width:   35 us [35;35]	(  84 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:    4 us [4;4]	(  10 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 2] count:    1,  width:  109 us [109;109]	( 261 S)
+ [ 3] count:    1,  width:   31 us [31;31]	(  74 S)
+ [ 4] count:    1,  width:    3 us [3;3]	(   7 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:      62,      0	(+2.3 kHz, +0.0 kHz)
+Guessing modulation: Pulse Position Modulation with fixed pulse width
+view at https://triq.org/pdv/#AAB10500040000006C001E000282839455
+Attempting demodulation... short_width: 31, long_width: 109, reset_limit: 109, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PPM,s=31,l=109,g=109,r=109'
+[104;94m[[37mpulse_slicer_ppm[94m][0m Analyzer Device
+codes     : {2}8
+
+*** Saving signal to file g032_904.4M_2400k.cu8 (33130 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:23.494301
+Analyzing pulses...
+Total count:    3,  width: 0.07 ms		(  178 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    5 us [5;5]	(  13 S)
+ [ 1] count:    1,  width:    4 us [4;4]	(  10 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   56 us [56;56]	( 134 S)
+ [ 1] count:    1,  width:    9 us [9;9]	(  21 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   61 us [61;61]	( 147 S)
+ [ 1] count:    1,  width:   13 us [13;13]	(  31 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:    5 us [5;5]	(  13 S)
+ [ 1] count:    1,  width:    4 us [4;4]	(  10 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:   56 us [56;56]	( 134 S)
+ [ 4] count:    1,  width:    9 us [9;9]	(  21 S)
+ [ 5] count:    1,  width:    2 us [2;2]	(   4 S)
+Level estimates [high, low]:     28,      3
+RSSI: -27.7 dB SNR: 9.7 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:     838,      0	(+30.7 kHz, +0.0 kHz)
+Guessing modulation: No clue...
+view at https://triq.org/pdv/#AAB1060005000400000037000800018394A555
+
+*** Saving signal to file g033_904.4M_2400k.cu8 (32950 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:28.888150
+Analyzing pulses...
+Total count:    5,  width: 0.30 ms		(  712 S)
+Pulse width distribution:
+ [ 0] count:    3,  width:    5 us [5;5]	(  12 S)
+ [ 1] count:    1,  width:    8 us [8;8]	(  18 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   30 us [30;30]	(  73 S)
+ [ 1] count:    2,  width:  116 us [108;124]	( 278 S)
+ [ 2] count:    1,  width:   12 us [12;12]	(  29 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   35 us [35;35]	(  85 S)
+ [ 1] count:    2,  width:  122 us [115;129]	( 293 S)
+ [ 2] count:    1,  width:   17 us [17;17]	(  41 S)
+Pulse timing distribution:
+ [ 0] count:    3,  width:    5 us [5;5]	(  12 S)
+ [ 1] count:    1,  width:    8 us [8;8]	(  18 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:   30 us [30;30]	(  73 S)
+ [ 4] count:    2,  width:  116 us [108;124]	( 278 S)
+ [ 5] count:    1,  width:   12 us [12;12]	(  29 S)
+ [ 6] count:    1,  width:    2 us [2;2]	(   6 S)
+Level estimates [high, low]:     32,      4
+RSSI: -27.1 dB SNR: 9.0 dB Noise: -36.1 dB
+Frequency offsets [F1, F2]:   -1487,      0	(-54.5 kHz, +0.0 kHz)
+Guessing modulation: Pulse Width Modulation with multiple packets
+view at https://triq.org/pdv/#AAB0120701000500070000001E0073000C0002839455+AAB0110701000500070000001E0073000C00028455+AAB0120701000500070000001E0073000C000285A655
+Attempting demodulation... short_width: 5, long_width: 8, reset_limit: 124, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PWM,s=5,l=8,r=124,g=31,t=1,y=0'
+[104;94m[[37mpulse_slicer_pwm[94m][0m Analyzer Device
+codes     : {2}8, {1}8, {1}8
+
+*** Saving signal to file g034_904.4M_2400k.cu8 (33486 samples, 131072 bytes)
+[103;93m[[30mAuto Level[93m][0m Estimated noise level is -31.6 dB, adjusting minimum detection level to -28.6 dB
+Detected OOK package	2026-10-21 21:43:31.733838
+Analyzing pulses...
+Total count:    3,  width: 0.14 ms		(  329 S)
+Pulse width distribution:
+ [ 0] count:    2,  width:    5 us [5;5]	(  13 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    2,  width:   63 us [60;67]	( 151 S)
+Pulse period distribution:
+ [ 0] count:    2,  width:   68 us [65;72]	( 164 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:    5 us [5;5]	(  13 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 2] count:    2,  width:   63 us [60;67]	( 151 S)
+ [ 3] count:    1,  width:    1 us [1;1]	(   3 S)
+Level estimates [high, low]:     24,      3
+RSSI: -28.3 dB SNR: 9.0 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:    1870,      0	(+68.5 kHz, +0.0 kHz)
+Guessing modulation: Un-modulated signal. Maybe a preamble...
+view at https://triq.org/pdv/#AAB10400050000003E000182829355
+
+*** Saving signal to file g035_904.4M_2400k.cu8 (33100 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:31.896600
+Analyzing pulses...
+Total count:    3,  width: 0.14 ms		(  330 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    8 us [8;8]	(  20 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  11 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   75 us [75;75]	( 179 S)
+ [ 1] count:    1,  width:   50 us [50;50]	( 120 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   83 us [83;83]	( 199 S)
+ [ 1] count:    1,  width:   55 us [55;55]	( 131 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:    8 us [8;8]	(  20 S)
+ [ 1] count:    2,  width:    4 us [4;5]	(  10 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:   75 us [75;75]	( 179 S)
+ [ 4] count:    1,  width:   50 us [50;50]	( 120 S)
+Level estimates [high, low]:     22,      2
+RSSI: -28.7 dB SNR: 10.4 dB Noise: -39.1 dB
+Frequency offsets [F1, F2]:    -391,      0	(-14.3 kHz, +0.0 kHz)
+Guessing modulation: No clue...
+view at https://triq.org/pdv/#AAB105000800040000004A00328394A155
+
+*** Saving signal to file g036_904.4M_2400k.cu8 (33108 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:31.981079
+Analyzing pulses...
+Total count:    4,  width: 0.11 ms		(  261 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    8 us [8;8]	(  18 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  13 S)
+ [ 2] count:    1,  width:   11 us [11;11]	(  26 S)
+ [ 3] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    2,  width:   20 us [20;21]	(  49 S)
+ [ 1] count:    1,  width:   44 us [44;44]	( 106 S)
+Pulse period distribution:
+ [ 0] count:    2,  width:   27 us [26;28]	(  64 S)
+ [ 1] count:    1,  width:   55 us [55;55]	( 132 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:    8 us [8;8]	(  18 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  13 S)
+ [ 2] count:    1,  width:   11 us [11;11]	(  26 S)
+ [ 3] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 4] count:    2,  width:   20 us [20;21]	(  49 S)
+ [ 5] count:    1,  width:   44 us [44;44]	( 106 S)
+ [ 6] count:    1,  width:    1 us [1;1]	(   3 S)
+Level estimates [high, low]:     22,      2
+RSSI: -28.7 dB SNR: 10.4 dB Noise: -39.1 dB
+Frequency offsets [F1, F2]:     510,      0	(+18.7 kHz, +0.0 kHz)
+Guessing modulation: Pulse Width Modulation with sync/delimiter
+view at https://triq.org/pdv/#AAB10700070005000A00000014002C00018494A5B655
+Attempting demodulation... short_width: 8, long_width: 11, reset_limit: 45, sync_width: 5
+Use a flex decoder with -X 'n=name,m=OOK_PWM,s=8,l=11,r=45,g=0,t=0,y=5'
+[104;94m[[37mpulse_slicer_pwm[94m][0m Analyzer Device
+codes     : {1}8, {1}0
+
+*** Saving signal to file g037_904.4M_2400k.cu8 (33032 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:32.337284
+Analyzing pulses...
+Total count:    3,  width: 0.10 ms		(  236 S)
+Pulse width distribution:
+ [ 0] count:    2,  width:    5 us [5;6]	(  13 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   77 us [77;77]	( 185 S)
+ [ 1] count:    1,  width:   10 us [10;10]	(  24 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   82 us [82;82]	( 198 S)
+ [ 1] count:    1,  width:   16 us [16;16]	(  38 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:    5 us [5;6]	(  13 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 2] count:    1,  width:   77 us [77;77]	( 185 S)
+ [ 3] count:    1,  width:   10 us [10;10]	(  24 S)
+ [ 4] count:    1,  width:    2 us [2;2]	(   4 S)
+Level estimates [high, low]:     24,      3
+RSSI: -28.3 dB SNR: 9.0 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:      66,      0	(+2.4 kHz, +0.0 kHz)
+Guessing modulation: Pulse Position Modulation with fixed pulse width
+view at https://triq.org/pdv/#AAB10500050000004D000A000182839455
+Attempting demodulation... short_width: 10, long_width: 77, reset_limit: 78, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PPM,s=10,l=77,g=78,r=78'
+[104;94m[[37mpulse_slicer_ppm[94m][0m Analyzer Device
+codes     : {2}8
+
+Detected OOK package	2026-10-21 21:43:32.387261
+Analyzing pulses...
+Total count:    3,  width: 0.10 ms		(  243 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    5 us [5;5]	(  11 S)
+ [ 1] count:    1,  width:    8 us [8;8]	(  19 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   63 us [63;63]	( 152 S)
+ [ 1] count:    1,  width:   25 us [25;25]	(  61 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   68 us [68;68]	( 163 S)
+ [ 1] count:    1,  width:   33 us [33;33]	(  80 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:    5 us [5;5]	(  11 S)
+ [ 1] count:    1,  width:    8 us [8;8]	(  19 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:   63 us [63;63]	( 152 S)
+ [ 4] count:    1,  width:   25 us [25;25]	(  61 S)
+ [ 5] count:    1,  width:    2 us [2;2]	(   6 S)
+Level estimates [high, low]:     22,      1
+RSSI: -28.7 dB SNR: 13.4 dB Noise: -42.1 dB
+Frequency offsets [F1, F2]:    -594,      0	(-21.8 kHz, +0.0 kHz)
+Guessing modulation: No clue...
+view at https://triq.org/pdv/#AAB106000400070000003F001900028394A555
+
+*** Saving signal to file g038_904.4M_2400k.cu8 (152769 samples, 393216 bytes)
+Detected OOK package	2026-10-21 21:43:32.538221
+Analyzing pulses...
+Total count:    3,  width: 0.03 ms		(   76 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    5 us [5;5]	(  11 S)
+ [ 1] count:    1,  width:    8 us [8;8]	(  20 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   12 us [12;12]	(  30 S)
+ [ 1] count:    1,  width:    6 us [6;6]	(  15 S)
+Pulse period distribution:
+ [ 0] count:    2,  width:   16 us [15;17]	(  38 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:    5 us [5;5]	(  11 S)
+ [ 1] count:    1,  width:    8 us [8;8]	(  20 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:   12 us [12;12]	(  30 S)
+ [ 4] count:    1,  width:    6 us [6;6]	(  15 S)
+ [ 5] count:    1,  width:    1 us [1;1]	(   3 S)
+Level estimates [high, low]:     22,      2
+RSSI: -28.7 dB SNR: 10.4 dB Noise: -39.1 dB
+Frequency offsets [F1, F2]:    -282,      0	(-10.3 kHz, +0.0 kHz)
+Guessing modulation: Pulse Width Modulation with fixed period
+view at https://triq.org/pdv/#AAB106000400080000000C000600018394A555
+Attempting demodulation... short_width: 5, long_width: 8, reset_limit: 13, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PWM,s=5,l=8,r=13,g=0,t=1,y=0'
+[104;94m[[37mpulse_slicer_pwm[94m][0m Analyzer Device
+codes     : {2}8
+
+*** Saving signal to file g039_904.4M_2400k.cu8 (32847 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:32.680201
+Analyzing pulses...
+Total count:    4,  width: 0.11 ms		(  270 S)
+Pulse width distribution:
+ [ 0] count:    3,  width:    5 us [4;5]	(  11 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   50 us [50;50]	( 121 S)
+ [ 1] count:    1,  width:   36 us [36;36]	(  86 S)
+ [ 2] count:    1,  width:   12 us [12;12]	(  29 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   55 us [55;55]	( 133 S)
+ [ 1] count:    1,  width:   40 us [40;40]	(  96 S)
+ [ 2] count:    1,  width:   17 us [17;17]	(  41 S)
+Pulse timing distribution:
+ [ 0] count:    3,  width:    5 us [4;5]	(  11 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 2] count:    1,  width:   50 us [50;50]	( 121 S)
+ [ 3] count:    1,  width:   36 us [36;36]	(  86 S)
+ [ 4] count:    1,  width:   12 us [12;12]	(  29 S)
+ [ 5] count:    1,  width:    2 us [2;2]	(   6 S)
+Level estimates [high, low]:     22,      2
+RSSI: -28.7 dB SNR: 10.4 dB Noise: -39.1 dB
+Frequency offsets [F1, F2]:    2148,      0	(+78.7 kHz, +0.0 kHz)
+Guessing modulation: Pulse Position Modulation with fixed pulse width
+view at https://triq.org/pdv/#AAB00F06010004000000320023000C00028255+AAB01106010004000000320023000C000283849555
+Attempting demodulation... short_width: 12, long_width: 36, reset_limit: 51, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PPM,s=12,l=36,g=36,r=51'
+[104;94m[[37mpulse_slicer_ppm[94m][0m Analyzer Device
+codes     : {0}0, {2}8
+
+*** Saving signal to file g040_904.4M_2400k.cu8 (33044 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:33.084724
+Analyzing pulses...
+Total count:    4,  width: 0.08 ms		(  201 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:   11 us [11;11]	(  27 S)
+ [ 1] count:    2,  width:    6 us [5;7]	(  14 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:    5 us [5;5]	(  12 S)
+ [ 1] count:    1,  width:   46 us [46;46]	( 110 S)
+ [ 2] count:    1,  width:   10 us [10;10]	(  23 S)
+Pulse period distribution:
+ [ 0] count:    2,  width:   15 us [15;16]	(  37 S)
+ [ 1] count:    1,  width:   52 us [52;52]	( 126 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:   10 us [10;11]	(  25 S)
+ [ 1] count:    3,  width:    5 us [5;7]	(  13 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:   46 us [46;46]	( 110 S)
+ [ 4] count:    1,  width:    3 us [3;3]	(   7 S)
+Level estimates [high, low]:     22,      2
+RSSI: -28.7 dB SNR: 10.4 dB Noise: -39.1 dB
+Frequency offsets [F1, F2]:    1063,      0	(+38.9 kHz, +0.0 kHz)
+Guessing modulation: Pulse Width Modulation with multiple packets
+view at https://triq.org/pdv/#AAB00E0501000A00050000002D0002819355+AAB00E0501000A00050000002D000290A455
+Attempting demodulation... short_width: 6, long_width: 11, reset_limit: 46, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PWM,s=6,l=11,r=46,g=10,t=2,y=0'
+[104;94m[[37mpulse_slicer_pwm[94m][0m Analyzer Device
+codes     : {2}4, {1}8
+
+*** Saving signal to file g041_904.4M_2400k.cu8 (32976 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:33.187665
+Analyzing pulses...
+Total count:    4,  width: 0.19 ms		(  453 S)
+Pulse width distribution:
+ [ 0] count:    3,  width:    5 us [5;5]	(  11 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   22 us [22;22]	(  54 S)
+ [ 1] count:    1,  width:  140 us [140;140]	( 335 S)
+ [ 2] count:    1,  width:   13 us [13;13]	(  31 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   27 us [27;27]	(  65 S)
+ [ 1] count:    1,  width:  144 us [144;144]	( 346 S)
+ [ 2] count:    1,  width:   18 us [18;18]	(  42 S)
+Pulse timing distribution:
+ [ 0] count:    3,  width:    5 us [5;5]	(  11 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 2] count:    1,  width:   22 us [22;22]	(  54 S)
+ [ 3] count:    1,  width:  140 us [140;140]	( 335 S)
+ [ 4] count:    1,  width:   13 us [13;13]	(  31 S)
+ [ 5] count:    1,  width:    2 us [2;2]	(   6 S)
+Level estimates [high, low]:     24,      3
+RSSI: -28.3 dB SNR: 9.0 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:     964,      0	(+35.3 kHz, +0.0 kHz)
+Guessing modulation: Pulse Position Modulation with fixed pulse width
+view at https://triq.org/pdv/#AAB0100601000400000016008B000C0002828355+AAB0100601000400000016008B000C0002849555
+Attempting demodulation... short_width: 13, long_width: 22, reset_limit: 140, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PPM,s=13,l=22,g=23,r=140'
+[104;94m[[37mpulse_slicer_ppm[94m][0m Analyzer Device
+codes     : {1}8, {1}0
+
+Detected OOK package	2026-10-21 21:43:33.204948
+Analyzing pulses...
+Total count:    6,  width: 0.13 ms		(  317 S)
+Pulse width distribution:
+ [ 0] count:    2,  width:    5 us [5;5]	(  12 S)
+ [ 1] count:    1,  width:   19 us [19;19]	(  46 S)
+ [ 2] count:    2,  width:    8 us [7;8]	(  18 S)
+ [ 3] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    3,  width:   14 us [13;16]	(  33 S)
+ [ 1] count:    1,  width:   38 us [38;38]	(  92 S)
+ [ 2] count:    1,  width:    7 us [7;7]	(  17 S)
+Pulse period distribution:
+ [ 0] count:    3,  width:   18 us [15;20]	(  43 S)
+ [ 1] count:    2,  width:   39 us [35;43]	(  93 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:    5 us [5;5]	(  12 S)
+ [ 1] count:    2,  width:   18 us [16;19]	(  42 S)
+ [ 2] count:    3,  width:    8 us [7;8]	(  18 S)
+ [ 3] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 4] count:    2,  width:   13 us [13;13]	(  31 S)
+ [ 5] count:    1,  width:   38 us [38;38]	(  92 S)
+ [ 6] count:    1,  width:    2 us [2;2]	(   4 S)
+Level estimates [high, low]:     22,      1
+RSSI: -28.7 dB SNR: 13.4 dB Noise: -42.1 dB
+Frequency offsets [F1, F2]:    2137,      0	(+78.3 kHz, +0.0 kHz)
+Guessing modulation: Pulse Width Modulation with sync/delimiter
+view at https://triq.org/pdv/#AAB01307010005001100070000000C0026000184918555+AAB01307010005001100070000000C00260001A4A2B655
+Attempting demodulation... short_width: 5, long_width: 8, reset_limit: 39, sync_width: 19
+Use a flex decoder with -X 'n=name,m=OOK_PWM,s=5,l=8,r=39,g=0,t=0,y=19'
+[104;94m[[37mpulse_slicer_pwm[94m][0m Analyzer Device
+codes     : {1}8, {3}8
+
+*** Saving signal to file g042_904.4M_2400k.cu8 (74567 samples, 262144 bytes)
+Detected OOK package	2026-10-21 21:43:33.337019
+Analyzing pulses...
+Total count:    3,  width: 0.18 ms		(  421 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    5 us [5;5]	(  13 S)
+ [ 1] count:    1,  width:    9 us [9;9]	(  22 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    2,  width:   80 us [79;82]	( 193 S)
+Pulse period distribution:
+ [ 0] count:    2,  width:   88 us [85;91]	( 210 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:    5 us [5;5]	(  13 S)
+ [ 1] count:    1,  width:    9 us [9;9]	(  22 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    2,  width:   80 us [79;82]	( 193 S)
+ [ 4] count:    1,  width:    2 us [2;2]	(   5 S)
+Level estimates [high, low]:     24,      3
+RSSI: -28.3 dB SNR: 9.0 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:    -392,      0	(-14.4 kHz, +0.0 kHz)
+Guessing modulation: Pulse Width Modulation with fixed gap
+view at https://triq.org/pdv/#AAB105000500090000005000028393A455
+Attempting demodulation... short_width: 5, long_width: 9, reset_limit: 82, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PWM,s=5,l=9,r=82,g=0,t=2,y=0'
+[104;94m[[37mpulse_slicer_pwm[94m][0m Analyzer Device
+codes     : {2}8
+
+*** Saving signal to file g043_904.4M_2400k.cu8 (33194 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:33.669197
+Analyzing pulses...
+Total count:    3,  width: 0.21 ms		(  510 S)
+Pulse width distribution:
+ [ 0] count:    2,  width:    4 us [4;5]	(  10 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    2,  width:  102 us [98;106]	( 244 S)
+Pulse period distribution:
+ [ 0] count:    2,  width:  106 us [102;110]	( 255 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:    4 us [4;5]	(  10 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 2] count:    2,  width:  102 us [98;106]	( 244 S)
+ [ 3] count:    1,  width:    2 us [2;2]	(   6 S)
+Level estimates [high, low]:     24,      3
+RSSI: -28.3 dB SNR: 9.0 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:    -388,      0	(-14.2 kHz, +0.0 kHz)
+Guessing modulation: Un-modulated signal. Maybe a preamble...
+view at https://triq.org/pdv/#AAB104000400000065000282829355
+
+*** Saving signal to file g044_904.4M_2400k.cu8 (33284 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:33.740077
+Analyzing pulses...
+Total count:    3,  width: 0.07 ms		(  169 S)
+Pulse width distribution:
+ [ 0] count:    2,  width:    5 us [5;5]	(  12 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:    7 us [7;7]	(  16 S)
+ [ 1] count:    1,  width:   53 us [53;53]	( 128 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   12 us [12;12]	(  29 S)
+ [ 1] count:    1,  width:   58 us [58;58]	( 140 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:    5 us [5;5]	(  12 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 2] count:    1,  width:    7 us [7;7]	(  16 S)
+ [ 3] count:    1,  width:   53 us [53;53]	( 128 S)
+ [ 4] count:    1,  width:    4 us [4;4]	(   9 S)
+Level estimates [high, low]:     24,      3
+RSSI: -28.3 dB SNR: 9.0 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:     952,      0	(+34.9 kHz, +0.0 kHz)
+Guessing modulation: Pulse Position Modulation with fixed pulse width
+view at https://triq.org/pdv/#AAB1050005000000060035000382839455
+Attempting demodulation... short_width: 7, long_width: 53, reset_limit: 54, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PPM,s=7,l=53,g=54,r=54'
+[104;94m[[37mpulse_slicer_ppm[94m][0m Analyzer Device
+codes     : {2}4
+
+Detected OOK package	2026-10-21 21:43:33.807817
+Analyzing pulses...
+Total count:    3,  width: 0.10 ms		(  236 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    5 us [5;5]	(  11 S)
+ [ 1] count:    1,  width:    6 us [6;6]	(  14 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   34 us [34;34]	(  82 S)
+ [ 1] count:    1,  width:   54 us [54;54]	( 129 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   39 us [39;39]	(  93 S)
+ [ 1] count:    1,  width:   60 us [60;60]	( 143 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:    5 us [5;5]	(  11 S)
+ [ 1] count:    1,  width:    6 us [6;6]	(  14 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:   34 us [34;34]	(  82 S)
+ [ 4] count:    1,  width:   54 us [54;54]	( 129 S)
+ [ 5] count:    1,  width:    2 us [2;2]	(   5 S)
+Level estimates [high, low]:     22,      2
+RSSI: -28.7 dB SNR: 10.4 dB Noise: -39.1 dB
+Frequency offsets [F1, F2]:    2053,      0	(+75.2 kHz, +0.0 kHz)
+Guessing modulation: No clue...
+view at https://triq.org/pdv/#AAB1060004000500000022003500028394A555
+
+*** Saving signal to file g045_904.4M_2400k.cu8 (195417 samples, 393216 bytes)
+Detected OOK package	2026-10-21 21:43:34.070395
+Analyzing pulses...
+Total count:    3,  width: 0.06 ms		(  141 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    6 us [6;6]	(  15 S)
+ [ 1] count:    1,  width:   11 us [11;11]	(  27 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   36 us [36;36]	(  86 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  13 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   42 us [42;42]	( 101 S)
+ [ 1] count:    1,  width:   17 us [17;17]	(  40 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:    6 us [5;6]	(  14 S)
+ [ 1] count:    1,  width:   11 us [11;11]	(  27 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:   36 us [36;36]	(  86 S)
+ [ 4] count:    1,  width:    3 us [3;3]	(   8 S)
+Level estimates [high, low]:     22,      2
+RSSI: -28.7 dB SNR: 10.4 dB Noise: -39.1 dB
+Frequency offsets [F1, F2]:      32,      0	(+1.2 kHz, +0.0 kHz)
+Guessing modulation: No clue...
+view at https://triq.org/pdv/#AAB1050005000B0000002300038390A455
+
+*** Saving signal to file g046_904.4M_2400k.cu8 (32917 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:34.235242
+Analyzing pulses...
+Total count:    3,  width: 0.08 ms		(  195 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    6 us [6;6]	(  14 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  11 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    2,  width:   35 us [32;39]	(  85 S)
+Pulse period distribution:
+ [ 0] count:    2,  width:   40 us [36;45]	(  97 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:    6 us [6;6]	(  14 S)
+ [ 1] count:    1,  width:    5 us [5;5]	(  11 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    2,  width:   35 us [32;39]	(  85 S)
+ [ 4] count:    1,  width:    3 us [3;3]	(   7 S)
+Level estimates [high, low]:     24,      3
+RSSI: -28.3 dB SNR: 9.0 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:    1989,      0	(+72.8 kHz, +0.0 kHz)
+Guessing modulation: Pulse Width Modulation with fixed gap
+view at https://triq.org/pdv/#AAB105000500040000002300028393A455
+Attempting demodulation... short_width: 5, long_width: 6, reset_limit: 40, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PWM,s=5,l=6,r=40,g=0,t=0,y=0'
+[104;94m[[37mpulse_slicer_pwm[94m][0m Analyzer Device
+codes     : {2}4
+
+*** Saving signal to file g047_904.4M_2400k.cu8 (32970 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:34.549287
+Analyzing pulses...
+Total count:    3,  width: 0.13 ms		(  303 S)
+Pulse width distribution:
+ [ 0] count:    2,  width:   11 us [11;12]	(  27 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   60 us [60;60]	( 144 S)
+ [ 1] count:    1,  width:   43 us [43;43]	( 104 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   72 us [72;72]	( 172 S)
+ [ 1] count:    1,  width:   55 us [55;55]	( 131 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:   11 us [11;12]	(  27 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 2] count:    1,  width:   60 us [60;60]	( 144 S)
+ [ 3] count:    1,  width:   43 us [43;43]	( 104 S)
+ [ 4] count:    1,  width:    4 us [4;4]	(   9 S)
+Level estimates [high, low]:     22,      1
+RSSI: -28.7 dB SNR: 13.4 dB Noise: -42.1 dB
+Frequency offsets [F1, F2]:   -1665,      0	(-61.0 kHz, +0.0 kHz)
+Guessing modulation: Pulse Position Modulation with fixed pulse width
+view at https://triq.org/pdv/#AAB105000B0000003C002B000382839455
+Attempting demodulation... short_width: 43, long_width: 60, reset_limit: 60, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PPM,s=43,l=60,g=60,r=60'
+[104;94m[[37mpulse_slicer_ppm[94m][0m Analyzer Device
+codes     : {2}8
+
+*** Saving signal to file g048_904.4M_2400k.cu8 (33080 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:35.450644
+Analyzing pulses...
+Total count:    4,  width: 0.10 ms		(  243 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:   14 us [14;14]	(  33 S)
+ [ 1] count:    1,  width:    4 us [4;4]	(  10 S)
+ [ 2] count:    1,  width:    6 us [6;6]	(  14 S)
+ [ 3] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   46 us [46;46]	( 111 S)
+ [ 1] count:    1,  width:    8 us [8;8]	(  20 S)
+ [ 2] count:    1,  width:   23 us [23;23]	(  55 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   60 us [60;60]	( 144 S)
+ [ 1] count:    1,  width:   12 us [12;12]	(  30 S)
+ [ 2] count:    1,  width:   29 us [29;29]	(  69 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:   14 us [14;14]	(  33 S)
+ [ 1] count:    1,  width:    4 us [4;4]	(  10 S)
+ [ 2] count:    1,  width:    6 us [6;6]	(  14 S)
+ [ 3] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 4] count:    1,  width:   46 us [46;46]	( 111 S)
+ [ 5] count:    1,  width:    8 us [8;8]	(  20 S)
+ [ 6] count:    1,  width:   23 us [23;23]	(  55 S)
+ [ 7] count:    1,  width:    2 us [2;2]	(   6 S)
+Level estimates [high, low]:     22,      1
+RSSI: -28.7 dB SNR: 13.4 dB Noise: -42.1 dB
+Frequency offsets [F1, F2]:    1256,      0	(+46.0 kHz, +0.0 kHz)
+Guessing modulation: Pulse Width Modulation with sync/delimiter
+view at https://triq.org/pdv/#AAB0130801000D000400050000002E0008001600028455+AAB0150801000D000400050000002E00080016000295A6B755
+Attempting demodulation... short_width: 6, long_width: 14, reset_limit: 47, sync_width: 4
+Use a flex decoder with -X 'n=name,m=OOK_PWM,s=6,l=14,r=47,g=0,t=0,y=4'
+[104;94m[[37mpulse_slicer_pwm[94m][0m Analyzer Device
+codes     : {1}0, {1}8
+
+*** Saving signal to file g049_904.4M_2400k.cu8 (33017 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:35.578683
+Analyzing pulses...
+Total count:    3,  width: 0.11 ms		(  255 S)
+Pulse width distribution:
+ [ 0] count:    2,  width:   10 us [9;10]	(  23 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    2,  width:   43 us [39;48]	( 104 S)
+Pulse period distribution:
+ [ 0] count:    2,  width:   53 us [48;58]	( 127 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:   10 us [9;10]	(  23 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 2] count:    2,  width:   43 us [39;48]	( 104 S)
+ [ 3] count:    1,  width:    3 us [3;3]	(   7 S)
+Level estimates [high, low]:     24,      3
+RSSI: -28.3 dB SNR: 9.0 dB Noise: -37.4 dB
+Frequency offsets [F1, F2]:     623,      0	(+22.8 kHz, +0.0 kHz)
+Guessing modulation: Un-modulated signal. Maybe a preamble...
+view at https://triq.org/pdv/#AAB10400090000002B000282829355
+
+*** Saving signal to file g050_904.4M_2400k.cu8 (33030 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:35.654736
+Analyzing pulses...
+Total count:    3,  width: 0.07 ms		(  156 S)
+Pulse width distribution:
+ [ 0] count:    2,  width:    5 us [5;5]	(  13 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   20 us [20;20]	(  49 S)
+ [ 1] count:    1,  width:   34 us [34;34]	(  81 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   26 us [26;26]	(  62 S)
+ [ 1] count:    1,  width:   39 us [39;39]	(  94 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width:    5 us [5;5]	(  13 S)
+ [ 1] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 2] count:    1,  width:   20 us [20;20]	(  49 S)
+ [ 3] count:    1,  width:   34 us [34;34]	(  81 S)
+ [ 4] count:    1,  width:    3 us [3;3]	(   8 S)
+Level estimates [high, low]:     22,      2
+RSSI: -28.7 dB SNR: 10.4 dB Noise: -39.1 dB
+Frequency offsets [F1, F2]:     979,      0	(+35.9 kHz, +0.0 kHz)
+Guessing modulation: Pulse Position Modulation with fixed pulse width
+view at https://triq.org/pdv/#AAB1050005000000140021000382839455
+Attempting demodulation... short_width: 20, long_width: 34, reset_limit: 34, sync_width: 0
+Use a flex decoder with -X 'n=name,m=OOK_PPM,s=20,l=34,g=34,r=34'
+[104;94m[[37mpulse_slicer_ppm[94m][0m Analyzer Device
+codes     : {2}4
+
+*** Saving signal to file g051_904.4M_2400k.cu8 (32932 samples, 131072 bytes)
+Detected OOK package	2026-10-21 21:43:35.762503
+Analyzing pulses...
+Total count:    3,  width: 0.08 ms		(  180 S)
+Pulse width distribution:
+ [ 0] count:    1,  width:    8 us [8;8]	(  19 S)
+ [ 1] count:    1,  width:   10 us [10;10]	(  25 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+Gap width distribution:
+ [ 0] count:    1,  width:   36 us [36;36]	(  86 S)
+ [ 1] count:    1,  width:   21 us [21;21]	(  50 S)
+Pulse period distribution:
+ [ 0] count:    1,  width:   44 us [44;44]	( 105 S)
+ [ 1] count:    1,  width:   31 us [31;31]	(  75 S)
+Pulse timing distribution:
+ [ 0] count:    1,  width:    8 us [8;8]	(  19 S)
+ [ 1] count:    1,  width:   10 us [10;10]	(  25 S)
+ [ 2] count:    1,  width:    0 us [0;0]	(   0 S)
+ [ 3] count:    1,  width:   36 us [36;36]	(  86 S)
+ [ 4] count:    1,  width:   21 us [21;21]	(  50 S)
+ [ 5] count:    1,  width:    2 us [2;2]	(   5 S)
+Level estimates [high, low]:     22,      1
+RSSI: -28.7 dB SNR: 13.4 dB Noise: -42.1 dB
+Frequency offsets [F1, F2]:     373,      0	(+13.7 kHz, +0.0 kHz)
+Guessing modulation: No clue...
+view at https://triq.org/pdv/#AAB1060007000A00000023001400028394A555
+
+*** Saving signal to file g052_904.4M_2400k.cu8 (32953 samples, 131072 bytes)
+Detected FSK package	2026-10-21 21:43:35.801211
+Analyzing pulses...
+Total count:  997,  width: 97.53 ms		(234071 S)
+Pulse width distribution:
+ [ 0] count:  954,  width:    1 us [1;1]	(   2 S)
+ [ 1] count:   13,  width:    2 us [2;2]	(   5 S)
+ [ 2] count:   27,  width:    1 us [1;1]	(   3 S)
+ [ 3] count:    1,  width:    3 us [3;3]	(   8 S)
+ [ 4] count:    2,  width:    0 us [0;0]	(   1 S)
+Gap width distribution:
+ [ 0] count:  194,  width:   40 us [32;51]	(  96 S)
+ [ 1] count:  121,  width:  180 us [138;234]	( 431 S)
+ [ 2] count:   74,  width:  276 us [229;343]	( 663 S)
+ [ 3] count:   42,  width:    7 us [6;9]	(  17 S)
+ [ 4] count:    9,  width:    1 us [1;1]	(   2 S)
+ [ 5] count:  127,  width:  113 us [86;140]	( 271 S)
+ [ 6] count:   74,  width:   29 us [24;33]	(  69 S)
+ [ 7] count:    8,  width:    0 us [0;0]	(   1 S)
+ [ 8] count:   33,  width:   14 us [11;16]	(  33 S)
+ [ 9] count:   33,  width:  429 us [353;537]	(1029 S)
+ [10] count:  149,  width:   75 us [53;90]	( 180 S)
+ [11] count:   24,  width:    3 us [2;4]	(   7 S)
+ [12] count:   15,  width:    2 us [2;2]	(   5 S)
+ [13] count:   14,  width:   20 us [18;23]	(  49 S)
+Pulse period distribution:
+ [ 0] count:  201,  width:   41 us [33;52]	(  98 S)
+ [ 1] count:  123,  width:  181 us [139;236]	( 435 S)
+ [ 2] count:   72,  width:  278 us [230;344]	( 668 S)
+ [ 3] count:   46,  width:    8 us [7;10]	(  19 S)
+ [ 4] count:   18,  width:    2 us [2;3]	(   5 S)
+ [ 5] count:  127,  width:  114 us [87;141]	( 273 S)
+ [ 6] count:   71,  width:   29 us [24;34]	(  69 S)
+ [ 7] count:    8,  width:    1 us [1;1]	(   3 S)
+ [ 8] count:   37,  width:   14 us [12;17]	(  34 S)
+ [ 9] count:   33,  width:  430 us [354;538]	(1031 S)
+ [10] count:  149,  width:   76 us [54;91]	( 182 S)
+ [11] count:    7,  width:    2 us [2;2]	(   4 S)
+ [12] count:   26,  width:    4 us [3;5]	(   9 S)
+ [13] count:    9,  width:   20 us [17;22]	(  47 S)
+Pulse timing distribution:
+ [ 0] count:  963,  width:    1 us [1;1]	(   2 S)
+ [ 1] count:   30,  width:    2 us [2;2]	(   5 S)
+ [ 2] count:   38,  width:    1 us [1;1]	(   3 S)
+ [ 3] count:   24,  width:    3 us [3;4]	(   7 S)
+ [ 4] count:   10,  width:    0 us [0;0]	(   1 S)
+ [ 5] count:  194,  width:   40 us [32;51]	(  96 S)
+ [ 6] count:  121,  width:  180 us [138;234]	( 431 S)
+ [ 7] count:   74,  width:  276 us [229;343]	( 663 S)
+ [ 8] count:   42,  width:    7 us [6;9]	(  17 S)
+ [ 9] count:  127,  width:  113 us [86;140]	( 271 S)
+ [10] count:   74,  width:   29 us [24;33]	(  69 S)
+ [11] count:   33,  width:   14 us [11;16]	(  33 S)
+ [12] count:   33,  width:  429 us [353;537]	(1029 S)
+ [13] count:  149,  width:   75 us [53;90]	( 180 S)
+Level estimates [high, low]:    360,     31
+RSSI: -16.6 dB SNR: 10.6 dB Noise: -27.2 dB
+Frequency offsets [F1, F2]:  -26120, -10196	(-956.6 kHz, -373.4 kHz)
+Guessing modulation: No clue...
+
+[103;93m[[30mAuto Level[93m][0m Estimated noise level is -30.1 dB, adjusting minimum detection level to -27.1 dB
+*** Saving signal to file g053_904.4M_2400k.cu8 (406341 samples, 917504 bytes)
+Signal caught, exiting!

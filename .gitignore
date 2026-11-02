@@ -1,0 +1,10 @@
+__pycache__/
+.venv/
+.pytest_cache/
+*.egg-info/
+/.toolchain
+build/
+.local/
+
+# local stock-firmware backups of Wyze devices and session data (recordings, scripts): never committed
+/backups/

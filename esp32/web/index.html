@@ -1,0 +1,219 @@
+<!doctype html>
+<!-- The relays' one web page (issue #22, TASK-17), the same on the ESP8266 and the ESP32-S3: status (GET /api/status
+every 2 s, passive per-sensor telemetry, radio reset, startup auto-sync safe-mode toggle, and nv.json export/import),
+update (the relay itself: POST /ota; custom CC1310 radio image: POST /contact/flash), and setup (POST /setup).
+Nothing loaded from elsewhere: the setup access point has no internet. Embedded by esp8266/embed.py and
+idf/main/CMakeLists.txt. -->
+<html lang=en><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
+<title>OpenWyzeSense relay</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--fg:#1d2330;--mute:#667085;--line:#e3e6eb;--acc:#2f6fdf;--accfg:#fff;
+--ok:#1f9d55;--warn:#c47f00;--bad:#d64545;--bar:#e8ecf3}
+@media (prefers-color-scheme:dark){:root{--bg:#12151b;--card:#1b1f27;--fg:#e6e9ef;--mute:#98a2b3;--line:#2b313c;
+--acc:#5b8ff0;--accfg:#0b1020;--ok:#3fbf7f;--warn:#e0a63a;--bad:#ef6b6b;--bar:#262c37}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--card);border-bottom:1px solid var(--line);padding:14px 16px}
+.wrap{max-width:860px;margin:0 auto}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font-size:18px;margin:0;font-weight:650}
+.sub{color:var(--mute);font-size:13px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;font-size:13px;
+background:var(--bar);margin-left:auto}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mute)}
+.ok .dot{background:var(--ok)}.warn .dot{background:var(--warn)}.bad .dot{background:var(--bad)}
+nav{display:flex;gap:4px;margin-top:12px}
+nav button{background:none;border:0;color:var(--mute);padding:6px 12px;border-radius:8px;font:inherit;cursor:pointer}
+nav button.on{background:var(--bar);color:var(--fg);font-weight:600}
+main{padding:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card.wide{grid-column:1/-1}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute);margin:0 0 10px;font-weight:600}
+dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px}
+dt{color:var(--mute)}dd{margin:0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.big{font-size:26px;font-weight:650;font-variant-numeric:tabular-nums}
+label{display:block;margin:10px 0 4px;color:var(--mute);font-size:13px}
+input[type=text],input[type=password]{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;
+background:var(--bg);color:var(--fg);font:inherit}
+input[type=file]{width:100%;font:inherit;color:var(--mute)}
+.check{display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--fg);font-size:14px;cursor:pointer}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.btn{margin-top:12px;background:var(--acc);color:var(--accfg);border:0;border-radius:8px;padding:8px 14px;
+font:inherit;font-weight:600;cursor:pointer}
+.btns .btn{margin-top:0}
+.btn.ghost{background:var(--bar);color:var(--fg)}
+.btn:disabled{opacity:.5;cursor:default}
+.prog{height:8px;background:var(--bar);border-radius:99px;margin-top:12px;overflow:hidden;display:none}
+.prog i{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
+.msg{margin-top:10px;font-size:14px;min-height:1.2em;overflow-wrap:anywhere}
+.msg.ok{color:var(--ok)}.msg.bad{color:var(--bad)}
+.note{color:var(--mute);font-size:13px;margin:6px 0 0}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{color:var(--mute);font-size:12px;font-weight:600}
+tr:last-child td{border-bottom:0}
+.weak{color:var(--bad)}
+[hidden]{display:none!important}
+</style></head><body>
+<header><div class=wrap>
+<div class=top><div><h1 id=name>OpenWyzeSense relay</h1><div class=sub id=where>&nbsp;</div></div>
+<span class=pill id=pill><span class=dot></span><span id=pilltext>loading</span></span></div>
+<nav><button data-tab=status class=on>Status</button><button data-tab=update>Update</button>
+<button data-tab=setup>Setup</button></nav></div></header>
+<main class=wrap>
+
+<section id=status><div class=grid>
+<div class=card><h2>Gateway link</h2><div class=big id=relay>–</div>
+<dl style="margin-top:8px"><dt>Bridge</dt><dd id=url>–</dd><dt>Connections</dt><dd id=connects>–</dd>
+<dt>Last event</dt><dd id=log>–</dd></dl></div>
+<div class=card><h2>Contact board</h2><dl><dt>Gateway</dt><dd id=gwrun>–</dd><dt>Carried</dt><dd id=gwcar>–</dd>
+<dt>At start</dt><dd id=gwmsg>–</dd><dt>MAC</dt><dd id=mac>–</dd><dt>UART</dt><dd id=uart>–</dd>
+<dt>Last flash</dt><dd id=flashlast>–</dd></dl>
+<details id=gwdet style="margin-top:8px"><summary class=note>Start-up check, step by step</summary>
+<pre id=gwsteps class=note style="white-space:pre-wrap;margin:6px 0 0">–</pre></details>
+<label class=check><input type=checkbox id=skipgw>Pause startup auto-sync (keep custom radio image)</label>
+<div class=btns><button class="btn ghost" id=reset>Reset radio</button>
+<button class="btn ghost" id=nvexp>Export nv.json</button>
+<button class="btn ghost" id=nvimp>Import nv.json</button>
+<input type=file id=nvfile accept=".json,application/json" hidden></div>
+<div class=msg id=resetmsg></div></div>
+<div class=card><h2>Kept through outages</h2><div class=big id=queued>–</div>
+<dl style="margin-top:8px"><dt>Sent on</dt><dd id=replayed>–</dd><dt>Dropped</dt><dd id=dropped>–</dd>
+<dt>Waiting</dt><dd id=waiting>–</dd></dl></div>
+<div class=card><h2>This relay (<span class=chip>…</span>)</h2><dl><dt>Wi-Fi</dt><dd id=wifi>–</dd><dt>Signal</dt><dd id=rssi>–</dd>
+<dt>Up</dt><dd id=up>–</dd><dt>Free memory</dt><dd id=heap>–</dd><dt>Protection</dt><dd id=auth>–</dd>
+<dt>Firmware</dt><dd id=build>–</dd></dl></div>
+<div class="card wide"><h2>Sensors heard (<span id=snscount>0</span>)</h2>
+<p class=note id=snsempty>No sensor reports heard since boot.</p>
+<div id=snswrap hidden style="overflow-x:auto"><table id=snstbl><thead>
+<tr><th>MAC</th><th>Type</th><th>Signal</th><th>Battery</th><th>Last seen</th></tr>
+</thead><tbody id=snsbody></tbody></table></div></div>
+</div></section>
+
+<section id=update hidden><div class=grid>
+<div class=card><h2>Relay firmware (<span class=chip>this relay</span>)</h2>
+<p class=note>The relay's build, <code id=fwhint>firmware.bin</code>. It carries the gateway firmware for the
+contact board: after its restart the relay checks the contact and updates it unless startup auto-sync is paused
+(paired sensors stay).</p>
+<label>Image</label><input type=file id=fwfile accept=".bin">
+<dl id=fwinfo hidden style="margin-top:10px"><dt>Relay</dt><dd id=fwrelay>–</dd><dt>Gateway</dt><dd id=fwgw>–</dd></dl>
+<button class=btn id=fwgo>Update and restart</button>
+<div class=prog id=fwprog><i></i></div><div class=msg id=fwmsg></div></div>
+
+<div class=card><h2>Contact radio firmware (CC1310)</h2>
+<p class=note>Flash a custom CC1310 pages 0–29 binary (<code>gateway-contact-v1-app.bin</code>) directly over the ROM
+bootloader without reflashing the ESP.</p>
+<label>Radio image</label><input type=file id=gwfile accept=".bin">
+<dl id=cgwinfo hidden style="margin-top:10px"><dt>App</dt><dd id=cgwapp>–</dd><dt>Build</dt><dd id=cgwver>–</dd></dl>
+<label class=check><input type=checkbox id=gwkeep checked>Pause startup auto-sync so reboots keep this image</label>
+<label class=check><input type=checkbox id=gwwipe>Wipe paired sensors (NV page 30)</label>
+<button class=btn id=gwgo>Flash radio</button>
+<div class=prog id=gwprog><i></i></div><div class=msg id=gwmsg></div></div>
+</div></section>
+
+<section id=setup hidden><div class=grid><div class=card><h2>Setup</h2>
+<p class=note>An empty field leaves that setting unchanged. Saving restarts the relay.</p>
+<form id=setupform><label>Wi-Fi network (2.4 GHz)</label><input type=text name=ssid id=ssid autocomplete=off>
+<label>Wi-Fi password</label><input type=password name=pass autocomplete=new-password>
+<label>wyzesense2mqtt-rs bridge</label><input type=text name=url id=seturl placeholder=ws://host:8080/ws/bridge>
+<label>Bridge token</label><input type=password name=token autocomplete=new-password>
+<label>Admin password (protects setup &amp; updates)</label><input type=password name=admin_pass autocomplete=new-password placeholder="uses bridge token if unset">
+<button class=btn>Save and restart</button><div class=msg id=setupmsg></div></form></div></div></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);let busy=false,filled=false;
+const TYPES={1:'contact v1',2:'motion v1',3:'leak v2',7:'climate v2',14:'contact v2',15:'motion v2'};
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x==b));
+document.querySelectorAll('main section').forEach(s=>s.hidden=s.id!=b.dataset.tab);location.hash=b.dataset.tab});
+const tab=document.querySelector('nav button[data-tab="'+(location.hash.slice(1)||
+(location.pathname=='/setup'?'setup':''))+'"]');if(tab)tab.click();
+function dur(s){const d=Math.floor(s/86400),h=Math.floor(s/3600)%24,m=Math.floor(s/60)%60;
+return(d?d+'d ':'')+(d||h?h+'h ':'')+m+'m'}
+function ago(s){return s<5?'just now':s<60?s+'s ago':s<3600?Math.floor(s/60)+'m ago':dur(s)+' ago'}
+function pill(cls,t){$('pill').className='pill '+cls;$('pilltext').textContent=t}
+function showMsg(el,ok,t){el.className='msg '+(ok?'ok':'bad');el.textContent=t}
+function renderSensors(list){
+$('snscount').textContent=list.length;$('snsempty').hidden=list.length>0;$('snswrap').hidden=!list.length;
+const tb=$('snsbody');tb.replaceChildren();
+list.slice().sort((a,b)=>a.seen_s-b.seen_s).forEach(x=>{
+const tr=document.createElement('tr'),vals=[x.mac,TYPES[x.type]||('0x'+x.type.toString(16)),x.rssi+' dBm',
+x.bat_mv?(x.bat_mv/1000).toFixed(2)+' V ('+x.bat_mv+' mV)':'–',ago(x.seen_s)];
+vals.forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;if(i==2&&x.rssi<-85)td.className='weak';
+tr.appendChild(td)});tb.appendChild(tr)})}
+async function poll(){if(busy)return;try{const r=await fetch('/api/status',{cache:'no-store'});const s=await r.json();
+$('name').textContent=s.name;document.title=s.name;
+$('where').textContent=(s.ip?s.ip+(s.mdns?' · '+s.mdns:''):'not on Wi-Fi')+(s.ap?' · setup access point '+s.name+' up':'');
+const st={connected:['ok','connected'],handshake:['warn','connecting'],down:['bad','not connected']}[s.relay];
+pill(s.url?st[0]:'warn',s.url?'gateway link '+st[1]:'no bridge set up');
+$('relay').textContent=s.url?st[1]:'not set up';$('url').textContent=s.url||'(not set)';
+$('connects').textContent=s.connects;$('log').textContent=s.log||'–';
+$('uart').textContent=s.uart_tx==null?'–':s.uart_tx+' B out · '+s.uart_rx+' B in';
+$('flashlast').textContent=s.flash||'–';$('skipgw').checked=!!s.skip_gwsync;
+const g=s.gw||{},v=x=>x?x.version+' · '+x.id.slice(0,8):'unknown';$('gwrun').textContent=v(g.running);
+$('gwcar').textContent=v(g.carried);$('gwmsg').textContent=g.checked?g.msg:'checking…';
+$('gwsteps').textContent=(g.steps||'').trim()||'–';if(!g.checked)$('gwdet').open=true;
+$('gwmsg').className=g.result=='failed'||g.result=='refused'?'msg bad':'';$('mac').textContent=s.contact_mac||'–';
+$('queued').textContent=s.queued+' alarms';$('replayed').textContent=s.replayed;$('dropped').textContent=s.dropped;
+$('waiting').textContent=s.waiting;$('wifi').textContent=s.ssid||'(not set)';
+$('rssi').textContent=s.ip?s.rssi+' dBm':'–';$('up').textContent=dur(s.uptime);
+$('heap').textContent=(s.heap/1024).toFixed(1)+' KB';$('auth').textContent=s.auth?'password set':'open (set in Setup)';
+$('build').textContent=s.build;renderSensors(s.sensors||[]);
+document.querySelectorAll('.chip').forEach(e=>e.textContent=s.chip);$('fwhint').textContent=s.fw_file;
+if(!filled){filled=true;$('ssid').value=s.ssid;$('seturl').value=s.url}
+}catch(e){pill('bad','relay not answering')}}
+setInterval(poll,2000);poll();
+function upload(url,field,file,prog,msg,btn,done){
+if(!file){showMsg(msg,false,'Pick a file first.');return}
+busy=true;btn.disabled=true;prog.style.display='block';prog.firstChild.style.width='0';
+msg.className='msg';msg.textContent='Uploading…';const x=new XMLHttpRequest();x.open('POST',url);
+x.upload.onprogress=e=>{if(e.lengthComputable)prog.firstChild.style.width=(100*e.loaded/e.total)+'%'};
+x.onload=()=>{busy=false;btn.disabled=false;const ok=x.status==200;showMsg(msg,ok,x.responseText.trim()||('HTTP '+x.status));
+if(ok&&done)done();poll()};
+x.onerror=()=>{busy=false;btn.disabled=false;showMsg(msg,false,'The upload broke off.')};
+const f=new FormData();f.append(field,file);x.send(f)}
+// what an uploaded image carries: its version tag and build info block (split literals: this page is embedded too)
+function txt(b,at,n){let t='';for(let i=at;i<at+n&&b[i];i++)t+=String.fromCharCode(b[i]);return t}
+function find(b,pat,from){outer:for(let i=from||0;i<=b.length-pat.length;i++){for(let k=0;k<pat.length;k++)
+if(b[i+k]!=pat.charCodeAt(k))continue outer;return i}return -1}
+function findBi(b,wantGw){let at=0;while((at=find(b,'OW'+'SB',at))>=0){
+if(b[at+4]==1&&(!wantGw||txt(b,at+64,12)=='gateway'))return at;at++}return -1}
+$('fwfile').onchange=async()=>{const f=$('fwfile').files[0];$('fwinfo').hidden=!f;if(!f)return;
+const b=new Uint8Array(await f.arrayBuffer());const r=find(b,'OWS-RELAY-'+'VERSION:');
+$('fwrelay').textContent=r<0?'not a relay image of ours':txt(b,r+18,48);const g=findBi(b,true);
+$('fwgw').textContent=g<0?'none':txt(b,g+76,40)+' · '+Array.from(b.slice(g+8,g+16),x=>x.toString(16).padStart(2,'0')).join('').slice(0,8)};
+$('fwgo').onclick=()=>upload('/ota','image',$('fwfile').files[0],$('fwprog'),$('fwmsg'),$('fwgo'),()=>{
+$('fwmsg').textContent+=' — waiting for it to come back…';busy=true;
+setTimeout(function back(){fetch('/api/status').then(()=>location.reload(),()=>setTimeout(back,2000))},6000)});
+$('gwfile').onchange=async()=>{const f=$('gwfile').files[0];$('cgwinfo').hidden=!f;if(!f)return;
+const b=new Uint8Array(await f.arrayBuffer());const g=findBi(b,false);
+const warn=b.length>0x1e000?' (too large: > 120 KB; pick -app.bin)':b.length%4?' (size not a multiple of 4)':'';
+$('cgwapp').textContent=(g<0?'raw image ('+b.length+' B)':txt(b,g+64,12)+' · '+txt(b,g+16,24))+warn;
+$('cgwver').textContent=g<0?'no build-info block':txt(b,g+76,40)+' · '+Array.from(b.slice(g+8,g+16),x=>x.toString(16).padStart(2,'0')).join('').slice(0,8)};
+$('gwgo').onclick=()=>{const q=[];if($('gwkeep').checked)q.push('keep=1');if($('gwwipe').checked)q.push('nv=wipe');
+upload('/contact/flash'+(q.length?'?'+q.join('&'):''),'image',$('gwfile').files[0],$('gwprog'),$('gwmsg'),$('gwgo'))};
+$('reset').onclick=async()=>{const r=await fetch('/contact/reset',{method:'POST'});
+showMsg($('resetmsg'),r.ok,r.ok?'Radio reset sent.':(r.status==401?'Authentication required.':(await r.text()).trim()||'Failed.'));
+setTimeout(()=>$('resetmsg').textContent='',4000)};
+$('skipgw').onchange=async()=>{const want=$('skipgw').checked?1:0;const r=await fetch('/contact/gwsync?skip='+want,{method:'POST'});
+const t=(await r.text()).trim();showMsg($('resetmsg'),r.ok,t||(r.status==401?'Authentication required.':'Failed.'));
+if(!r.ok)$('skipgw').checked=!want;poll()};
+$('nvexp').onclick=async()=>{$('resetmsg').className='msg';$('resetmsg').textContent='Exporting nv.json…';
+const r=await fetch('/contact/nv',{cache:'no-store'});if(!r.ok){
+showMsg($('resetmsg'),false,(await r.text()).trim()||('HTTP '+r.status));return}
+const blob=await r.blob(),a=document.createElement('a');a.href=URL.createObjectURL(blob);
+a.download=($('name').textContent||'ows-relay')+'-nv.json';a.click();URL.revokeObjectURL(a.href);
+showMsg($('resetmsg'),true,'Exported nv.json.')};
+$('nvimp').onclick=()=>$('nvfile').click();
+$('nvfile').onchange=async()=>{const f=$('nvfile').files[0];$('nvfile').value='';if(!f)return;
+if(!confirm('Import '+f.name+' onto the contact gateway? This replaces its network and paired sensor table.'))return;
+busy=true;$('nvimp').disabled=true;$('resetmsg').className='msg';$('resetmsg').textContent='Importing nv.json…';
+try{const fd=new FormData();fd.append('nv',f);const r=await fetch('/contact/nv',{method:'POST',body:fd});
+showMsg($('resetmsg'),r.ok,(await r.text()).trim()||('HTTP '+r.status))}catch(_){
+showMsg($('resetmsg'),false,'Import failed.')}busy=false;$('nvimp').disabled=false;poll()};
+$('setupform').onsubmit=async e=>{e.preventDefault();const b=new URLSearchParams(new FormData(e.target));
+['ssid','url','token'].forEach(k=>b.set(k,b.get(k).trim()));
+$('setupmsg').className='msg';$('setupmsg').textContent='Saving…';try{const r=await fetch('/setup',{method:'POST',body:b});
+showMsg($('setupmsg'),r.ok,(await r.text()).trim())}catch(_){showMsg($('setupmsg'),true,'Saved; restarting.')}};
+</script></body></html>

@@ -1,0 +1,28 @@
+{
+  "time": "2026-10-23 22:12:29 -0700",
+  "update_mode_reply": "55aa4303130158",
+  "chip_id": "20018000",
+  "resetctl": "0x00001af2",
+  "reset_source": "pin reset",
+  "flash.bin": {
+    "address": "0x00000000",
+    "size": 131072,
+    "sha256": "94d76e8f975504a4e94ff2613b82873ae3ad3ea3acb391124709431aeeb82c34",
+    "chip_crc32": "0x43a43ad1",
+    "reads": 2
+  },
+  "ccfg.bin": {
+    "address": "0x50003000",
+    "size": 4096,
+    "sha256": "3ec1b0f5058590ac5771a7a003b58a4d111bcca2a9e8d872b1c9af64b7c3480b",
+    "chip_crc32": "0xadf71e1e",
+    "reads": 2
+  },
+  "fcfg1.bin": {
+    "address": "0x50001000",
+    "size": 1008,
+    "sha256": "d7075f90aac41b4b631938f7cff6d0b1c8a605b0d58dcdbc51f6b1d24719297d",
+    "chip_crc32": "0x9a8e3955",
+    "reads": 2
+  }
+}

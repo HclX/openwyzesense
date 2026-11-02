@@ -1,0 +1,227 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    # tools/lint.sh: clang-format, clang-tidy, ruff, shfmt, shellcheck (versions pinned in uv.lock); fails on any finding
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Lint and format checks
+        run: tools/lint.sh
+
+  esp32:
+    # the ESP32-S3 relay firmware (esp32/idf, #22) with the ESP-IDF pinned in tools/toolchain.lock; it carries the
+    # gateway image build-and-test built (#76, esp32/gateway_image.py: OWS_GATEWAY_IMAGE)
+    runs-on: ubuntu-24.04
+    container: espressif/idf:v5.5.6
+    needs: build-and-test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # git describe --tags: the version the images carry (#89)
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: gateway-contact-v1
+          path: gateway
+
+      - name: Build the firmware
+        shell: bash
+        run: |
+          export OWS_GATEWAY_IMAGE="$GITHUB_WORKSPACE/gateway/gateway-contact-v1-app.bin"  # the container's path
+          grep -qx 'ESP_IDF_VERSION=v5.5.6' tools/toolchain.lock  # the container's tag follows the lock
+          . "$IDF_PATH/export.sh"
+          cd esp32/idf && idf.py set-target esp32s3 && idf.py build
+          # the same for the classic ESP32 (a LOLIN32): its own build directory and sdkconfig
+          idf.py -B build-esp32 -D SDKCONFIG=build-esp32/sdkconfig -D IDF_TARGET=esp32 build
+          # one image for a first flash at 0x0 (bootloader, partition table, OTA data, app): the release bundle (#89)
+          (cd build && esptool.py --chip esp32s3 merge_bin -o ows_relay_full.bin @flash_args)
+          (cd build-esp32 && esptool.py --chip esp32 merge_bin -o ows_relay_full.bin @flash_args)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: esp32-relay
+          path: |
+            esp32/idf/build/ows_relay.bin
+            esp32/idf/build/ows_relay_full.bin
+            esp32/idf/build/bootloader/bootloader.bin
+            esp32/idf/build/partition_table/partition-table.bin
+            esp32/idf/build/ota_data_initial.bin
+            esp32/idf/build/flash_args
+            esp32/idf/build-esp32/ows_relay.bin
+            esp32/idf/build-esp32/ows_relay_full.bin
+            esp32/idf/build-esp32/bootloader/bootloader.bin
+            esp32/idf/build-esp32/partition_table/partition-table.bin
+            esp32/idf/build-esp32/ota_data_initial.bin
+            esp32/idf/build-esp32/flash_args
+
+  esp8266:
+    # the ESP8266 relay firmware (esp32/esp8266, #22): PlatformIO pinned in tools/pio.sh, the platform in platformio.ini;
+    # the gateway image it carries as for esp32
+    runs-on: ubuntu-24.04
+    needs: build-and-test
+    env:
+      OWS_GATEWAY_IMAGE: ${{ github.workspace }}/gateway/gateway-contact-v1-app.bin
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # git describe --tags: the version the images carry (#89)
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: gateway-contact-v1
+          path: gateway
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Cache PlatformIO's packages
+        uses: actions/cache@v4
+        with:
+          path: .toolchain/platformio
+          key: platformio-${{ hashFiles('esp32/esp8266/platformio.ini', 'tools/pio.sh') }}
+
+      - name: Build the firmware
+        run: tools/pio.sh run
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: esp8266-relay
+          path: esp32/esp8266/.pio/build/d1_mini/firmware.bin
+
+  build-and-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # git describe --tags: the version the images carry (#89)
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Cache the pinned toolchain
+        uses: actions/cache@v4
+        with:
+          path: .toolchain
+          key: toolchain-${{ hashFiles('tools/toolchain.lock') }}
+
+      - name: Fetch the toolchain (tools/toolchain.lock)
+        run: tools/toolchain.sh gcc
+
+      - name: Native unit tests
+        run: |
+          cmake --preset host
+          cmake --build --preset host
+          ctest --preset host
+
+      - name: Firmware (fw)
+        run: cmake --preset fw && cmake --build --preset fw
+
+      - name: Reference and firmware-image tests (hardware tests skip)
+        run: uv run pytest -q
+
+      - uses: actions/upload-artifact@v4  # what the relays carry (#76)
+        with:
+          name: gateway-contact-v1
+          path: build/fw/firmware/gateway-contact-v1-app.bin
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: |
+            build/fw/firmware/*.elf
+            build/fw/firmware/*.hex
+            build/fw/firmware/*.bin
+            build/fw/firmware/*.img
+
+  # wyzesense2mqtt-rs over IP driving our gateway and sensor firmware as host programs (no hardware):
+  # reference/tests/test_host_e2e.py
+  e2e-host:
+    runs-on: ubuntu-24.04
+    env:
+      W2M_REF: 9b804d19717ca1c46b1a30c2dcf450f90a2fd238     # HclX/wyzesense2mqtt-rs, the version checked against
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: HclX/wyzesense2mqtt-rs
+          ref: ${{ env.W2M_REF }}
+          path: w2m
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: mosquitto
+        run: sudo apt-get update && sudo apt-get install -y mosquitto mosquitto-clients
+
+      - name: Cache the wyzesense2mqtt-rs build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            w2m/target
+          key: w2m-${{ env.W2M_REF }}
+
+      - name: Build wyzesense2mqtt-rs
+        run: cd w2m && cargo build --release --bin wyzesense2mqtt-rs
+
+      - name: Host build (the firmware apps as host programs)
+        run: cmake --preset host && cmake --build --preset host
+
+      - name: End to end
+        run: OWS_W2M=$PWD/w2m/target/release/wyzesense2mqtt-rs uv run pytest -v -s reference/tests/test_host_e2e.py
+
+  release:
+    # the release bundle (#89, tools/release_bundle.py): every run assembles it as an artifact; a v* tag publishes it
+    # as a GitHub Release (a tag with a '-', e.g. v0.2.0-rc1, as a pre-release). Only when every other job passed.
+    runs-on: ubuntu-24.04
+    needs: [lint, build-and-test, esp32, esp8266, e2e-host]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware
+          path: in/firmware
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: esp32-relay
+          path: in/esp32
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: esp8266-relay
+          path: in/esp8266
+
+      - name: Assemble the bundle
+        run: |
+          uv run tools/release_bundle.py --version "$(git describe --always --dirty --tags)" --firmware in/firmware \
+            --esp32 in/esp32 --esp8266 in/esp8266/firmware.bin --out dist
+          ls -l dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-bundle
+          path: dist
+
+      - name: Publish the GitHub Release (v* tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pre=""
+          case "$GITHUB_REF_NAME" in *-*) pre="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" dist/* --verify-tag $pre --title "OpenWyzeSense $GITHUB_REF_NAME" \
+            --notes-file dist/README.md

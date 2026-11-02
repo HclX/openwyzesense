@@ -1,0 +1,1937 @@
+rtl_433 version 23.11 (2023-11-28) inputs file rtl_tcp RTL-SDR SoapySDR
+
+New defaults active, use "-Y classic -s 250k" if you need the old defaults
+
+Found Rafael Micro R820T tuner
+[102;92m[[30mSDR[92m][0m Using device 0: Realtek, RTL2838UHIDIR, SN: 00000001, "Generic RTL2832U OEM"
+[R82XX] PLL not locked!
+Allocating 15 zero-copy buffers
+Detected FSK package	2026-10-21 21:18:10.852570
+Analyzing pulses...
+Total count:  880,  width: 5.85 ms		(14032 S)
+Pulse width distribution:
+ [ 0] count:  194,  width:    0 us [0;0]	(   1 S)
+ [ 1] count:  221,  width:    1 us [1;1]	(   2 S)
+ [ 2] count:  106,  width:    1 us [1;1]	(   3 S)
+ [ 3] count:   90,  width:    2 us [2;2]	(   5 S)
+ [ 4] count:   66,  width:    4 us [4;5]	(  10 S)
+ [ 5] count:    2,  width:   54 us [52;57]	( 130 S)
+ [ 6] count:    7,  width:   20 us [18;21]	(  47 S)
+ [ 7] count:   50,  width:    3 us [3;3]	(   7 S)
+ [ 8] count:   83,  width:    2 us [2;2]	(   4 S)
+ [ 9] count:   35,  width:    6 us [5;9]	(  15 S)
+ [10] count:   15,  width:   12 us [10;15]	(  29 S)
+ [11] count:    3,  width:   25 us [25;27]	(  61 S)
+ [12] count:    6,  width:    9 us [8;10]	(  22 S)
+ [13] count:    1,  width:   15 us [15;15]	(  37 S)
+ [14] count:    1,  width:   38 us [38;38]	(  92 S)
+Gap width distribution:
+ [ 0] count:   90,  width:    2 us [2;3]	(   5 S)
+ [ 1] count:  198,  width:    0 us [0;0]	(   1 S)
+ [ 2] count:  205,  width:    1 us [1;1]	(   2 S)
+ [ 3] count:   64,  width:    4 us [4;6]	(  10 S)
+ [ 4] count:   56,  width:    2 us [2;2]	(   4 S)
+ [ 5] count:   62,  width:    3 us [3;4]	(   7 S)
+ [ 6] count:  102,  width:    1 us [1;1]	(   3 S)
+ [ 7] count:   21,  width:   10 us [8;12]	(  23 S)
+ [ 8] count:   34,  width:    6 us [5;8]	(  15 S)
+ [ 9] count:    4,  width:  188 us [168;207]	( 452 S)
+ [10] count:    8,  width:   13 us [12;15]	(  32 S)
+ [11] count:    5,  width:   27 us [23;31]	(  65 S)
+ [12] count:   11,  width:   48 us [42;55]	( 116 S)
+ [13] count:   10,  width:   19 us [17;22]	(  45 S)
+ [14] count:    3,  width:   35 us [34;38]	(  85 S)
+ [15] count:    2,  width:   83 us [77;90]	( 199 S)
+Pulse period distribution:
+ [ 0] count:  253,  width:    2 us [2;3]	(   6 S)
+ [ 1] count:   96,  width:    1 us [1;1]	(   3 S)
+ [ 2] count:   89,  width:    2 us [2;2]	(   4 S)
+ [ 3] count:  123,  width:    6 us [5;8]	(  14 S)
+ [ 4] count:   13,  width:   50 us [43;58]	( 120 S)
+ [ 5] count:   24,  width:   20 us [16;24]	(  47 S)
+ [ 6] count:  138,  width:    4 us [3;5]	(   9 S)
+ [ 7] count:   68,  width:    8 us [8;11]	(  20 S)
+ [ 8] count:   34,  width:   12 us [10;15]	(  29 S)
+ [ 9] count:   22,  width:    1 us [1;1]	(   2 S)
+ [10] count:    7,  width:   28 us [26;32]	(  67 S)
+ [11] count:    4,  width:  189 us [168;207]	( 453 S)
+ [12] count:    4,  width:   37 us [35;39]	(  89 S)
+Pulse timing distribution:
+ [ 0] count:  392,  width:    0 us [0;0]	(   1 S)
+ [ 1] count:  426,  width:    1 us [1;1]	(   2 S)
+ [ 2] count:  208,  width:    1 us [1;1]	(   3 S)
+ [ 3] count:  178,  width:    2 us [2;2]	(   5 S)
+ [ 4] count:  128,  width:    4 us [4;5]	(  10 S)
+ [ 5] count:   13,  width:   49 us [42;57]	( 118 S)
+ [ 6] count:   20,  width:   20 us [17;23]	(  47 S)
+ [ 7] count:  111,  width:    3 us [3;3]	(   7 S)
+ [ 8] count:  139,  width:    2 us [2;2]	(   4 S)
+ [ 9] count:   74,  width:    6 us [5;9]	(  15 S)
+ [10] count:   32,  width:   12 us [10;15]	(  28 S)
+ [11] count:    6,  width:   28 us [25;31]	(  66 S)
+ [12] count:   19,  width:    9 us [8;10]	(  21 S)
+ [13] count:    2,  width:   15 us [15;15]	(  36 S)
+ [14] count:    4,  width:   36 us [34;38]	(  87 S)
+Level estimates [high, low]:   4097,     82
+RSSI: -6.0 dB SNR: 17.0 dB Noise: -23.0 dB
+Frequency offsets [F1, F2]:    -527,   -142	(-19.3 kHz, -5.2 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {14085}80d9c001819b67efff3efffffffffffffffffffffffffffffff3b9ffffffffffc300cf99f980f8fbff0003ffbffbbfc3f07ffc0f83bf000e00ffe37e01bb63c0183e01001e1c0383607efe77fdfe0000020004007000060c031fc82fd03dff83ff03fffffffffffb07ffffffffffff000fff0fdff8c41b37061e77ff7cff00002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000180dc0273ccd838fefc00fcffffc0ff0fff81f0010063c3380c00000004000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000000000000100fe7ffffffff83d9e7dfffffffe7f801bffc8c08ffe01e00fffffff3070322607ff9fcf607fff830000278ffffd0001fffffff983ffff803f03f00004000001000000000000000006000000000000000000000000001800071dffeffe7f8ffffdffbdfffffffffffffffeffffffffffffffe3ff01dc0c07c000000000001e000000000000000000008000000000000000000000000180003600000000000180000000000000000018101800000602400fc0095bff81ffffffff7fffffffffffd9ffffbfff71fffcfff00fffb3bc7ff0f1fee00c007f60800039b73f3c3ff37ce419f87800341d1f800330679fdcf88000003fc801fd8ffdff90ff87dfeffc09fde78037007fffcfff30398082360000000000000000000000000000200000000000000000000040000000c49bfc01a7ffffdf5fe38c873cfff399c13ffdf000181f67080ff81f000780f88600ff9fff99cec0807721c3f883fffe23ffffffffe38f7ffdc662003cf88000000000000000000000000000000008000000000000800400000000ffffffffffffffffffffffffffffffffff9bfe7fffffffffffc63c126006040000000000000000000000000000000000000000000003000000200000009ffffffe0ffbdfbfffff83ffffff1930f8007dff0ffffff07ff60007fffffe00029fe5c061807e8f1ebffefcf823e101fffe1fffc01fffe0f00000400000000002000000000010000000000000000000000000200000001800efff39fffffffffff3fffcfffffffecffefefffbffffffc7fffffec89847061e78c4ffe68272ffffff8c180400103f9fe7001000001c800000900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000fffffffeffffe4f7d04c39cc98f20079f79e00e0feffe00310078008040009b00c03c0193ee5c003180000807c0c9f41fcc003603efe3fc00c67c058081b0f2f3007b387e00cdb0038dfffffff0180e0387f907e7fe3f001e03fe68ff770300186c9de33bfdb3f3f96f00581e302ffc7c01e20300c000002040600000000010000000000000000000000000000000000000000000000000000000000000000c000008020000070000004000001100000000008000e0b000601fff9f180001fc18780016183f1801ffcc007980061f0403c47861df19fbe47f67e3f7e0010ff804100c240318c0000effdbf3c4061fff8930100c001d80000380c623f23341e3cc1cdfd3e31c20e7ccfffffffffffc07ffffffffdfffff1ffcfffe0003ffc0040000007cc00080000001000000000000000000000000001e000000000004000000000000271dbf7ffffffffffffff9fffbffffcfffffffffffffffffffffff7ffdeffffc7fff8ffff207ff3800008c723bef87fb000303e3c05f3c000001c300000c000000000000000000000000000000000000000000000000000004000000008000e1ff0001879f938ff9fbbffef1b811ffff1f80403801d800061000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000713c0fbff9e97ffffd0000c0000483c010f00000e1fe0003fff07fc000000000000000000000000000001000000000000000000000000000000079803ffcf9c1ff9c031fc20401773000f81fc019ffe607d3bd22980fe78de4c37fe3ff6ff000000000c07bff82007e001ffc041cd80003e00784ff8ec004000000000000000000000000000004000000000000000000000000000010000000000000000000000300000000000000000000000000000000000000000000000000000000000000000000000020000600000000001800000000000004000090000000000000000006d80003f800000001fede1edfff873f7fffff3019777c7c00f38f1c00007e63c0cd909fe0000788e7f01ee7feffbf01cf79873907f737f97f00f043fe49e00087ff87f06ffff27be1f8373c063df007fff00000000000000
+
+*** Saving signal to file g001_906.8M_2400k.cu8 (125800 samples, 262144 bytes)
+Detected FSK package	2026-10-21 21:18:12.460161
+Analyzing pulses...
+Total count:  757,  width: 4.30 ms		(10314 S)
+Pulse width distribution:
+ [ 0] count:   57,  width:    5 us [4;7]	(  12 S)
+ [ 1] count:  169,  width:    0 us [0;0]	(   1 S)
+ [ 2] count:   91,  width:    2 us [2;2]	(   5 S)
+ [ 3] count:   15,  width:    8 us [7;10]	(  19 S)
+ [ 4] count:  175,  width:    1 us [1;1]	(   2 S)
+ [ 5] count:   57,  width:    2 us [2;2]	(   4 S)
+ [ 6] count:   94,  width:    1 us [1;1]	(   3 S)
+ [ 7] count:   72,  width:    3 us [3;4]	(   7 S)
+ [ 8] count:   12,  width:   11 us [10;13]	(  26 S)
+ [ 9] count:    3,  width:  115 us [109;123]	( 275 S)
+ [10] count:    1,  width:   39 us [39;39]	(  94 S)
+ [11] count:    5,  width:   75 us [59;83]	( 180 S)
+ [12] count:    3,  width:   17 us [15;18]	(  40 S)
+Gap width distribution:
+ [ 0] count:  200,  width:    1 us [1;1]	(   2 S)
+ [ 1] count:   97,  width:    2 us [2;3]	(   5 S)
+ [ 2] count:  178,  width:    0 us [0;0]	(   1 S)
+ [ 3] count:   80,  width:    4 us [3;5]	(   9 S)
+ [ 4] count:   79,  width:    1 us [1;1]	(   3 S)
+ [ 5] count:   16,  width:    8 us [7;11]	(  20 S)
+ [ 6] count:   58,  width:    2 us [2;2]	(   4 S)
+ [ 7] count:   35,  width:    5 us [5;7]	(  13 S)
+ [ 8] count:    1,  width:  210 us [210;210]	( 504 S)
+ [ 9] count:    2,  width:  121 us [118;125]	( 291 S)
+ [10] count:    4,  width:   14 us [12;16]	(  34 S)
+ [11] count:    3,  width:   24 us [22;27]	(  57 S)
+ [12] count:    2,  width:   11 us [11;11]	(  26 S)
+ [13] count:    1,  width:   34 us [34;34]	(  81 S)
+Pulse period distribution:
+ [ 0] count:  132,  width:    5 us [4;7]	(  12 S)
+ [ 1] count:   73,  width:    1 us [1;1]	(   3 S)
+ [ 2] count:  166,  width:    3 us [3;5]	(   8 S)
+ [ 3] count:  150,  width:    2 us [2;3]	(   5 S)
+ [ 4] count:   47,  width:    9 us [8;12]	(  22 S)
+ [ 5] count:   84,  width:    2 us [2;2]	(   4 S)
+ [ 6] count:    1,  width:  210 us [210;210]	( 505 S)
+ [ 7] count:   18,  width:   14 us [12;18]	(  34 S)
+ [ 8] count:   40,  width:    7 us [6;8]	(  16 S)
+ [ 9] count:   25,  width:    1 us [1;1]	(   2 S)
+ [10] count:    5,  width:  119 us [112;128]	( 285 S)
+ [11] count:    5,  width:   26 us [23;30]	(  63 S)
+ [12] count:    2,  width:   37 us [35;40]	(  89 S)
+ [13] count:    5,  width:   75 us [59;84]	( 181 S)
+Pulse timing distribution:
+ [ 0] count:  111,  width:    5 us [4;7]	(  12 S)
+ [ 1] count:  347,  width:    0 us [0;0]	(   1 S)
+ [ 2] count:  161,  width:    2 us [2;2]	(   5 S)
+ [ 3] count:   37,  width:    8 us [6;10]	(  18 S)
+ [ 4] count:  375,  width:    1 us [1;1]	(   2 S)
+ [ 5] count:  115,  width:    2 us [2;2]	(   4 S)
+ [ 6] count:  173,  width:    1 us [1;1]	(   3 S)
+ [ 7] count:  127,  width:    3 us [3;4]	(   7 S)
+ [ 8] count:   19,  width:   11 us [10;13]	(  26 S)
+ [ 9] count:    5,  width:  117 us [109;125]	( 281 S)
+ [10] count:   22,  width:    4 us [4;4]	(   9 S)
+ [11] count:    2,  width:   36 us [34;39]	(  87 S)
+ [12] count:    5,  width:   75 us [59;83]	( 180 S)
+ [13] count:    5,  width:   16 us [15;18]	(  39 S)
+Level estimates [high, low]:   3953,     81
+RSSI: -6.2 dB SNR: 16.9 dB Noise: -23.1 dB
+Frequency offsets [F1, F2]:    -527,    -97	(-19.3 kHz, -3.6 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {10371}fffc9f01f9ffffd9007e3e4f00000fffe00c38679f901fff8f07fe3cfff00070790f10ccf0c006c40088020fd003e1e7fe60060fc3efc04d9ffe43e7e1000400f88c18987003e1c06fe7fde19f40007bf004000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003f843ffffffbfffffff87fe407bfff80fffe438201beff3cff9bc27ff380fffefe7ffbfe1fc05fe8ff9c47fe13c17cffc3fff6023fff3f123e71279fffffe607fffd802837f307ff81ff800040081bc03a7b003b802313fcc67c001880007e08007f1c008c7cfffefa6fccf9f8039fa0263f20077ffa000000000000000000000000000000000000000000000000000000000000000000000040020000000300000000000001900000080000000000000002000000000607800600000000033f6fff7c079e0fe1ff37781fe00cc00cfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdc8ec4e33f8000efe0e300ffffffc000e8dc3f82007f87dc0e0c100007f3e7e737f3ffffc6fefdfdfe3f1c77efff9fbfff9f91fcff206601338181e0003fff3ffe61edff0fb07bfffffe001f7377826f83b9fc0000007ee7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc01800040c1c0000000000001c00380040030700e63fe04fff80003ff7380000798ffe7900f3e0026380667980e000fbf9803ffff87ffffcfcffbfffffffffffffffffffffff7ffffffffffffffffffffffffffffffffffdfffffcfd2405802180a0402e4e0020007ffffb001ffe00300d80406008007ffeff0600c4003ffce2ffffc03033e01f860403003e19bffffff608dcf7c8fffffffcfffffffffffffffffffffffffffffffffffffffffffffff9ffffffffffcffec3ffbffffffffffffffff7fefffffffff9ff8f9e303fbffff9c6000035f931ffefe5ff043fc0f0cfe0067df9fffeff00000400c03fffc7f9f8c03be7ff807ffffffffffffffffe678fe7f63dff0185fc0000000000000000000000000000000000000000000000000000000000000000000000000030f210100001fce088060320c84ceec7007cccffff00001800bef007c1c007f43fd81c003ffe0e00200004e0c7ce78e3cfff7ff940efe040c648008600fe001b0000002030d0080d8617317c3806068040718001f9cffffc0f007f1ffffee07f2190320980e224013d6ee3c00fe00004000f1f9e5f7c1800f932780007fc0fe77fffffe87e1b9fa66001ffbff3dfff7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff77fffffffffdffefe7f880006081e00fef0fdf90fffff9373e7ffdefbfffffffffffffffffffffffffffffffffffffffffff7fffffffffffffffffffffffffffffeffffff3fffffffffffffffffffffffffffffffffffffffffffffffffdfffffffffffffffffffffffffffffffffffffffffffffffffa00000007000001c0080007c08f1df2b6233e7ffff0cc400000c303301c3ffc77efffc00c00007f37ec0ffe003807ffff800fe0ffffffc07bdfdfff07ff71f802c07dc09bcff00199ffbad800008cc009037fc3bbe7fc037e1cd1fff081800fc00073ffe6790818c1f800c00000000000000000001ce200080030000001c483f9c43907c0020180800e7dffffffe7037ff00dff3f7ffc87ee61c02ff6fd8bcc00bc87ffaf9ef0000ffdfffffe3ffc7667c0019fffe60029ffc00000000000000
+
+*** Saving signal to file g002_906.8M_2400k.cu8 (125802 samples, 262144 bytes)
+Detected OOK package	2026-10-21 21:18:14.024875
+Analyzing pulses...
+Total count:    1,  width: 33.96 ms		(81512 S)
+Pulse width distribution:
+ [ 0] count:    1,  width: 33963 us [33963;33963]	(81512 S)
+Gap width distribution:
+Pulse period distribution:
+Pulse timing distribution:
+ [ 0] count:    1,  width: 33963 us [33963;33963]	(81512 S)
+ [ 1] count:    1,  width: 100000 us [100000;100000]	(240001 S)
+Level estimates [high, low]:   1181,     79
+RSSI: -11.4 dB SNR: 11.7 dB Noise: -23.2 dB
+Frequency offsets [F1, F2]:     200,      0	(+7.3 kHz, +0.0 kHz)
+Guessing modulation: Single pulse detected. Probably Frequency Shift Keying or just noise...
+view at https://triq.org/pdv/#AAB10284ABFFFF8155
+
+*** Saving signal to file g003_906.8M_2400k.cu8 (354281 samples, 786432 bytes)
+Detected OOK package	2026-10-21 21:18:15.687636
+Analyzing pulses...
+Total count:    2,  width: 164.40 ms		(394554 S)
+Pulse width distribution:
+ [ 0] count:    2,  width: 36361 us [33963;38760]	(87267 S)
+Gap width distribution:
+ [ 0] count:    1,  width: 91675 us [91675;91675]	(220020 S)
+Pulse period distribution:
+ [ 0] count:    1,  width: 125638 us [125638;125638]	(301531 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width: 36361 us [33963;38760]	(87267 S)
+ [ 1] count:    2,  width: 95838 us [91675;100000]	(230010 S)
+Level estimates [high, low]:   3799,     80
+RSSI: -6.3 dB SNR: 16.8 dB Noise: -23.1 dB
+Frequency offsets [F1, F2]:    -479,      0	(-17.5 kHz, +0.0 kHz)
+Guessing modulation: Un-modulated signal. Maybe a preamble...
+view at https://triq.org/pdv/#AAB1028E09FFFF818155
+
+*** Saving signal to file g004_906.8M_2400k.cu8 (667323 samples, 1441792 bytes)
+Detected OOK package	2026-10-21 21:18:17.348783
+Analyzing pulses...
+Total count:    1,  width: 33.96 ms		(81514 S)
+Pulse width distribution:
+ [ 0] count:    1,  width: 33964 us [33964;33964]	(81514 S)
+Gap width distribution:
+Pulse period distribution:
+Pulse timing distribution:
+ [ 0] count:    1,  width: 33964 us [33964;33964]	(81514 S)
+ [ 1] count:    1,  width: 100000 us [100000;100000]	(240001 S)
+Level estimates [high, low]:   1164,     76
+RSSI: -11.5 dB SNR: 11.9 dB Noise: -23.3 dB
+Frequency offsets [F1, F2]:     173,      0	(+6.3 kHz, +0.0 kHz)
+Guessing modulation: Single pulse detected. Probably Frequency Shift Keying or just noise...
+view at https://triq.org/pdv/#AAB10284ACFFFF8155
+
+Detected FSK package	2026-10-21 21:18:17.491854
+Analyzing pulses...
+Total count:  727,  width: 5.03 ms		(12066 S)
+Pulse width distribution:
+ [ 0] count:   80,  width:    2 us [2;3]	(   5 S)
+ [ 1] count:   23,  width:    8 us [7;10]	(  19 S)
+ [ 2] count:    2,  width:   62 us [58;67]	( 149 S)
+ [ 3] count:   93,  width:    1 us [1;1]	(   3 S)
+ [ 4] count:   70,  width:    4 us [3;6]	(  10 S)
+ [ 5] count:  181,  width:    0 us [0;0]	(   1 S)
+ [ 6] count:   51,  width:    2 us [2;2]	(   4 S)
+ [ 7] count:  165,  width:    1 us [1;1]	(   2 S)
+ [ 8] count:   29,  width:    3 us [3;3]	(   7 S)
+ [ 9] count:    9,  width:   10 us [10;12]	(  25 S)
+ [10] count:    9,  width:   20 us [17;24]	(  47 S)
+ [11] count:    3,  width:   93 us [86;98]	( 224 S)
+ [12] count:    2,  width:   48 us [46;50]	( 116 S)
+ [13] count:    5,  width:   30 us [28;35]	(  73 S)
+ [14] count:    2,  width:   15 us [13;16]	(  35 S)
+Gap width distribution:
+ [ 0] count:  171,  width:    0 us [0;0]	(   1 S)
+ [ 1] count:   66,  width:    2 us [2;2]	(   4 S)
+ [ 2] count:  157,  width:    1 us [1;1]	(   2 S)
+ [ 3] count:   42,  width:    4 us [4;5]	(  10 S)
+ [ 4] count:   18,  width:   12 us [10;15]	(  30 S)
+ [ 5] count:    3,  width:   57 us [52;65]	( 137 S)
+ [ 6] count:  107,  width:    2 us [2;3]	(   6 S)
+ [ 7] count:   79,  width:    1 us [1;1]	(   3 S)
+ [ 8] count:   32,  width:    6 us [5;8]	(  15 S)
+ [ 9] count:   11,  width:    8 us [8;10]	(  20 S)
+ [10] count:   10,  width:   22 us [18;29]	(  53 S)
+ [11] count:   19,  width:    3 us [3;3]	(   8 S)
+ [12] count:    2,  width:   95 us [90;100]	( 228 S)
+Pulse period distribution:
+ [ 0] count:  175,  width:    2 us [2;3]	(   6 S)
+ [ 1] count:   90,  width:    7 us [6;9]	(  17 S)
+ [ 2] count:    7,  width:   56 us [47;68]	( 135 S)
+ [ 3] count:  105,  width:    5 us [4;7]	(  11 S)
+ [ 4] count:   32,  width:   12 us [10;15]	(  29 S)
+ [ 5] count:   93,  width:    3 us [3;5]	(   8 S)
+ [ 6] count:   79,  width:    1 us [1;1]	(   3 S)
+ [ 7] count:   74,  width:    2 us [2;2]	(   4 S)
+ [ 8] count:    9,  width:   10 us [9;11]	(  23 S)
+ [ 9] count:   13,  width:   25 us [21;30]	(  60 S)
+ [10] count:   16,  width:   18 us [15;21]	(  43 S)
+ [11] count:    5,  width:   95 us [86;103]	( 229 S)
+Pulse timing distribution:
+ [ 0] count:  149,  width:    2 us [2;3]	(   5 S)
+ [ 1] count:   51,  width:    8 us [6;10]	(  18 S)
+ [ 2] count:    5,  width:   59 us [52;67]	( 142 S)
+ [ 3] count:  172,  width:    1 us [1;1]	(   3 S)
+ [ 4] count:   92,  width:    5 us [4;6]	(  11 S)
+ [ 5] count:  352,  width:    0 us [0;0]	(   1 S)
+ [ 6] count:  117,  width:    2 us [2;2]	(   4 S)
+ [ 7] count:  322,  width:    1 us [1;1]	(   2 S)
+ [ 8] count:  113,  width:    3 us [3;5]	(   7 S)
+ [ 9] count:   22,  width:   11 us [10;13]	(  26 S)
+ [10] count:   19,  width:   20 us [16;24]	(  48 S)
+ [11] count:    5,  width:   94 us [86;100]	( 226 S)
+ [12] count:    5,  width:   43 us [36;50]	( 103 S)
+ [13] count:    9,  width:   31 us [28;35]	(  74 S)
+ [14] count:    9,  width:   14 us [13;16]	(  34 S)
+Level estimates [high, low]:   3769,     82
+RSSI: -6.4 dB SNR: 16.6 dB Noise: -23.0 dB
+Frequency offsets [F1, F2]:    -504,   -109	(-18.5 kHz, -4.0 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {12120}fefffffbfffffffffffffffffffffffffffffffffffffffee1fffc87ffe1f800e000000008000000000000000000000000000000100f7c30000000c036200186ffffde027ff8e60c81e0e0087fff0f01f9dffb6007dfe678c360101bffa1000043182018019fbfcffffff7ff38081f387fcc1bf9808004d800230000008000000000000000000000000000000010000000000000000101007c0fffffffffffdffe7fffffffffff7fffffffffffffc7fffffffffff8fc6e40000004000000000001000000000000010c0078000002000200033bfffffdffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe60e00010009f7ff86ffc091fffffe006f013ff7f0000c38000d9f13983ffe071dbffc1fffffffffff7fffffe1dee4fff83ffc047f00c07e3fc000000000000000000000000000000000000000000000000000000000002070f041805f3f0f9fefdffffffd0008002e7001c0001fffef048f6fb0ff0200100000000208000040000000000000000000000002000000000000000000000000400004000000000000000000000000000000000000000000000000000001e003c0000000000002000c0000040000002000100003800007f0dff9fffffffffffe7fffffffffffffffffffffffffffffdfffffffffffffffff7ffffffffffffffffc3fcfffffffffffffffffffffffffffefffffbffffffffffffffff7fe1ffffffffffffedbffffefcfffffffffe7fffe3c0fffef9f80fe333fff9fb3e186370c37c0f080c017fffff7e1dfffffeff739ffc8e4e7c01c60007c8fd9ffff8fd01fe1f30e7c0d00e0fff4007cfe18c220b78ffefffc0cdf80049de0000201cb1e4e27e71f3e23c3fe70f13fdf3001f801c1fffffff8203c0007ff3ef9ffff80607fe03e1fcddfcdf19df1cc0200007fe9181c001e8080fa1fffe3cf83eff38407c1c3f0800000002238008080000000000000000000000000000000000000040000000000000000000044009f0fff80b00b403fee04630387c7ffffe6c70d03fc7bfe1f78fd81f8018000b33301ffffe0da1e71bc19d9180087639ff0000000800000000000000000000000000000000000000000000000000000000000000000000000001c000037f31ff3ffffffe7ffcd9f8c6f71cfc200d37ffffff800081800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000066805ff9fffe3001bff030fa70fd860e0f7fffff0031d0c0f1ffbe622fe38ffffffff06e201fe7ffe78002003087601fbfce1fcffffcf08101800000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003fcdf7e13ffd6ffffd9f9f1d91ff3f80083a60000000018000ff98780f80000000000000000000020000e0000000000000000000002000040000000007f3ffbefffffffffff9feffeff9f7ffffc7fffffffffd0cf7ff80833801efe4f8004000000003990006b000e2e81e40083bf8339f86779effe409ff00800000000000000003102000000000000020000000800000000008000074000200000016012020000067000023800c80fc7f7fe7c03fe07fc020fffffffffffffffffffdfffffffffffffffffffffffffffffffffffffffffffffffffffffffffe7ffffffffffffffffffff9fffffffffffffffffffffffffffffffffffffffffffffffffffbffffffffffffffffffffffffffffffffff3e00000000400000000000c180076edc1bc701ffdb0003830300d03a21fffe007820000008000000000000c00026e3c207e7fe380001006006fe38f0c8fffff7ffff67ffe6f09c000200f8098001afc09cc000000080e01020600100e000000fe78f20260c870003bcc0ffffff8ff7ffff7fe1fffff81fff01fbf3e41fdf7fff9ff3901ff8fffe2ffcffcc7b0f7fff7ff3e67fc07e1803c07f80000800364c0f2c077e78e3003fe00000000000200002100000000e0c03ff9c0000000000000
+
+*** Saving signal to file g005_906.8M_2400k.cu8 (469171 samples, 1048576 bytes)
+Detected OOK package	2026-10-21 21:18:19.144577
+Analyzing pulses...
+Total count:    1,  width: 38.76 ms		(93023 S)
+Pulse width distribution:
+ [ 0] count:    1,  width: 38760 us [38760;38760]	(93023 S)
+Gap width distribution:
+Pulse period distribution:
+Pulse timing distribution:
+ [ 0] count:    1,  width: 38760 us [38760;38760]	(93023 S)
+ [ 1] count:    1,  width: 100000 us [100000;100000]	(240001 S)
+Level estimates [high, low]:   3929,     80
+RSSI: -6.2 dB SNR: 16.9 dB Noise: -23.1 dB
+Frequency offsets [F1, F2]:    -491,      0	(-18.0 kHz, +0.0 kHz)
+Guessing modulation: Single pulse detected. Probably Frequency Shift Keying or just noise...
+view at https://triq.org/pdv/#AAB1029767FFFF8155
+
+*** Saving signal to file g006_906.8M_2400k.cu8 (365792 samples, 786432 bytes)
+Detected OOK package	2026-10-21 21:18:20.667134
+Analyzing pulses...
+Total count:    2,  width: 165.76 ms		(397830 S)
+Pulse width distribution:
+ [ 0] count:    2,  width: 36361 us [33963;38759]	(87267 S)
+Gap width distribution:
+ [ 0] count:    1,  width: 93040 us [93040;93040]	(223296 S)
+Pulse period distribution:
+ [ 0] count:    1,  width: 127003 us [127003;127003]	(304808 S)
+Pulse timing distribution:
+ [ 0] count:    2,  width: 36361 us [33963;38759]	(87267 S)
+ [ 1] count:    2,  width: 96520 us [93040;100000]	(231648 S)
+Level estimates [high, low]:   3518,     79
+RSSI: -6.7 dB SNR: 16.5 dB Noise: -23.2 dB
+Frequency offsets [F1, F2]:    -487,      0	(-17.8 kHz, +0.0 kHz)
+Guessing modulation: Un-modulated signal. Maybe a preamble...
+view at https://triq.org/pdv/#AAB1028E09FFFF818155
+
+*** Saving signal to file g007_906.8M_2400k.cu8 (670599 samples, 1441792 bytes)
+Detected FSK package	2026-10-21 21:18:22.419200
+Analyzing pulses...
+Total count:  613,  width: 4.08 ms		( 9792 S)
+Pulse width distribution:
+ [ 0] count:  155,  width:    1 us [1;1]	(   2 S)
+ [ 1] count:   45,  width:    2 us [2;2]	(   4 S)
+ [ 2] count:   70,  width:    2 us [2;2]	(   5 S)
+ [ 3] count:  147,  width:    0 us [0;0]	(   1 S)
+ [ 4] count:   69,  width:    1 us [1;1]	(   3 S)
+ [ 5] count:   35,  width:    4 us [4;5]	(  10 S)
+ [ 6] count:   26,  width:    6 us [5;8]	(  14 S)
+ [ 7] count:    1,  width:   26 us [26;26]	(  63 S)
+ [ 8] count:    2,  width:  180 us [173;186]	( 431 S)
+ [ 9] count:   31,  width:    3 us [3;3]	(   7 S)
+ [10] count:   19,  width:    9 us [7;12]	(  21 S)
+ [11] count:    4,  width:  112 us [95;132]	( 270 S)
+ [12] count:    2,  width:   49 us [45;53]	( 117 S)
+ [13] count:    2,  width:   37 us [36;37]	(  88 S)
+ [14] count:    4,  width:   13 us [12;15]	(  32 S)
+Gap width distribution:
+ [ 0] count:  106,  width:    2 us [2;4]	(   6 S)
+ [ 1] count:   56,  width:    2 us [2;2]	(   4 S)
+ [ 2] count:  127,  width:    0 us [0;0]	(   1 S)
+ [ 3] count:   78,  width:    1 us [1;1]	(   3 S)
+ [ 4] count:  137,  width:    1 us [1;1]	(   2 S)
+ [ 5] count:   44,  width:    4 us [4;5]	(  10 S)
+ [ 6] count:   25,  width:    6 us [5;8]	(  15 S)
+ [ 7] count:   14,  width:    9 us [8;10]	(  21 S)
+ [ 8] count:    2,  width:   12 us [11;12]	(  28 S)
+ [ 9] count:    3,  width:   15 us [15;15]	(  35 S)
+ [10] count:    1,  width:   18 us [18;18]	(  44 S)
+ [11] count:    6,  width:    3 us [3;3]	(   8 S)
+ [12] count:    5,  width:   39 us [36;41]	(  93 S)
+ [13] count:    2,  width:   58 us [55;61]	( 138 S)
+ [14] count:    1,  width:  179 us [179;179]	( 430 S)
+Pulse period distribution:
+ [ 0] count:   85,  width:    4 us [4;5]	(  10 S)
+ [ 1] count:  158,  width:    2 us [2;3]	(   5 S)
+ [ 2] count:   77,  width:    2 us [2;2]	(   4 S)
+ [ 3] count:  100,  width:    6 us [5;9]	(  15 S)
+ [ 4] count:   65,  width:    1 us [1;1]	(   3 S)
+ [ 5] count:    5,  width:   28 us [27;32]	(  68 S)
+ [ 6] count:    3,  width:  180 us [174;186]	( 432 S)
+ [ 7] count:   11,  width:    1 us [1;1]	(   2 S)
+ [ 8] count:   15,  width:   12 us [10;16]	(  30 S)
+ [ 9] count:   32,  width:    9 us [8;11]	(  22 S)
+ [10] count:   40,  width:    3 us [3;3]	(   8 S)
+ [11] count:    5,  width:  112 us [96;133]	( 268 S)
+ [12] count:   10,  width:   42 us [37;55]	( 102 S)
+Pulse timing distribution:
+ [ 0] count:  292,  width:    1 us [1;1]	(   2 S)
+ [ 1] count:  101,  width:    2 us [2;2]	(   4 S)
+ [ 2] count:  136,  width:    2 us [2;2]	(   5 S)
+ [ 3] count:  274,  width:    0 us [0;0]	(   1 S)
+ [ 4] count:  147,  width:    1 us [1;1]	(   3 S)
+ [ 5] count:   80,  width:    4 us [4;5]	(  10 S)
+ [ 6] count:   50,  width:    6 us [5;8]	(  14 S)
+ [ 7] count:    5,  width:   28 us [26;32]	(  66 S)
+ [ 8] count:    3,  width:  179 us [173;186]	( 430 S)
+ [ 9] count:   76,  width:    3 us [3;3]	(   7 S)
+ [10] count:   34,  width:    9 us [7;12]	(  21 S)
+ [11] count:    5,  width:  111 us [95;132]	( 266 S)
+ [12] count:   10,  width:   42 us [36;55]	( 101 S)
+ [13] count:    9,  width:   13 us [11;15]	(  32 S)
+Level estimates [high, low]:   3783,     81
+RSSI: -6.4 dB SNR: 16.7 dB Noise: -23.1 dB
+Frequency offsets [F1, F2]:    -519,   -114	(-19.0 kHz, -4.2 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {9844}c03c3ef10c8e88703fe00340fdfff8fffffffffffffffefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd8027844000138e0003002fe104043ffce1c003ffffff807efffffe7191ff800c673e003fff9f88e319f8f80136032242630f3c4c193ff90ccf8ff01e680f32200311f1b183fc61e2061cdffd87e7e01081f7fffffcbdf81fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe7dc3ef32000008023cfafb80f00c00181f9e30edf0feff7f01c19ff87fffffffffffffffffffffffffffffff7fffdffffffffffffffffffffff7ff00cf0000000200004000000400800000000dfe7f00c0407ffffd01ffcc38cdb0e01ddfff90800cf7fff07e040200cfcfdb81ffc039ffffce71bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff1cffff7800006fffe0c2fd23f3c0303fffdfffffdffffffff1ffffffe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe1c1000040f1813f801847000001000000c00906000dff37ffffffffffffffffffffffffffffffffffffffffffffffffffffffffcfffffefffff87ffc9fc0e00400fc41013fc00023f70003df0087ffff80f9ffff73d9fffffbffffffffffffffffffffffffffdfffffffffffffffffffffdfd3e1fffe78007803000000c0000120200000000001801900030000c21e0006060199ff833c00010460442000ee1ffd7dfc004303003400fe41e89f3001870fe3303fcf00901f183bf0001fbff01870000803f8007f803fffe032fc007ffffc131f7fffeffffffffffcfffddff7ffc321ec3efffc06e03befa7c0efc6cf8c7fc00e7ecff82c03ffc1f00300000fcdfff067fcfe673c13df8fe0381bf60ffffe303f86f33effffc00001000620007e20000c2074781ffb040ffc00c0b9f86ffc83f8fc027d8f803000768f0001fbbe788fffff3fffce0060dffffffffc3f8007228020471f006e11c0001c1e79bff800000000fc8000000000000000000000003000000000000000000000000000000000000220c7cc8fbffffffffbfc78012378000003cff83c1000c000040200fffffff7ffbfb8e63861f9fff80c0fffc3b381601ff7fffdffe267e7ff0c00000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000400000000000000000020000000000000000000002000000000000000000000000000000000000000000000000000000000000020000000000000001000000000000000000000008000000000000000000000018000000000000000000000000c600000000000000008000030060000060000000000000000c30000c180081cf069f80000ffe42407ffe09806039fc107600003fbe39001f800e3446000ffff9f8ffc0001ffffc7f81ce1cffcc7f002387e7c33fe03dc07ffee000ffffe586dbf0c03001bffff7a7e03ff09ff81b76799fff213c0ce404c006c1e0718107fbff9ffe900fc7ffe7f3ffc10000000000000
+
+*** Saving signal to file g008_906.8M_2400k.cu8 (125801 samples, 262144 bytes)
+Detected FSK package	2026-10-21 21:18:24.020901
+Analyzing pulses...
+Total count: 1057,  width: 7.21 ms		(17301 S)
+Pulse width distribution:
+ [ 0] count:  269,  width:    1 us [1;1]	(   2 S)
+ [ 1] count:   24,  width:    8 us [7;10]	(  19 S)
+ [ 2] count:   12,  width:   13 us [11;16]	(  32 S)
+ [ 3] count:  127,  width:    2 us [2;3]	(   5 S)
+ [ 4] count:  115,  width:    1 us [1;1]	(   3 S)
+ [ 5] count:   94,  width:    3 us [3;5]	(   7 S)
+ [ 6] count:  236,  width:    0 us [0;0]	(   1 S)
+ [ 7] count:   85,  width:    2 us [2;2]	(   4 S)
+ [ 8] count:   59,  width:    5 us [4;6]	(  11 S)
+ [ 9] count:    4,  width:   10 us [10;11]	(  25 S)
+ [10] count:   21,  width:    6 us [6;7]	(  14 S)
+ [11] count:    5,  width:   25 us [22;30]	(  61 S)
+ [12] count:    1,  width:  217 us [217;217]	( 521 S)
+ [13] count:    1,  width:   54 us [54;54]	( 130 S)
+ [14] count:    3,  width:   37 us [32;42]	(  88 S)
+Gap width distribution:
+ [ 0] count:  131,  width:    2 us [2;3]	(   5 S)
+ [ 1] count:  112,  width:    1 us [1;1]	(   3 S)
+ [ 2] count:  237,  width:    0 us [0;0]	(   1 S)
+ [ 3] count:  238,  width:    1 us [1;1]	(   2 S)
+ [ 4] count:   94,  width:    2 us [2;2]	(   4 S)
+ [ 5] count:   68,  width:    4 us [4;5]	(  10 S)
+ [ 6] count:   44,  width:    6 us [5;7]	(  14 S)
+ [ 7] count:   20,  width:   10 us [8;12]	(  24 S)
+ [ 8] count:   14,  width:    8 us [7;10]	(  18 S)
+ [ 9] count:    3,  width:  224 us [213;245]	( 537 S)
+ [10] count:   52,  width:    3 us [3;3]	(   7 S)
+ [11] count:    6,  width:  104 us [93;125]	( 250 S)
+ [12] count:    2,  width:   42 us [40;43]	( 100 S)
+ [13] count:   14,  width:   19 us [16;22]	(  46 S)
+Pulse period distribution:
+ [ 0] count:  256,  width:    3 us [2;4]	(   7 S)
+ [ 1] count:   78,  width:    9 us [8;12]	(  22 S)
+ [ 2] count:   34,  width:   15 us [12;18]	(  35 S)
+ [ 3] count:  102,  width:    2 us [2;2]	(   5 S)
+ [ 4] count:   13,  width:   22 us [18;26]	(  53 S)
+ [ 5] count:  106,  width:    2 us [2;2]	(   4 S)
+ [ 6] count:  172,  width:    5 us [4;7]	(  12 S)
+ [ 7] count:   26,  width:    1 us [1;1]	(   2 S)
+ [ 8] count:  108,  width:    1 us [1;1]	(   3 S)
+ [ 9] count:   72,  width:    4 us [4;5]	(   9 S)
+ [10] count:    4,  width:  223 us [214;245]	( 535 S)
+ [11] count:   55,  width:    7 us [6;8]	(  16 S)
+ [12] count:    7,  width:  108 us [94;127]	( 259 S)
+ [13] count:    6,  width:   38 us [31;43]	(  91 S)
+Pulse timing distribution:
+ [ 0] count:  507,  width:    1 us [1;1]	(   2 S)
+ [ 1] count:   60,  width:    8 us [7;10]	(  19 S)
+ [ 2] count:   37,  width:   12 us [10;16]	(  30 S)
+ [ 3] count:  252,  width:    2 us [2;3]	(   5 S)
+ [ 4] count:  227,  width:    1 us [1;1]	(   3 S)
+ [ 5] count:  152,  width:    3 us [3;5]	(   7 S)
+ [ 6] count:  473,  width:    0 us [0;0]	(   1 S)
+ [ 7] count:  179,  width:    2 us [2;2]	(   4 S)
+ [ 8] count:  131,  width:    4 us [4;6]	(  10 S)
+ [ 9] count:   49,  width:    6 us [5;7]	(  14 S)
+ [10] count:   19,  width:   24 us [20;30]	(  58 S)
+ [11] count:    4,  width:  222 us [213;245]	( 533 S)
+ [12] count:    3,  width:   59 us [54;66]	( 141 S)
+ [13] count:    5,  width:   39 us [32;43]	(  93 S)
+Level estimates [high, low]:   3717,     83
+RSSI: -6.4 dB SNR: 16.5 dB Noise: -23.0 dB
+Frequency offsets [F1, F2]:    -541,   -101	(-19.8 kHz, -3.7 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {17360}c03ffffc7fffffff7fb9fffffffff87ffffe67fe0befe01f9af981003fffff37b9fc07f0204000d00103fe00000008001800000800000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c04007c09879cffffd00fcc118ff3f8d1f80601f1fc1700000000000000000000000000000000000000000000000000000000000000000000000000061ffc0020867edfbe000007031f9feffc0f87ffb67cfdc0c26bffd3f1f7efdc1e0f864c460664767c01ffffff6062902770004b001fffbff1987ffffb0407fc3f4c0014f2ff003e7fff800603fe7c0000001f300ff061800002000000000000000000000000020000000000c0000010000000000000000000000000000000000000000000000000000000020000000000000001c107ff83f3ffffffffe7fe7fcffff1cfcb9ff241ff0004000080000e0000000000000000000000000000000000000000000000000000000000000001e1002000ef8ff1c87f8000fbfffff8fffffffffffffdfffbf7f9fdfdf9c00000000000000000000000000000000000000000000000000000000000008000038fffffffdf7b7ff783de678ff9f3c004c800fffe8e60707f8000300000000000000000000000040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000000000004000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007fcfffe7ffff8df7ff01c107001fc07fb7809821067f00ec5feffdffe1efef9f7f1fc7a03fdfffc04cfcdf01ff1cdc3f7f0000301f601c433efcff0318603c327ffe3307e6308383c1f3e0cf062401ff990011800007fc3ef8e1ef1c1cdffffc3fbf99cc07ffe401801c4ff1e006100003fbfff7bf0e60ffc000100001c81ff183f068f99c01dc70580e60e1604e400000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c00403c0f84f9898e03c70000c0000009fe1e1f300dfffffffc009000000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000030000000000000003000000070c0000000100000c18000002020000000000000040000000000cce000000180fe1f7feef8707c1c247efe7fefff0f80018c7ccf80f8379bc7fc7d867ffffb4000033fdde76c30205ffa3fe3020003303ff8ffdedffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0120064000818200401dde6000081e60003ec71081cfffc000200783ec7ff10c7ff0c090027319260fc300000000361000000061c0003fdffffffffffffffffffffffffffffffffbfffffffffffffffffffff9fffffeffffffffffffffffbffffffff01fffffdfbdfffffffffffffffffff3fffdf7ffc3fff3f8ef7ffefa7fd876891fff1fc7f07fffa5ff06ffe00f8260007037f8f1f8061f07711de09b98007e0f7c00fffff19e03f3c01c0000464001000000000000000000000000000000000000000200000000000001001700006fe1fffffffd7ffffffff9ffff7fff83fffffd9ffbf87fffef6cef9ffe0018000201c1f39b30f01c30dffcdbe662000cc00080360006ff3ffde00e00c0000000400000000008080000000000000000800000002000000000000000001801304007801002000000000008180000000ffce7cf9fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff9ffffff87ff00002037f87c3f8000c33f21fffff7ffc87effdfe04000000000c1c000473f0000000000004300018301800030604fe0f800c3ffffffffffffff7fffcffdffffffffffffffffff7ffff91f7ffffffff460000000000080000000000001e2060000000000000000000000000000000001800fff9c2fefffddf9fdbc1e40103f7c0001e7e9e00000201a0300003ff07e0fe27fffd3f883e3c1003c006000083f3cf367cff8ff33fe3f98e00400000000000000000000000000000000000000000000000000000000000000c0073fdffffff9fffc619edff98c6f2ffe9effc33c399f986fd800100000000180000000000000000000000000000000000000000000000000000000f8fffffffffffffffffffffffffbe67ff9ffffffffffffff7fff37f7ffff9fffffffc0781ffe0fe00000fffdffff9867c2580000e1ff9ff801f00e006327ff006e000f787e0008007e0bbfee1800070fe0c39c07ffffff0f63e1e0fff0000000000001000000000000040000186000000020000000060e0000000006000000000001ffa3ef23f0ce0fffe001f03bfc0611e1fe07f0138181ff78001f0ffe07d80c181e207f840fa1c20080033ff82136083011ca7b839d8883fff02700003000030000000000000604707f4000e000cd0178fffcf47cc3fc03f7f3fffffe3b3800478ff0ff00460325e100078307f0000e004c0000431c1ffb3ff81fbfffe00267000e017ec1ffe1f8fe07301fec4dbdf0c011ff7fb3fff11e00087f87f0300398010019e0defc7fc000000023f100c6080afef38e00030001c010401ff0fbdff87f20f0e401fce1f71f3003203feec037899ec03fffff00720060207f3cffe6f3603e79300049e0000cf006000f200860618000006049db1b3f063fff27fff7fbefff3fffedffffffdff800000000000000
+
+*** Saving signal to file g009_906.8M_2400k.cu8 (125801 samples, 262144 bytes)
+Detected FSK package	2026-10-21 21:18:25.778284
+Analyzing pulses...
+Total count:  897,  width: 5.84 ms		(14012 S)
+Pulse width distribution:
+ [ 0] count:   78,  width:    2 us [2;2]	(   4 S)
+ [ 1] count:  143,  width:    2 us [2;4]	(   6 S)
+ [ 2] count:   45,  width:    6 us [5;9]	(  15 S)
+ [ 3] count:  196,  width:    0 us [0;0]	(   1 S)
+ [ 4] count:  231,  width:    1 us [1;1]	(   2 S)
+ [ 5] count:   38,  width:    4 us [4;6]	(  10 S)
+ [ 6] count:  103,  width:    1 us [1;1]	(   3 S)
+ [ 7] count:   12,  width:    3 us [3;4]	(   8 S)
+ [ 8] count:    7,  width:   51 us [43;63]	( 122 S)
+ [ 9] count:   15,  width:   10 us [9;12]	(  24 S)
+ [10] count:    2,  width:  207 us [207;208]	( 497 S)
+ [11] count:    3,  width:   75 us [72;80]	( 181 S)
+ [12] count:    7,  width:   29 us [25;34]	(  69 S)
+Gap width distribution:
+ [ 0] count:  212,  width:    1 us [1;1]	(   2 S)
+ [ 1] count:  105,  width:    1 us [1;1]	(   3 S)
+ [ 2] count:  209,  width:    0 us [0;0]	(   1 S)
+ [ 3] count:   98,  width:    2 us [2;3]	(   5 S)
+ [ 4] count:   69,  width:    4 us [4;5]	(  10 S)
+ [ 5] count:   66,  width:    2 us [2;2]	(   4 S)
+ [ 6] count:    1,  width:   34 us [34;34]	(  82 S)
+ [ 7] count:   16,  width:   14 us [12;17]	(  34 S)
+ [ 8] count:   28,  width:    7 us [6;9]	(  17 S)
+ [ 9] count:   59,  width:    3 us [3;3]	(   7 S)
+ [10] count:   11,  width:    5 us [5;7]	(  13 S)
+ [11] count:    3,  width:   20 us [19;22]	(  47 S)
+ [12] count:    5,  width:   55 us [48;60]	( 133 S)
+ [13] count:   10,  width:   10 us [10;11]	(  24 S)
+ [14] count:    1,  width:   27 us [27;27]	(  65 S)
+ [15] count:    2,  width:   92 us [88;96]	( 221 S)
+Pulse period distribution:
+ [ 0] count:  161,  width:    2 us [2;3]	(   5 S)
+ [ 1] count:  165,  width:    4 us [4;6]	(  10 S)
+ [ 2] count:  114,  width:    3 us [3;4]	(   7 S)
+ [ 3] count:   77,  width:    8 us [7;12]	(  19 S)
+ [ 4] count:   27,  width:    1 us [1;1]	(   2 S)
+ [ 5] count:   91,  width:    1 us [1;1]	(   3 S)
+ [ 6] count:   78,  width:    6 us [5;8]	(  14 S)
+ [ 7] count:    9,  width:   30 us [25;35]	(  71 S)
+ [ 8] count:   33,  width:   15 us [12;18]	(  35 S)
+ [ 9] count:   99,  width:    2 us [2;2]	(   4 S)
+ [10] count:   12,  width:   54 us [45;63]	( 129 S)
+ [11] count:   10,  width:   11 us [10;12]	(  26 S)
+ [12] count:   10,  width:   20 us [18;22]	(  47 S)
+ [13] count:    3,  width:  208 us [207;208]	( 498 S)
+ [14] count:    5,  width:   83 us [73;97]	( 199 S)
+Pulse timing distribution:
+ [ 0] count:  144,  width:    2 us [2;2]	(   4 S)
+ [ 1] count:  274,  width:    2 us [2;4]	(   6 S)
+ [ 2] count:   75,  width:    6 us [5;9]	(  15 S)
+ [ 3] count:  405,  width:    0 us [0;0]	(   1 S)
+ [ 4] count:  443,  width:    1 us [1;1]	(   2 S)
+ [ 5] count:  107,  width:    4 us [4;6]	(  10 S)
+ [ 6] count:  208,  width:    1 us [1;1]	(   3 S)
+ [ 7] count:   38,  width:    3 us [3;4]	(   8 S)
+ [ 8] count:   12,  width:   52 us [43;63]	( 126 S)
+ [ 9] count:   36,  width:   10 us [8;12]	(  23 S)
+ [10] count:    3,  width:  207 us [207;208]	( 497 S)
+ [11] count:    5,  width:   82 us [72;96]	( 197 S)
+ [12] count:   10,  width:   29 us [24;34]	(  69 S)
+Level estimates [high, low]:   3748,     78
+RSSI: -6.4 dB SNR: 16.8 dB Noise: -23.2 dB
+Frequency offsets [F1, F2]:    -515,    -93	(-18.9 kHz, -3.4 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {14069}f3fe3fdffff817fffe00607ed800618fcbf9fc9fe3fff7f603ffc0f3c6f83fc3fffb83e20000000000000000000040000000004c003000003e0088c300f800e040000ff8200001e7ce383f9fc63138f83c8984e0001e0000fe7fc310e7c6cc8e3dffffffffffffffffffffffffffffffe7ffffdff67ffffff3ffffc1e200001001000000002000000000000180000000000000000000000000000627f5dfefffcfe337fffde013bfe0000009037818046108c0fffcffff8d9e62020301c00003fffc800030180000ff7000d801bff9feff183f8030e806600803dffc18fb061e1867fffe7fb8ff9ff3e6d870fa141fef063ffb862002001e0181ffccfb9e0007e080200dc581fff37c100004037e8bdf0186cf9c78631dfffa3ffc01c7803e60183fffffff7cf1efffffdfff8dff67fff3c7fffe380bc07803807cce03a7c801b0327bff09f9e4e1cf84e031cff1dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff967e6020023c800019e77801980713803fce0003ce7f002199ffffffffffffffffffffffffffffffffffff7fffffffffffffffffffffffff8ffff3f7fcf3fe0000000010087ffef007c078dc04c0039201b1ffc3e000387fffb1bfffffe7fffffffffffffffffffffffffffffffffffffffffffeffffdc4e03100000001000000000300000200000007c10000006000000040800080000101000000000fc0d9f00a3f0038040381ffe6f9fff1381ffffc4e4e20ffffffffffffffffffffffffffefffffffffffffffffffffffffff7efc0067c400000021800000000080c000f0000040fbf81000019effffff3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdfffe7f9fc7fff0d980fffecfe5a4198f3fe11e3d23cf80e000606e9fe787fffffffffffffffffffffffffffffffffffffffffffffffcdffffffffffffffffeffffffffbfffffffffffffffffffffffffffffffffffffffffff7fffffffffe7fffffffffffffffe6ffffffffdbffffffe79ffffffffc87f79ce03e010e0027e7fe0001f8380ff1800ff8013240fdcd8118381e002000000000000000000000000000000000800000000000000000000000000000000000264000fffffdfffe70f833dff707f0ff0fc3ffffb4e09184bce0706000000000008000000000000000000000000000000000040000000003001e3bffffffffffff79fffffbffffffffffffffffffbffffeffffffffffe1e7fd8180000400b405837301e0641ffe40c443fcc13f0790f0feff7fe7863fffffffffffffffffffffffffffffffffffffbfffffffffeffffffff3ffe00000000000000000000000000000000100000000000000006800c0000007bfe7fffffffffffcffffffffffffffeefffffffffdbffb0ffffffffff81f000b000001c4770000004000007007d8018807803fffe0783dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff86f0040408000000000400000180c0020007b80000c19800ff85806ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff9ffffffffffffffeffffffffffffffffffff5fffffffffffffffffffffffffffff7ffffffe7fffffffffffffffffffcfffffeffffffffffc7fffcdf800000000000000000000000000000000000000000000000000006600181fffff3eff7fffe7ffeddfffffffffcfbfffbf8003ff600407f0204000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000001303ffffffddfe7fff3fc0401c8203b0f832f030cfffcffc80c4300008000000000000000000000000000000000000000000000000000000000e11807e7fffffffdfffff7ffffffffeffb67fdf82ffc0fc3e00fbf3ef8ecf38043cffdc382f87effddf83ffff3cc21fedfff3fc7fc4c304ec600c00b067ff00000010000000360000000078201f0460001c33ff7b03efe000ffffdfe0009c46f81fff233e005c0f60060000f81ec0160170060331fe00fe400ff8301ff670f063fcf0047fffc00000210ffa6f8009e0dbf801847fff967fffec9fc63fff23027fff1e7f60007df619e701800079df40cfc000710e33ffe0fcfc74c8d9fb3038c08390131001e01379c0001fec01fdecc0307ffffff7f0040efc986c40600c033f8feff1f830f006005e38b380018380077ff0e000180507003e66001f41fc000004006000000000007ffdf388000000607c023e1e630733fffbf77fe7e001c8fc1c9fff07e0ff01fe0c00063801f80307ff000000000000000
+
+*** Saving signal to file g010_906.8M_2400k.cu8 (125800 samples, 262144 bytes)
+Detected FSK package	2026-10-21 21:18:27.349288
+Analyzing pulses...
+Total count:  949,  width: 6.76 ms		(16232 S)
+Pulse width distribution:
+ [ 0] count:  101,  width:    1 us [1;1]	(   3 S)
+ [ 1] count:  107,  width:    2 us [2;2]	(   5 S)
+ [ 2] count:  224,  width:    1 us [1;1]	(   2 S)
+ [ 3] count:   19,  width:   10 us [8;12]	(  24 S)
+ [ 4] count:  210,  width:    0 us [0;0]	(   1 S)
+ [ 5] count:   61,  width:    3 us [3;3]	(   7 S)
+ [ 6] count:    3,  width:   75 us [71;83]	( 181 S)
+ [ 7] count:   11,  width:   23 us [20;27]	(  55 S)
+ [ 8] count:    4,  width:   30 us [29;33]	(  73 S)
+ [ 9] count:   60,  width:    4 us [4;5]	(  10 S)
+ [10] count:   56,  width:    6 us [5;7]	(  14 S)
+ [11] count:   73,  width:    2 us [2;2]	(   4 S)
+ [12] count:   10,  width:   14 us [12;17]	(  34 S)
+ [13] count:    6,  width:    8 us [8;8]	(  18 S)
+ [14] count:    2,  width:  101 us [98;104]	( 242 S)
+ [15] count:    1,  width:  130 us [130;130]	( 311 S)
+Gap width distribution:
+ [ 0] count:   93,  width:    3 us [2;4]	(   7 S)
+ [ 1] count:  224,  width:    0 us [0;0]	(   1 S)
+ [ 2] count:   73,  width:    2 us [2;2]	(   4 S)
+ [ 3] count:   86,  width:    2 us [2;2]	(   5 S)
+ [ 4] count:  114,  width:    1 us [1;1]	(   3 S)
+ [ 5] count:  216,  width:    1 us [1;1]	(   2 S)
+ [ 6] count:    3,  width:  216 us [198;230]	( 519 S)
+ [ 7] count:   42,  width:    6 us [5;8]	(  15 S)
+ [ 8] count:   45,  width:    4 us [4;5]	(  10 S)
+ [ 9] count:    7,  width:   18 us [15;21]	(  42 S)
+ [10] count:    2,  width:   28 us [27;28]	(  66 S)
+ [11] count:   24,  width:   10 us [9;13]	(  25 S)
+ [12] count:    4,  width:   47 us [42;52]	( 113 S)
+ [13] count:    5,  width:   98 us [85;112]	( 236 S)
+Pulse period distribution:
+ [ 0] count:  169,  width:    4 us [4;5]	(  10 S)
+ [ 1] count:  103,  width:    2 us [2;2]	(   4 S)
+ [ 2] count:  233,  width:    2 us [2;3]	(   6 S)
+ [ 3] count:   42,  width:    3 us [3;4]	(   8 S)
+ [ 4] count:   60,  width:   11 us [9;13]	(  26 S)
+ [ 5] count:    7,  width:   80 us [67;95]	( 193 S)
+ [ 6] count:   16,  width:   22 us [19;26]	(  52 S)
+ [ 7] count:    8,  width:   29 us [27;34]	(  70 S)
+ [ 8] count:   23,  width:    1 us [1;1]	(   2 S)
+ [ 9] count:  100,  width:    1 us [1;1]	(   3 S)
+ [10] count:  132,  width:    6 us [5;8]	(  15 S)
+ [11] count:    3,  width:  217 us [198;230]	( 520 S)
+ [12] count:   25,  width:    8 us [8;8]	(  19 S)
+ [13] count:   16,  width:   15 us [14;17]	(  36 S)
+ [14] count:    4,  width:   48 us [42;53]	( 114 S)
+Pulse timing distribution:
+ [ 0] count:  215,  width:    1 us [1;1]	(   3 S)
+ [ 1] count:  217,  width:    2 us [2;2]	(   5 S)
+ [ 2] count:  440,  width:    1 us [1;1]	(   2 S)
+ [ 3] count:   44,  width:   10 us [8;12]	(  24 S)
+ [ 4] count:  434,  width:    0 us [0;0]	(   1 S)
+ [ 5] count:  110,  width:    3 us [3;3]	(   7 S)
+ [ 6] count:    7,  width:   80 us [66;94]	( 191 S)
+ [ 7] count:   16,  width:   22 us [19;27]	(  54 S)
+ [ 8] count:    5,  width:   30 us [28;33]	(  72 S)
+ [ 9] count:  123,  width:    4 us [4;5]	(  10 S)
+ [10] count:   93,  width:    6 us [5;7]	(  14 S)
+ [11] count:  146,  width:    2 us [2;2]	(   4 S)
+ [12] count:   18,  width:   14 us [12;17]	(  33 S)
+ [13] count:   14,  width:    8 us [8;8]	(  18 S)
+ [14] count:    5,  width:  103 us [98;112]	( 247 S)
+ [15] count:    1,  width:  130 us [130;130]	( 311 S)
+Level estimates [high, low]:   3630,     82
+RSSI: -6.5 dB SNR: 16.5 dB Noise: -23.0 dB
+Frequency offsets [F1, F2]:    -517,    204	(-18.9 kHz, +7.5 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {16280}e0077ee18300c7e3fffff847ffffff7fbffffffffffffffffffffffffffffffffffffffffff7fffffffffffff7fffffdffffffffffffffffff7ffffe7fffff85ffbfffffc7ffff8ff37ffe3c0dfe0f870fe067f3307e7e7fedbe7c01e7c0ffa019804000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006f7f091f3c137f980001800343f7ffdfffea1999bffbf8000000000003e1600000000003280000000000000000700000000060040000000cfffffffffbfffef7ffffffffffffe70fffffffffefff9ffffffff2003804000000000000000000000000000000080000000000000000000000000200400e2303f7ffe7fb4f03f80380003fef01fbf24080000020fffffff180000000000000000000000000000000000000000000000000000000000000000003cfc0fcfffe7f323f07ffc1ff1bff7e000040fffffffc1f803600780042001c001f80e007bfe00941181f0cfff83fffffff9fffe27ffc447f9ff89ffff18ffe0000006dbfc00018f80003e7f81fe0007efdfbff80c03039a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000073f1dffffdffffffffffffb7fffffffffffe7ffffffffffffffffeff0ffdfffdfffffff9fffffc7ffdeff06ffff0123fff90c9fffefc8fff3ffffe700631fff9fd000f00dfc01b881c0063c3e0f3b03e01bfffdffe7fe74f60003e0c00000000000000000000000000000000000000000000000000006030801c7fffdffffffe7fffefffffffbffdffffffffffffff27cfffffffbfdff00080008010060020000000000060000001000000000000000000000000083c00780c20307d80000000020000030000006001ffc137072463fff60defffffffffffffffffffffffffffffffffffffffffffffffffeffffffffff021f80000003fc00001fff80001800184100000c81f0427f040cfc00e60f19fb913ffe09e7f03e00201df01ffff7fe3fee4cec3e0004203e09076c070f701f9e1180000003000003c60fffc0ffdff9c0040000000787be1f313fffffffeffffffffffffffffbffff7fffffffffffe7ffffffffffffffffef8f20010000200000000000000008000000000000000000000000000000000000000c0000c0002006000000038001ec00118000000360003fffd2c7fff7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe00001e00000040000000000000000000000000000004807803000c008761e018267dfe706001cf8f781e7f36fff8e73dfc00040800000277ffffceffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0ff6000600000000fdc03ff87ffdffc25f8c047ffffffffffff7fd8037fffe3beffff9f6eff3c71c0000803001ffff006001ff80c6078000430002000011fffdcf7ff37fc001c87bfe2cd8003fce6c3bfe7fe000030833e9134107ff827fefff83f97983e3383007ec1e0fce78000026f869fff8107efffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe7ffffffffffffffffffffffffffffffffffffffffffeffffe9bbbffc00030003a670180c304e0e0f33fc27f780103fe70000c01f0f031a300060e8ffef6003800070033fe08c007fdf07e61f33fdffe7fe3be19fffffffffffffffeffff7ffffffffff9fffffffffffffffffffcffffffffffff9fffffffffffffffbfff9938ffffaffeffefbfbe3381103f08000e0000000000000000000000000000000000000000000000000000000000018803fdfdffdffffffeffe3f3fff3ff3effff7d88f06ff1901fc0ffff3ec1e00018df9fb180187030f3f7fb00c475ec39e0fffbffe7fffc02088318dfc7e3807ff7ffffeffc05fc33f8667e381d00019801ff87e0ff00050000470fc3f38104c0f7cc33f081f80e04fc07e5fe471ffcffe187301fe5f3cb1ffffffffc3f0400070c0000ff800f000100b3841e37ff0e037ce0f3ffff7b83fc77fffff7fffdefcfe52fff1bff813fff000000001f800000240304000020200088f19f0830000000000003000e001f83f8e1fffc1607198ffff39ff88fc210001fffbffffc87fffffe3fffffffff1fefff000001a43c807ff30047ff003ce19f88087f98c1fa2081fe004cccc010004e0070000034c400ffc6f827f80c00000200000360c3fef9c91e3f3006d9c003ffe7fe0c3f079f1dff7f00600009981fc000030013c427ff8e0c06405e03f00000110000000c00000000000000000000000000000000000000000000000000000000c800871ef7f1f7e1ff9f8601c41e06078fe6ff247e8cb981ffe01f3ee3a7f9f3e7873c0c1bfff7be30fe0301c7f9ccc8038003f80000001002f00c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000007ff79000000000000
+
+*** Saving signal to file g011_906.8M_2400k.cu8 (125801 samples, 262144 bytes)
+Detected FSK package	2026-10-21 21:18:30.670179
+Analyzing pulses...
+Total count: 1147,  width: 6.57 ms		(15769 S)
+Pulse width distribution:
+ [ 0] count:  134,  width:    2 us [2;2]	(   5 S)
+ [ 1] count:  270,  width:    0 us [0;0]	(   1 S)
+ [ 2] count:   61,  width:    3 us [3;3]	(   7 S)
+ [ 3] count:   55,  width:    6 us [5;7]	(  14 S)
+ [ 4] count:  269,  width:    1 us [1;1]	(   2 S)
+ [ 5] count:  142,  width:    1 us [1;1]	(   3 S)
+ [ 6] count:   88,  width:    2 us [2;2]	(   4 S)
+ [ 7] count:    9,  width:   20 us [18;25]	(  49 S)
+ [ 8] count:    7,  width:   44 us [38;51]	( 106 S)
+ [ 9] count:   22,  width:   10 us [8;13]	(  24 S)
+ [10] count:   60,  width:    4 us [4;5]	(   9 S)
+ [11] count:    3,  width:  102 us [89;116]	( 245 S)
+ [12] count:    4,  width:   67 us [61;72]	( 160 S)
+ [13] count:    3,  width:   15 us [14;17]	(  37 S)
+ [14] count:   15,  width:    8 us [8;9]	(  18 S)
+ [15] count:    5,  width:   29 us [26;32]	(  70 S)
+Gap width distribution:
+ [ 0] count:  255,  width:    0 us [0;0]	(   1 S)
+ [ 1] count:  142,  width:    2 us [2;3]	(   5 S)
+ [ 2] count:  286,  width:    1 us [1;1]	(   2 S)
+ [ 3] count:  117,  width:    1 us [1;1]	(   3 S)
+ [ 4] count:   23,  width:   10 us [9;13]	(  25 S)
+ [ 5] count:   50,  width:    6 us [5;8]	(  15 S)
+ [ 6] count:    8,  width:   21 us [18;25]	(  50 S)
+ [ 7] count:   97,  width:    4 us [4;6]	(  10 S)
+ [ 8] count:   86,  width:    2 us [2;2]	(   4 S)
+ [ 9] count:   64,  width:    3 us [3;3]	(   7 S)
+ [10] count:    1,  width:  215 us [215;215]	( 515 S)
+ [11] count:    4,  width:   93 us [86;108]	( 224 S)
+ [12] count:    3,  width:   43 us [40;50]	( 104 S)
+ [13] count:    3,  width:   16 us [15;18]	(  38 S)
+Pulse period distribution:
+ [ 0] count:  194,  width:    2 us [2;3]	(   5 S)
+ [ 1] count:  162,  width:    3 us [3;4]	(   7 S)
+ [ 2] count:  115,  width:    8 us [7;11]	(  20 S)
+ [ 3] count:  132,  width:    1 us [1;1]	(   3 S)
+ [ 4] count:   19,  width:   21 us [18;27]	(  51 S)
+ [ 5] count:   10,  width:   45 us [38;51]	( 107 S)
+ [ 6] count:   25,  width:   13 us [11;15]	(  31 S)
+ [ 7] count:  194,  width:    5 us [5;7]	(  13 S)
+ [ 8] count:    7,  width:   31 us [28;33]	(  75 S)
+ [ 9] count:  117,  width:    2 us [2;2]	(   4 S)
+ [10] count:  118,  width:    4 us [4;5]	(   9 S)
+ [11] count:   37,  width:    1 us [1;1]	(   2 S)
+ [12] count:    6,  width:  100 us [88;117]	( 239 S)
+ [13] count:    6,  width:   70 us [62;87]	( 168 S)
+ [14] count:    1,  width:  215 us [215;215]	( 516 S)
+Pulse timing distribution:
+ [ 0] count:  274,  width:    2 us [2;2]	(   5 S)
+ [ 1] count:  525,  width:    0 us [0;0]	(   1 S)
+ [ 2] count:  127,  width:    3 us [3;3]	(   7 S)
+ [ 3] count:  125,  width:    5 us [5;7]	(  13 S)
+ [ 4] count:  555,  width:    1 us [1;1]	(   2 S)
+ [ 5] count:  259,  width:    1 us [1;1]	(   3 S)
+ [ 6] count:  174,  width:    2 us [2;2]	(   4 S)
+ [ 7] count:   19,  width:   20 us [18;25]	(  49 S)
+ [ 8] count:   10,  width:   44 us [38;51]	( 105 S)
+ [ 9] count:   46,  width:   10 us [8;13]	(  24 S)
+ [10] count:  125,  width:    4 us [4;5]	(   9 S)
+ [11] count:    7,  width:   97 us [86;116]	( 233 S)
+ [12] count:    5,  width:   66 us [61;72]	( 158 S)
+ [13] count:    7,  width:   15 us [12;17]	(  35 S)
+ [14] count:   28,  width:    8 us [7;9]	(  18 S)
+ [15] count:    7,  width:   29 us [26;32]	(  70 S)
+Level estimates [high, low]:   4060,     82
+RSSI: -6.1 dB SNR: 16.9 dB Noise: -23.0 dB
+Frequency offsets [F1, F2]:    -531,   -110	(-19.4 kHz, -4.0 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {15815}fa07f7fffc06e7fff818f381ffffffffffffdfffffffffffffffffffffffff7e7ffffff03ffe7dffffffffffff800000080000c000000000000098000002001900000800101b00000000fc1eff83027b81fe2fe0c0fb7ec0b7ef9c001ffb77fff6cc3260fe0cf89cffe1f9bf2c7e0f80000e01fbfcd380f087619800193f7c39e0f3b980fffffffbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff1fffffffffffffffffffffffffffffffffffffffffff3fffff8c001b0020000000000000e0000001be00004008c81e1c0fe0001bdf000600267f0084607f9fcf1ffffff47ffcffc60077fe23f3700803edfe47f8180fffe0fffffffcffffffff3ffffffff1c1ffffcf3c07ffffff941004fc0000c840386fcc67ff983880007800f0003ec08000800008207b307fe618c10000c86b9801e0063c7ee7f9ef38de79df9c09de267f00410600040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040039dfc0fffff9127a19007c7feffc00bfcfe07ffc3c9b7000c80000000000000000000000000000000000000000000000000000000000000000fff0003e7fddffd9f9ffc9bfe80700400dffffcf807f861000713c000878000000300000000000000000000000020000000000000000000000009ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffc0e900007fff00401cc7cb008c902667ff4039e3f0808180e8c921fce7063fc00fc07ffcff803ff88003000e7410018390e73ffbcc23fbfcd0020020cb3f0602001830601e00b3f80040e784380c398901ff9e003e4fe0ff800f900070ff21f800876c0000dc70000002604000380002400c3f061b007021fe6ffdfffffe0087061fe60fdf8c1b00ffbefffcf3f9240079ec403c0000801ffc0040183f0003c3fffff8e21e6e7981800207e80f36c22f807feffff003f03c3bbe3fffdf0fa1b000e9e00007ff7ffffeffff87f0ffc7ff37fbf0004007f103fdcfffff03ff8cdc3ffff93607ff801fffcfce5ff1f007bff7fffbffff7ff87ccfc0020373df338c7ffffe600633b8fef8047fffeffffffffffffffffffffffffffffffffffffffffefffffffffffffffe77b332f011802013f0001c38207c3ffc03e27cbe76101864180be60c38008006fdff07f031003fffe01e01c1f80723701e0048004586f08003f97eff007fbdf91c7f00040003ffff7ff9983e0c1989fbf30783c38e07fcf84eb82ff0ff62003e001fd861903f13f3bf0279f7f19fefffc0312c07fffd81ffff9f9cc0fffceffdffffc03c807ffbff8f0020f81fe3be18090bc227c107cc7001c0000000bc207fef9fff9e093f8dc01f8dc01240f3eb487ddff81b9ff3fff380cfbfffffffffffeffffff7fffd83fffc00037d9938eee00000000007c180f6c83801267c0fc607e61f1e031ebf66e63fc000000e00000000000800018000000000000000000000000000000000000000000000000001ffe3fffffffffdffffffffffffdfffffffffcbfffffdffefffffdfff1fff200200030800000000000000000000000000000c000000000000000000f3effffe3fffffffffffffffffffffffffffffdfffffffffffffffffc0171000003018000000200400000000000000000000000000000000000003e7ffcffffffffffffffffff9feffffffffffffffffffffffffffffffffffffefff880320003c24000003fff80f03f0273c005fffffe7fffc07f9803fe600783e3dfffe1fc93c00001f3f1fffff0718bb873f4fc000008000000000060000080000030000080039203007ff8000009060003fcf83e6000001807024c000c72000003e0019ff808f82066066dcfdb00008200007d3ffefce7f8ffffdffffffffffe7fffffffffffffffffffffffbffffffffff6fffffcc3000400000000000000000000000000000000000000000000000000006603f047e7ff9fffe7ffe7effdff02fc003fe0e11ff6ffce0ffffdf805e001fffe0000ff8001fe000000000000c019eff0fcff831ff3f83cffffffdffffe7fc7ffbffff0ffc31bffc766007ff0e08f003ff302c1ff83fff807c0000007100000000000000000000000000000000000000000000000000000001cffffffffffff3ffffffffffffffffffffffbffffffffffffffffffffffffffff20072003800000325001b4f783c473f00001601ffffff00143fffffffffffefffffffffffffffffffffffffffffffffffffffefffffffffffffffffffffffff3fffffffffffffffffff7fffffffffffffffffffffffffffffefffffffffffffffffffffffffffffffffffffffffffffffffffffbfffe8c000000000008000000000000300000300000060000000000000000020000000006000200c001c240002007c0600700f837e07b000000000000001c000de000270838084000003801ef873e41067fefc001837e00c0ff213ffffe7fe003060066c03b6d381f1ffc07ec3feff8000000004ff80c800e0f07cffee00e001e00000f990000e0c65ff3c0899c10001fe10006420e7c0bfc0f703f0077e1f00df100001b96c113c30301ffffffffffffffffbfffe6004118f199c7701879e20709f06fffbfff7c03fe438fff07ff0c038f03fd0006c18e38fffe7e2e983303ffffffffffffff87f3f7f63fc003fffffe79f1183f8f01fffe8800000000000
+
+*** Saving signal to file g012_906.8M_2400k.cu8 (125802 samples, 262144 bytes)
+Detected FSK package	2026-10-21 21:18:32.377187
+Analyzing pulses...
+Total count: 1026,  width: 6.72 ms		(16126 S)
+Pulse width distribution:
+ [ 0] count:  121,  width:    1 us [1;1]	(   3 S)
+ [ 1] count:  247,  width:    1 us [1;1]	(   2 S)
+ [ 2] count:  119,  width:    2 us [2;3]	(   5 S)
+ [ 3] count:  230,  width:    0 us [0;0]	(   1 S)
+ [ 4] count:   52,  width:    3 us [3;4]	(   7 S)
+ [ 5] count:   85,  width:    2 us [2;2]	(   4 S)
+ [ 6] count:   52,  width:    6 us [5;8]	(  14 S)
+ [ 7] count:   49,  width:    4 us [4;5]	(   9 S)
+ [ 8] count:    4,  width:   54 us [49;58]	( 129 S)
+ [ 9] count:    6,  width:   36 us [31;40]	(  87 S)
+ [10] count:   12,  width:   17 us [14;20]	(  41 S)
+ [11] count:   24,  width:   10 us [8;12]	(  23 S)
+ [12] count:    4,  width:   25 us [23;27]	(  59 S)
+ [13] count:   12,  width:    8 us [8;8]	(  18 S)
+ [14] count:    2,  width:  101 us [91;112]	( 243 S)
+Gap width distribution:
+ [ 0] count:   92,  width:    2 us [2;2]	(   5 S)
+ [ 1] count:  245,  width:    1 us [1;1]	(   2 S)
+ [ 2] count:  251,  width:    0 us [0;0]	(   1 S)
+ [ 3] count:   80,  width:    4 us [4;5]	(  10 S)
+ [ 4] count:   35,  width:    6 us [5;8]	(  14 S)
+ [ 5] count:  130,  width:    1 us [1;1]	(   3 S)
+ [ 6] count:   14,  width:    8 us [8;10]	(  20 S)
+ [ 7] count:   11,  width:   12 us [10;14]	(  28 S)
+ [ 8] count:   80,  width:    2 us [2;2]	(   4 S)
+ [ 9] count:   59,  width:    3 us [3;3]	(   7 S)
+ [10] count:    3,  width:   40 us [39;42]	(  96 S)
+ [11] count:    1,  width:  168 us [168;168]	( 404 S)
+ [12] count:    7,  width:   19 us [17;22]	(  46 S)
+ [13] count:    5,  width:   90 us [77;105]	( 216 S)
+ [14] count:    3,  width:   15 us [15;15]	(  35 S)
+ [15] count:    5,  width:   28 us [25;31]	(  66 S)
+Pulse period distribution:
+ [ 0] count:  194,  width:    2 us [2;3]	(   5 S)
+ [ 1] count:  118,  width:    2 us [2;2]	(   4 S)
+ [ 2] count:  111,  width:    1 us [1;1]	(   3 S)
+ [ 3] count:  176,  width:    4 us [4;6]	(  10 S)
+ [ 4] count:   99,  width:    8 us [7;11]	(  19 S)
+ [ 5] count:   28,  width:    1 us [1;1]	(   2 S)
+ [ 6] count:   39,  width:   11 us [10;15]	(  27 S)
+ [ 7] count:  137,  width:    3 us [3;4]	(   7 S)
+ [ 8] count:   60,  width:    6 us [5;7]	(  14 S)
+ [ 9] count:    6,  width:   58 us [50;68]	( 138 S)
+ [10] count:   10,  width:   38 us [32;42]	(  90 S)
+ [11] count:   25,  width:   18 us [15;23]	(  43 S)
+ [12] count:    1,  width:  169 us [169;169]	( 406 S)
+ [13] count:    8,  width:   27 us [25;29]	(  64 S)
+ [14] count:    5,  width:   82 us [76;92]	( 198 S)
+Pulse timing distribution:
+ [ 0] count:  251,  width:    1 us [1;1]	(   3 S)
+ [ 1] count:  492,  width:    1 us [1;1]	(   2 S)
+ [ 2] count:  211,  width:    2 us [2;3]	(   5 S)
+ [ 3] count:  481,  width:    0 us [0;0]	(   1 S)
+ [ 4] count:  111,  width:    3 us [3;4]	(   7 S)
+ [ 5] count:  165,  width:    2 us [2;2]	(   4 S)
+ [ 6] count:  100,  width:    6 us [5;8]	(  14 S)
+ [ 7] count:  115,  width:    4 us [4;5]	(   9 S)
+ [ 8] count:    6,  width:   57 us [49;67]	( 136 S)
+ [ 9] count:   10,  width:   37 us [31;42]	(  89 S)
+ [10] count:   22,  width:   17 us [14;21]	(  41 S)
+ [11] count:   42,  width:   10 us [8;12]	(  23 S)
+ [12] count:   10,  width:   25 us [22;28]	(  60 S)
+ [13] count:   15,  width:    8 us [8;8]	(  18 S)
+ [14] count:    7,  width:   93 us [77;112]	( 224 S)
+Level estimates [high, low]:   3638,     80
+RSSI: -6.5 dB SNR: 16.6 dB Noise: -23.1 dB
+Frequency offsets [F1, F2]:    -534,   -100	(-19.6 kHz, -3.7 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {16182}e0cd8007e000328fc00003f000000437f8007ef33cffffbdbfc1ff7f1fff2461fb8c65e3000b00236c040f2f9c8800ffc00f0cff1bff3fc1c98000181fe883c607dfcfbf8fd01fedfe01fc5ffd81001c30043c1f07f83187fdffffffffffffffffffffffffffffffffff87fffffffffffffffffffff97fffffffffe7fffeeffffffffffffffffffffffdffffff803fd8f3fd8403e00000000000000000000000c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020003fffffffffffff80fffc07fc07e7ffc00cfff00780fe83df87dc7e1a001000080000000000800200000040000000000000000000000000000000000000000000000000180000000000008000000000000180084300787e6cf3ffffffffffffffc7fffcffe7fffffffffff27bffefffffcfffb3b9fff84803f01cffc8703fff99c400db8447007fe1f0c7dfffe67ff900403f387ef0060200f8002019ce000803006001800183390000f307cc7e07ffff7fffffffffffffffffffffffffffffff3fffffffffffffffffffffffffffff77d23f0001c080080800000240781818df3ccffff0e267cb7e0dfff0703ffffffffffffffffffffffffffffffffffffffffffffffffffffff3ffff7fffffe0001800ec0002f927e003fe0007066c01f003fe7fdfdfee80604ff007cc003000d9f07ed8ff01c7fffe0efff0fe6c7fc673ffff00300ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe19f3207ff4ee00003e09f801bb043f3f9106ec3dff5d1ffffffffc3ffe6f80070a0f0c05e23ffdcf866f8fde4f3181fffffe03cf8f183fc63fb3e3ef87f8f1c03fffb1d3333f207c0f07e5d81fffffb3feffbefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7ffffffeffff99c7ff6dff0001f00020c01eddfc0006003e7000007f7fffffdfffffee3fffefffffffbfffff93c73e065efc3d80000000c24201fcfffc1fffffffffffffffffffffffffffffffffffffffffffff3dbffffffffe3fffffffff7fffffffffff1fdfff9fffffffc7fffffffffffffff83e7fffe1fbfffffff1c4800a1ff6c3c3be387ddbc665ffe19f23930733f63b0e0041c07dfff871808ff6eeffe003e300300f12fc7b23ffcfffddebf3cfbbff30ff830f78e0408b0069cf3d23ffff038007ff8fff3ffe01800003cc041f72603c080f88339ff63b8c39f0d800e1e787982e138f0803f39807be7ed0f27808001b80000000600020330619f809023fffe7ff067be41f01e4f02360020600f04e980fffe3fe3000000001f9307e03839bc006007ffe3fff9a3f9ff006002000000000000000000000000c04000c00000003fffdeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeffe3fff9fff880073fe6de0080ffffffbb9f937c07f3fd83ce37ffff3b01fff3fffffffffffcfffffffffffffff71bffdffcfffffffffffffffffffffffafc49e1cffffffc4e23d0ff0e1b801e0c37f041007ff3fb8e0c31c20fb600e01701bcc0f3c18203f18e07fffffffffce7ee7fcff0c0df8000000000000000000000000000000000000000000000000000000000000081c00600ffff8fffff33ff08fffcf3e7f8ffd87ffffbe7fffeffc000e03f9de03200000000000000000000000000000000000000000000000000000000000000224111f300fe007bfffe796fcd87ff91800001ff63ec401e0c381ff7de0000000800000000000000000000000000000000000000000000000004007f098ffffffffffdfffffe7ffde7ff07ffffbdfcfffff7f80e387ffee007f8c0000000080080000000000000000008000008007000000000003800079e3df801fffcfffffffffdc0807fc8119921a46999cc87df01e000220d00060000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000200000ffffdce3ffffffffc3fff00080005f800f8ff6dfdd8f8000000003fcfe1ff13fffc5ffcf87e007f800ffed0f70017effff3fff018c00fc9bc3310000020000001000000000020000000000000008000000000000000000000000000000000000000000000000000000000000000000000000000001dcc000080000000000000008002008008000000000000000204380d3e00007fe66fffffffffffffffffffffbffff7ffffffffffffffffff7fffffffc7fffffa000c080000330000c000000440180003000000448201c883f00000f700fffe6dfffffffffffffffffffffffffffffffffe1fffffffffffffffffffffffe7ffffffffff03fffc77cbf8fdfbffff747fe70398bc780c1ffd98c00200800000000000000000000000000000000000000020000000000000000100000000000000000000000008000000000000000000000000000000000000000000000200000000200000000008002000000000000c00019000000f97cc003f000006019f00981b00300070047fffffbfffffb848ff33f0007b86036f20c027d1b81ffe7d1f80021a60600fc00c39fb0fb22300fffffb0fff800030980007201fffff3fffff1fdff7fffefffffff1e07c7ffc7f3f207fffffe7fe400000000000000
+
+*** Saving signal to file g013_906.8M_2400k.cu8 (125801 samples, 262144 bytes)
+Detected FSK package	2026-10-21 21:18:33.988678
+Analyzing pulses...
+Total count: 1194,  width: 9.50 ms		(22793 S)
+Pulse width distribution:
+ [ 0] count:  267,  width:    0 us [0;0]	(   1 S)
+ [ 1] count:  281,  width:    1 us [1;1]	(   2 S)
+ [ 2] count:   40,  width:    8 us [6;10]	(  18 S)
+ [ 3] count:  113,  width:    2 us [2;3]	(   5 S)
+ [ 4] count:  140,  width:    1 us [1;1]	(   3 S)
+ [ 5] count:   88,  width:    4 us [3;5]	(   9 S)
+ [ 6] count:   39,  width:    3 us [3;3]	(   7 S)
+ [ 7] count:   54,  width:    5 us [5;7]	(  13 S)
+ [ 8] count:  101,  width:    2 us [2;2]	(   4 S)
+ [ 9] count:   16,  width:   15 us [12;19]	(  36 S)
+ [10] count:   17,  width:   11 us [10;13]	(  26 S)
+ [11] count:   12,  width:   48 us [39;57]	( 114 S)
+ [12] count:    2,  width:   94 us [85;103]	( 225 S)
+ [13] count:    7,  width:   33 us [30;37]	(  79 S)
+ [14] count:    9,  width:   23 us [20;26]	(  55 S)
+ [15] count:    3,  width:  197 us [172;212]	( 473 S)
+Gap width distribution:
+ [ 0] count:  122,  width:    2 us [2;3]	(   5 S)
+ [ 1] count:  288,  width:    0 us [0;0]	(   1 S)
+ [ 2] count:  139,  width:    1 us [1;1]	(   3 S)
+ [ 3] count:  268,  width:    1 us [1;1]	(   2 S)
+ [ 4] count:   94,  width:    2 us [2;2]	(   4 S)
+ [ 5] count:   83,  width:    4 us [4;5]	(  10 S)
+ [ 6] count:   58,  width:    6 us [5;8]	(  15 S)
+ [ 7] count:    8,  width:   33 us [28;39]	(  80 S)
+ [ 8] count:   22,  width:   12 us [10;15]	(  28 S)
+ [ 9] count:   22,  width:    9 us [8;10]	(  21 S)
+ [10] count:    3,  width:  200 us [181;211]	( 479 S)
+ [11] count:    8,  width:   55 us [45;65]	( 132 S)
+ [12] count:    5,  width:   22 us [20;24]	(  53 S)
+ [13] count:    8,  width:   16 us [15;18]	(  39 S)
+ [14] count:   58,  width:    3 us [3;3]	(   7 S)
+Pulse period distribution:
+ [ 0] count:  209,  width:    2 us [2;3]	(   5 S)
+ [ 1] count:   24,  width:    1 us [1;1]	(   2 S)
+ [ 2] count:  112,  width:    2 us [2;2]	(   4 S)
+ [ 3] count:  161,  width:    6 us [5;9]	(  15 S)
+ [ 4] count:  171,  width:    4 us [4;7]	(  10 S)
+ [ 5] count:  122,  width:    1 us [1;1]	(   3 S)
+ [ 6] count:   50,  width:    8 us [7;10]	(  20 S)
+ [ 7] count:  185,  width:    3 us [3;5]	(   7 S)
+ [ 8] count:   18,  width:   34 us [28;40]	(  81 S)
+ [ 9] count:   37,  width:   15 us [12;19]	(  37 S)
+ [10] count:   50,  width:   11 us [10;13]	(  26 S)
+ [11] count:    6,  width:  199 us [173;213]	( 477 S)
+ [12] count:   19,  width:   51 us [43;59]	( 122 S)
+ [13] count:   14,  width:   23 us [20;26]	(  55 S)
+Pulse timing distribution:
+ [ 0] count:  555,  width:    0 us [0;0]	(   1 S)
+ [ 1] count:  549,  width:    1 us [1;1]	(   2 S)
+ [ 2] count:   99,  width:    7 us [6;10]	(  17 S)
+ [ 3] count:  231,  width:    2 us [2;3]	(   5 S)
+ [ 4] count:  279,  width:    1 us [1;1]	(   3 S)
+ [ 5] count:  184,  width:    4 us [3;5]	(   9 S)
+ [ 6] count:   78,  width:    3 us [3;3]	(   7 S)
+ [ 7] count:   75,  width:    5 us [5;7]	(  13 S)
+ [ 8] count:  195,  width:    2 us [2;2]	(   4 S)
+ [ 9] count:   34,  width:   15 us [12;19]	(  35 S)
+ [10] count:   39,  width:   10 us [9;13]	(  25 S)
+ [11] count:   21,  width:   49 us [38;58]	( 117 S)
+ [12] count:    6,  width:   93 us [83;112]	( 223 S)
+ [13] count:   14,  width:   32 us [28;38]	(  77 S)
+ [14] count:   15,  width:   22 us [20;26]	(  54 S)
+ [15] count:    6,  width:  198 us [172;212]	( 476 S)
+Level estimates [high, low]:   3456,     79
+RSSI: -6.8 dB SNR: 16.4 dB Noise: -23.2 dB
+Frequency offsets [F1, F2]:    -514,   -106	(-18.8 kHz, -3.9 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {22850}814633ffffecfc0737ff03fcffffbfff79cc3fbffc20048000400000000000000000040000000000000000000000200000000600000119ffffffffff7fffffbffffffefffcfb87fe03e03f9ff0300790030000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000001be7fdbffffe067607fe11e7ffe31cf3f37fce0cf3f07fe71f26ff73b7f07c7ffcfbd80f1e7efe1b800fffe1fff83f8fdc000f7031800000000000000000000000000000000c000000000000000000000000000000718fffff8ffffffffffffffffffffffffffffffffcfffffffffbffbfdff1f80000000000000800000e000000000034020000000d000100080001000001c0000200000000000000000000000802000006098300104fcc0e6401fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdff3ff7ffd80c6119c780ff0761fc7b0e7fcec0001e3fb818070ec3e01918dfe003f8000080c00027e6403df1ff6ffffff9bfdfcf00f8183803ffe3831fffeffffffffffffffffffffbfffffe7f9effffffffffffe7fffffff7fffffff8fffffffffffffffffffdfe3fffffffffe7f1fffcffb3fff8418dffb7000ffff0fffbfffff7ffffec8ffe7e7f4e65e7f9fe39891c00c3c00004c678000000000000020000000000000f7b80000000001000180001c007037fffffcefffffffffffffffffffff2ffbfffffffffffff9fffffffffffffff00000003ec24007fffffc043e0000037e7ff379f9fffed83831f9c7017d2cffdf7ffdffffffffffffffffffffffffffffffffffffffffffffffffffeec0ffff800363c00b800007ffd003190080007fe3f0fff9ffff73fff7ffeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff486006000000000c7800360001b30001f3f833dd000013e2001c26f7cffff3fffffffffffffffffddffffffbffffffffffffffffffffffffc107f8600000000000000000400003001e000000000000000000000000000cc80000003800211007ffec7fcff0fff3b9fff7ffff7f39f81ffec31c5f33ff0000080c060fd13f202f23e0401ffe018740bffe00000067f1ecc0e1fe1fff800020701fe082df8000c070c00104c63f0f98c61a3913f78e7dffffbfffff870363ff7f3fffff04000000b0f3e7f0f8000840003f01fe40009fe66698cff2fffffffffffc382f9ffde3ec36cffff9b1e480018fcccf18001ffdffc07c0100008c0330601000026f6fc106f81f1fe001f201e3042000003c3800300000000fc00f08cf00001c203060c0046c0c06ff9f061f400002da0060f89d82787e7000007fe027e004601efbffe600701c0c10ff33003be0ffe70ffff90013c0001c3c61fff7078000000f804c01ffe7ee0003f61fffffffefffffffffffffffffffffffffff7fffffffffffffffffffffdfffdde004000000c00000000808001c7e7fc0001c00c903801fe0e1fffe3fcfefff7ffffffffffffffdfffffffffffffffffffffffffffffebffffffdefffc07e0007c669e300ffe07c7f9ef09e7fff9dc00820201018fc0fee7b7fe01e3c7ffe6081ffa3e20f000100700030007fff8f1fff2fffbffff0600ffcf8e181fc9fc040820e387f0ffffffffff0f00ffffffcff98fdbc3bfffffffbfffffffffffffffffffffffffffffffffffffffcfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7ffffffffbffc7ff813e000000040000038068000006200200e30e1e0081fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb9ffff71ffff8f2004321f000219c2003407fbe4ffe800fffe78cedfdf87ffc60000f7fecff9d8907fe003ce000060007fe60c003fffffffff7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc7f8030c33f3101f0f43790ffff6ffff6f03ffc0fff83e61fffcdfe070e30000800dffbfffeff3b0000c01043c01f8007c7b38f4db8001fff7400041800818e1f9c005e1dc87080001d893021bc0000000827ff01fff7fffffffffffffffffffffffffefffffffffffffffffeffffffffffffffffffffffffffffffffffbfffffffffffffffffffffffffffffffffdfffffffbfff887c000001cfb1fcfecf00440040000ffcfda00f3fb383ff7fd1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdb7e3dffffffcffffef00701c800ec963ffcc026403f0013cbf9ffffffffffffffffffffffffff3fffffffffffcfffffffffffffffffffffffffff7fffffffffffffffffffefff3fffffffffffffffffffffffffff7000000200000000000000000000000000000000000000080000c01000000471ffc6e3ffffff3f3fff1c39e0306c79dfe7c002ff63099f93e000000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000fa00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e08818011e3e00fff7f0083b3c4d3fffff01fff31fcfe13c01810020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001fc71bb7dffbb073bff05ffffc00c0083c0000c0077028005801ef827dc0000000000000000000000000000000000000000000000000080000000003000000000000000000000000000000000000000000000000000000000000000000080000000002010000000000000000000000000000000020000000000000000000002000000000000000000000040600000000180000c431fffffffffffffffffffffffff9ffffffffffbfffffefffffffffffe1ffb800000098100000200000400000000000000000000000000000001800383c3cce8ffdf31ffffcfffffdfff83fffeffe000e63f83f8173c000000000198003ffff001bcf0f04000003fffbfffff007ffffffe91800fbfffa40020406606000000000000000000000000000000000012000000000001f807c07efffffffffffffffdffffffc3ffffffffff3ffffffffe4fffdfffc0f38100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000018000000003ec03fcfff9fe1fffff7e3ffff011fe6c01ee41c36400019873f88e3608f09010001fc000300000000000000001000000080000079002303a787e60f6fffffff83ffffffffffffffefffffffffffff7f3fffffffffffffffffffffff3ffffffffffffffffffffffffffffff9ffffff9fffbfcffffffff701e00004000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000003000000021000000000000018000000000000000000000000000000000200000000078000000000000000040000000000000000fff80004010001f307e6307ff7bfef87e7fe4c00e080001080fb0c200000f003e4fee06381bffcffffffef9800e21fdff9f0013ff83063c7e0ff84070000103000c10027003c0f8f19f83bfe000dec9ffe800000000000000
+
+*** Saving signal to file g014_906.8M_2400k.cu8 (125802 samples, 262144 bytes)
+Detected FSK package	2026-10-21 21:18:35.700825
+Analyzing pulses...
+Total count: 1055,  width: 7.80 ms		(18716 S)
+Pulse width distribution:
+ [ 0] count:   70,  width:    4 us [4;5]	(  10 S)
+ [ 1] count:  135,  width:    1 us [1;1]	(   3 S)
+ [ 2] count:  227,  width:    0 us [0;0]	(   1 S)
+ [ 3] count:  101,  width:    2 us [2;2]	(   5 S)
+ [ 4] count:   82,  width:    2 us [2;2]	(   4 S)
+ [ 5] count:  263,  width:    1 us [1;1]	(   2 S)
+ [ 6] count:   12,  width:   12 us [10;13]	(  29 S)
+ [ 7] count:   76,  width:    3 us [3;3]	(   7 S)
+ [ 8] count:    3,  width:  307 us [282;322]	( 737 S)
+ [ 9] count:   44,  width:    6 us [5;8]	(  15 S)
+ [10] count:   11,  width:   33 us [29;39]	(  79 S)
+ [11] count:    8,  width:   22 us [20;27]	(  54 S)
+ [12] count:    6,  width:   51 us [43;55]	( 122 S)
+ [13] count:   10,  width:    9 us [8;10]	(  21 S)
+ [14] count:    6,  width:   16 us [16;18]	(  39 S)
+ [15] count:    1,  width:   76 us [76;76]	( 182 S)
+Gap width distribution:
+ [ 0] count:  261,  width:    0 us [0;0]	(   1 S)
+ [ 1] count:  109,  width:    1 us [1;1]	(   3 S)
+ [ 2] count:  130,  width:    2 us [2;2]	(   5 S)
+ [ 3] count:   90,  width:    2 us [2;2]	(   4 S)
+ [ 4] count:   29,  width:    8 us [7;10]	(  19 S)
+ [ 5] count:  229,  width:    1 us [1;1]	(   2 S)
+ [ 6] count:   67,  width:    3 us [3;4]	(   7 S)
+ [ 7] count:    9,  width:   14 us [12;16]	(  34 S)
+ [ 8] count:   75,  width:    4 us [4;5]	(  10 S)
+ [ 9] count:    9,  width:   22 us [19;26]	(  54 S)
+ [10] count:   26,  width:    5 us [5;8]	(  13 S)
+ [11] count:    5,  width:   99 us [92;111]	( 238 S)
+ [12] count:    3,  width:   31 us [30;32]	(  74 S)
+ [13] count:    4,  width:   54 us [47;60]	( 130 S)
+ [14] count:    2,  width:  282 us [258;305]	( 676 S)
+Pulse period distribution:
+ [ 0] count:  182,  width:    4 us [4;5]	(  10 S)
+ [ 1] count:  177,  width:    2 us [2;2]	(   5 S)
+ [ 2] count:   34,  width:    1 us [1;1]	(   2 S)
+ [ 3] count:   86,  width:    8 us [7;11]	(  20 S)
+ [ 4] count:  109,  width:    6 us [5;8]	(  14 S)
+ [ 5] count:  147,  width:    3 us [3;3]	(   7 S)
+ [ 6] count:   31,  width:   12 us [10;16]	(  30 S)
+ [ 7] count:  118,  width:    2 us [2;2]	(   4 S)
+ [ 8] count:   21,  width:   24 us [20;30]	(  58 S)
+ [ 9] count:    5,  width:  298 us [259;323]	( 714 S)
+ [10] count:  106,  width:    1 us [1;1]	(   3 S)
+ [11] count:   11,  width:   34 us [31;39]	(  81 S)
+ [12] count:    9,  width:   54 us [48;61]	( 129 S)
+ [13] count:    5,  width:  100 us [92;112]	( 241 S)
+ [14] count:    8,  width:   17 us [16;18]	(  40 S)
+Pulse timing distribution:
+ [ 0] count:  147,  width:    4 us [4;5]	(  10 S)
+ [ 1] count:  244,  width:    1 us [1;1]	(   3 S)
+ [ 2] count:  488,  width:    0 us [0;0]	(   1 S)
+ [ 3] count:  231,  width:    2 us [2;2]	(   5 S)
+ [ 4] count:  172,  width:    2 us [2;2]	(   4 S)
+ [ 5] count:  492,  width:    1 us [1;1]	(   2 S)
+ [ 6] count:   22,  width:   12 us [10;14]	(  28 S)
+ [ 7] count:  141,  width:    3 us [3;3]	(   7 S)
+ [ 8] count:    5,  width:  297 us [258;322]	( 713 S)
+ [ 9] count:   84,  width:    6 us [5;8]	(  15 S)
+ [10] count:   15,  width:   32 us [26;39]	(  77 S)
+ [11] count:   17,  width:   22 us [19;27]	(  53 S)
+ [12] count:   10,  width:   52 us [43;60]	( 125 S)
+ [13] count:   23,  width:    8 us [8;10]	(  20 S)
+ [14] count:   10,  width:   16 us [15;18]	(  39 S)
+ [15] count:    6,  width:   92 us [76;111]	( 221 S)
+Level estimates [high, low]:   3725,     81
+RSSI: -6.4 dB SNR: 16.6 dB Noise: -23.1 dB
+Frequency offsets [F1, F2]:    -524,   -132	(-19.2 kHz, -4.8 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {18766}fff717e0f03f0c600000e41fff07efffffffd9f32010e00c0401000000000601e00200000000000000180c007f82001fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbfffefffe7ffb0fe7ff801ffff197c7ff3c1f038000003d8e1f306cfffefe7ffffffffffffffffffffffdcffdfffffffffffffe7ffffffffffffffffffffffffffffffbfffffffffffff887ffffe0ff1f7ffefdfe000078400c000000000000000000000000000000000000000000000000000000000387fb8387ff87fffc7e12000020602f26c0c023ee01c00840984c1860036040370cc0000000400000100000000000000000008000000000000401000000000000000000040000400800000000000200000000000000700005fe623fffffffffffffffffffffffffffffdbfffff9ffbffffffffffffffffffeffc00ed000d9806f40cb031f9e3fe0401c038187c007bf238fb033ffbfee7f7bffffffffffffffffffffffffffffffeffffffffffff7fffffffff9fffffffffffffffffffffffffffffffffffffffffffffbfffffffffffffffefffffffffffffffffff9f7fffffffffffffffffffbfffc38e3fffffeffe7fbf3eff63fff867b03c3fe67861fb3cc701cccc70f0607fc80fe00f003ff9fd8220fcc1ee401839a738ff808001001dfe3e3fffffff87f9bfff768038c1c00000000000000000000000000000000000300000000200010018021fdfbffffffffffffffffffffffcffffffffffffffffff9fcffff99fe1fc002080000000000000000000000000000000000000000000000000000006083dffa01cbfbaddf3ffffe10181fb1c241fffd63c00ffcff0000202000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000010000010ee7fe7821c07ffffffc3fffffffcfe0f6fc0ffdfff19b3f00ffc11ff00000000000000400000000000000000000000000000040000000e001bf707fffffff8cf3e7fffde7f808338467f81ffc20043f822feffccf07ffffc03e6000fbf63fff8c708019fa3bcffff60f67e01ffc00000108002ff80cf81effc1f0363300000303c0c8dfc00409fef20003b9f08009de39c0001e00607c02600dfffbce907013fbff8f038000c0c00702079e0600c001ff08000033f3ff900047ff0ec3fcfffe7e3f80830c3cc03fb000651dc2e763c1fdfffffffffffffffffffffffffffffffff7fffffffffcfffffffffffffffffdfff7ffffffffffffffffffff8feffffffcffffffffffffff7ff1f000048600000000000000000000000000000000000900010c000000000000c000180200180080086a403f1b806e0847ff7f800c01bff7f03700fcef0613004cffbdba37001ffff9ffefd938000061efff33a61ffc3e607c859f272fffffffffffffffffffffffffefffe7ffffffffffffffffffcfffffffdf1fffc883018c21f001018001ffffbfcd800cde00001c603ffde1ff10c387f8fff001ee03ffffc623ff030e071c3dff41c1659c3b700cc0ffc7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe7ffa6fc3f6ffce7003fbff37020718013e5c1c333b1f8081ff833dfffe3dbcfce00001b000030648260f3cf801c7083fffbfc1ff00c0cf03bffc0670f000c01f135b07ffc001f000fffc1bfc0100370c00801880ffffffb34ff2034c1ffefc1c071fff87e3ffe318ff0fdbf1ff44cfc0ffffcc7ff31ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffffffffffffffe99838000fe1e1fc003e0c00008c7df47e027e7ac60001e19cff3efffffcfffffffffffffffffffffffffffffffe7ffffffcefffffffffdfffeffffffff400371fe001f00000003000e0410405300003fffc0010000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000603b007c19ffe03780178000f9f36c0fe643fe6438000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000000000000000000000000003ffff1e7e170e3f9f4df0fff0f6e6017f8df03b9a0ff3827b1f406047800000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000018000190000000001c00ff007effffffffff7fbffff3fffff8eefeffffc9df00007e0b3831e10003f9ff07f83801bbff8001c00203c0304489fecfffc03ff00000fffc187bfff901238200ff1e03bff1ff7fffc7e0e00101c0301fe03f9e1dff8c01fff97c0001040c8303ccf0437808839e07fdfdfdfe18380de5bde7f3f0fffe7fffffffffffffefffffffffdfffffffffffff7fffdfffffffefffffffffffffffffff7ffdf0ffffffffffff0fffffbffffcfffbffffffffff007f7b3e000000000c000000000000000000000000000180000010000000000000100000000800000000000000000c00000000000fe079ae00fe050459000011ffff80730786007fe000f803366f7f00003e46039ca00e27cbc37c0303c0e1fc8180013000018ff7f39cf813e19bf800180000800460192001cb3f1fbfe361e370780037ffbffb7ffff00f84c7e020f80f800200080003f800798003981f007f04001f040000032e0727e0df031fecc7c3b00307bfc7fe0138dfe7ff070000000000000
+
+*** Saving signal to file g015_906.8M_2400k.cu8 (125799 samples, 262144 bytes)
+Detected FSK package	2026-10-21 21:18:37.360123
+Analyzing pulses...
+Total count: 1154,  width: 9.13 ms		(21910 S)
+Pulse width distribution:
+ [ 0] count:  124,  width:    2 us [2;3]	(   5 S)
+ [ 1] count:  286,  width:    1 us [1;1]	(   2 S)
+ [ 2] count:   84,  width:    2 us [2;2]	(   4 S)
+ [ 3] count:  289,  width:    0 us [0;0]	(   1 S)
+ [ 4] count:   85,  width:    4 us [4;5]	(  10 S)
+ [ 5] count:  112,  width:    1 us [1;1]	(   3 S)
+ [ 6] count:   39,  width:    7 us [6;9]	(  17 S)
+ [ 7] count:    7,  width:   44 us [38;53]	( 106 S)
+ [ 8] count:    5,  width:   25 us [23;30]	(  61 S)
+ [ 9] count:   11,  width:    5 us [5;6]	(  13 S)
+ [10] count:   15,  width:   12 us [10;15]	(  30 S)
+ [11] count:    8,  width:   10 us [9;11]	(  23 S)
+ [12] count:   68,  width:    3 us [3;3]	(   7 S)
+ [13] count:    4,  width:   17 us [16;18]	(  41 S)
+ [14] count:    5,  width:  102 us [96;111]	( 245 S)
+Gap width distribution:
+ [ 0] count:  256,  width:    1 us [1;1]	(   2 S)
+ [ 1] count:  246,  width:    0 us [0;0]	(   1 S)
+ [ 2] count:   44,  width:    6 us [5;8]	(  15 S)
+ [ 3] count:   91,  width:    2 us [2;2]	(   4 S)
+ [ 4] count:  104,  width:    4 us [3;5]	(   9 S)
+ [ 5] count:  148,  width:    2 us [2;2]	(   5 S)
+ [ 6] count:  139,  width:    1 us [1;1]	(   3 S)
+ [ 7] count:   37,  width:    3 us [3;3]	(   7 S)
+ [ 8] count:   29,  width:   10 us [8;12]	(  23 S)
+ [ 9] count:   17,  width:   15 us [12;18]	(  35 S)
+ [10] count:    6,  width:    5 us [5;5]	(  12 S)
+ [11] count:    2,  width:  192 us [176;209]	( 462 S)
+ [12] count:    8,  width:   23 us [19;26]	(  56 S)
+ [13] count:   10,  width:   88 us [75;101]	( 211 S)
+ [14] count:    6,  width:   35 us [30;38]	(  85 S)
+Pulse period distribution:
+ [ 0] count:  249,  width:    4 us [3;5]	(   9 S)
+ [ 1] count:  126,  width:    1 us [1;1]	(   3 S)
+ [ 2] count:  100,  width:    8 us [7;11]	(  20 S)
+ [ 3] count:   94,  width:    5 us [5;6]	(  12 S)
+ [ 4] count:  124,  width:    2 us [2;2]	(   4 S)
+ [ 5] count:   38,  width:    6 us [6;7]	(  15 S)
+ [ 6] count:  211,  width:    2 us [2;3]	(   5 S)
+ [ 7] count:   25,  width:    1 us [1;1]	(   2 S)
+ [ 8] count:   12,  width:   44 us [38;54]	( 106 S)
+ [ 9] count:   13,  width:   26 us [23;31]	(  62 S)
+ [10] count:   45,  width:   14 us [12;17]	(  33 S)
+ [11] count:    9,  width:   11 us [10;12]	(  26 S)
+ [12] count:    7,  width:   18 us [18;20]	(  44 S)
+ [13] count:   14,  width:  104 us [88;123]	( 249 S)
+ [14] count:   65,  width:    3 us [3;3]	(   7 S)
+ [15] count:    7,  width:   74 us [63;78]	( 177 S)
+Pulse timing distribution:
+ [ 0] count:  272,  width:    2 us [2;3]	(   5 S)
+ [ 1] count:  542,  width:    1 us [1;1]	(   2 S)
+ [ 2] count:  175,  width:    2 us [2;2]	(   4 S)
+ [ 3] count:  535,  width:    0 us [0;0]	(   1 S)
+ [ 4] count:  169,  width:    4 us [4;5]	(  10 S)
+ [ 5] count:  251,  width:    1 us [1;1]	(   3 S)
+ [ 6] count:   99,  width:    6 us [5;9]	(  15 S)
+ [ 7] count:   14,  width:   42 us [36;53]	( 101 S)
+ [ 8] count:   13,  width:   25 us [22;30]	(  60 S)
+ [ 9] count:   37,  width:   12 us [10;15]	(  29 S)
+ [10] count:   23,  width:    9 us [8;11]	(  22 S)
+ [11] count:  131,  width:    3 us [3;3]	(   7 S)
+ [12] count:   14,  width:   17 us [15;20]	(  41 S)
+ [13] count:   13,  width:  102 us [88;122]	( 245 S)
+Level estimates [high, low]:   3637,     81
+RSSI: -6.5 dB SNR: 16.5 dB Noise: -23.1 dB
+Frequency offsets [F1, F2]:    -526,    195	(-19.3 kHz, +7.1 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {21966}fe6fe00037c3003c137f227ff07e08206ffbc0001e000f80ffcbe438e7e270ffff8fffffffffffffffffffffffffffe07ffffffffffffff83ffefffffffefffffffff9ffffe1f7ffffff00e03ffff06781060037c27e8f18cfe0787e0732000001000000001e30000600000700000000300800000008000000cfffdfffffffffffffffffffffffffffffffe7fffffffffffff7ffffffffff307f3983e0040007cc000fcc03c00000fb0fa039b00300ff0060c7cff8ffe03fc60003f803effffd8c83de0ffe7fde07fffffffbe0ff04300fffffdfffeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3fc001011fff010060c30e669f7ff30dff00383ffe7fe000080cd1fdc9fff806c7f02076060033804380200003f3f180001ffbffcffffffffffffffffffffffffffffff7ffffffffffffffffffffffffffffffffffffffffff1c3ff0000001000000030000000600767f0609e00007c0c0e003f00ffffffc0040800620189f82287e3be18f7e423033e043ff3833fffffefff9f3fffffffffffffffffffffffffeffffffffffffffffffffffff1ffffffffffffffffffffff87fff0077ffffd31d0c008fbdfbf800127f0000000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000060000000000000800013fbc060c004f37ff9f0cf8003f0f200f7067fbfc8b8fffe100108000000000400000000000000000000000000000000000000000000000000000000ff884fffffffff98dfff90001f40fc607f90efffffffdbffdf80330000000001a0000000000000000000000000000000000000000000004008019bffef07ffffffbfdfbfffffff7e7fff7fff9ffffc0c01f9e7800bf000ccec07ff800c0ff0300003ce607f9ff0f8ff187bfc30187fbe00ffdfe4ff801f019f4f83806e204dc7f90007e608670781703ff600fbe040c0f01e02c180c00000040100000000000000000000020000000000000000000003c004c8e1ffffffff0ffeffffd8fffff81fffff6263ecfe138107b71000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000817f3eeff7fff9fffc787bfeffe7bc0817cb3bc8f83930670c98e207db7f787c7b07f801c783007fc66064367f2839ffdb80000f400001fd880188e00000000000000000000000000000000000000000000000000000010000000fffffffffffffffffffff7fffffffffffffffff77fffffffb9ffffffc8fffff18083e076c0000a7fe0004001060002401ff7dfc1fdf31f3b4001800020000000006103000000000000000781f80000003c016e01817c100f8300001e3e03fe03fcc8687fc6607e6223f00040a3c07f8c000033fff0227fe04ff093bf3027064039ffcffc03f9bcfe0fa7fc0c41f81c7ff7ff8fe1fffffffffffffffbfffffffffffffffffffffffffffffffffffffffffffefffffffcfffff3fffffffffffffffffff201fff861ffffce3fff9cc7231004800000000070000000000000000000000e040800000020000000000040000000800380008000000c00000c110030000038000fff0027ffdff3fe7f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffefa04ffe0738f2d37ffffe001fcff9fff87fdf00f19f00180778006ffeff0190c330312061fd00df08018001ff1ffff608104d918890dfefffe7fefffffffffffffffffffffffffffffffffffffeffffffffffffffffffffffffcf9ff8003018d80700000c01df9c79a603024400700200780ffb7fff71ffffefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe3fffffffffffffffffffffffffffffffffffffffffffffffffff83b800000080104200000dfc0000000011004002c007c1f801ff3ff7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff03c400880000000000000080000000000000000020000000c0007000000000000001d81a0c03e18c1fd38c683007fc01e0fff22637ff00003fc1ffffb8067f8001fe00f0800d79fffdbff07a033fc6ecff1820002fffffc05c98048300001003f9ff1b08078207e0801f00fce00000c03989fe23bff87ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff9fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8400183804000110802033002003e000280000c018018801fa07fff9bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff800000000000400000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000018000000000000000000000000000001800000618000c38fe76fffffffffffffffffffffffffffffffffffffffffffffffffffffffffe1cdc0800000000019f800000801000000000831800003fe7c0001fde1ffbff7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff9bfffffffffbfeffffffffffffffde3fffffff7fffffe7ffffffffffffffffffcfcffffefffffffffff7fffffff9fe6ff0fffb0ffc1023fffe33ff1c3003c10800002000000016c208c00800000000000000000000000000000000000000000000008000000800000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000000000000000000308019fcfe419a3771bcc07ff301cfe3ff002607fff07fc66587884e4f1f0f003efbc0cfffeffe00e40f934fc67fe0e7643e30010f0cf07ef903e7ff9dfbfffff13bff3f3fffff800000000319fd018cf9370f76fa4df87801207ff0303c07c7fc27e00ffe6df19bdf18438dfbe07de007ff9ffef8d7ff880b0067c67ffff01123fe9fe79e7b0ffb8fdffcf80001f311e080007fe70e0c83ff9e64000310001e7800ce2c87801c00e0f87ec861dcc7fff83c807ffffeff07ff00ef00f8000000000188000040e70000c6811e7fff00000000000000000000000000000000000000000000000000000000000020000083e1b7f661fffffffffc70e41bdfe001ff64c0e07b0ff1cf8fe7ff003cf077ff200c03fffdf9f81ffffff08fc3fe07e0f9bfcfa006020310000006000000000000000000000000000000000000000000000000000000000000000000000000110000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000090000000000000000000000000004000000000000000000000000000000000000000000003c000000000000001000100000000000000018000000000000000000000000000000000000000000000000000000000000000000000000000007ffc00000000000000
+
+*** Saving signal to file g016_906.8M_2400k.cu8 (125802 samples, 262144 bytes)
+Detected FSK package	2026-10-21 21:18:40.634223
+Analyzing pulses...
+Total count:  608,  width: 4.07 ms		( 9773 S)
+Pulse width distribution:
+ [ 0] count:   79,  width:    1 us [1;1]	(   3 S)
+ [ 1] count:   45,  width:    5 us [4;7]	(  12 S)
+ [ 2] count:  152,  width:    1 us [1;1]	(   2 S)
+ [ 3] count:   63,  width:    2 us [2;2]	(   5 S)
+ [ 4] count:  134,  width:    0 us [0;0]	(   1 S)
+ [ 5] count:   42,  width:    4 us [3;5]	(   9 S)
+ [ 6] count:   14,  width:    9 us [8;11]	(  22 S)
+ [ 7] count:   26,  width:    3 us [3;3]	(   7 S)
+ [ 8] count:   32,  width:    2 us [2;2]	(   4 S)
+ [ 9] count:   11,  width:    7 us [6;8]	(  16 S)
+ [10] count:    1,  width:  225 us [225;225]	( 541 S)
+ [11] count:    3,  width:   20 us [18;23]	(  49 S)
+ [12] count:    5,  width:   13 us [12;14]	(  31 S)
+ [13] count:    1,  width:  306 us [306;306]	( 734 S)
+Gap width distribution:
+ [ 0] count:   95,  width:    2 us [2;3]	(   5 S)
+ [ 1] count:  126,  width:    1 us [1;1]	(   2 S)
+ [ 2] count:  114,  width:    0 us [0;0]	(   1 S)
+ [ 3] count:   70,  width:    1 us [1;1]	(   3 S)
+ [ 4] count:   23,  width:    7 us [5;9]	(  16 S)
+ [ 5] count:   48,  width:    4 us [4;6]	(  10 S)
+ [ 6] count:   51,  width:    3 us [3;4]	(   7 S)
+ [ 7] count:   51,  width:    2 us [2;2]	(   4 S)
+ [ 8] count:    4,  width:   18 us [15;20]	(  42 S)
+ [ 9] count:    7,  width:   51 us [47;55]	( 123 S)
+ [10] count:    4,  width:   27 us [24;31]	(  64 S)
+ [11] count:    5,  width:   95 us [80;110]	( 229 S)
+ [12] count:    1,  width:   66 us [66;66]	( 159 S)
+Pulse period distribution:
+ [ 0] count:  141,  width:    4 us [3;5]	(   9 S)
+ [ 1] count:  101,  width:    6 us [5;8]	(  15 S)
+ [ 2] count:   57,  width:    1 us [1;1]	(   3 S)
+ [ 3] count:   96,  width:    2 us [2;2]	(   5 S)
+ [ 4] count:   41,  width:    9 us [8;12]	(  22 S)
+ [ 5] count:   49,  width:    3 us [3;3]	(   7 S)
+ [ 6] count:   55,  width:    2 us [2;2]	(   4 S)
+ [ 7] count:   11,  width:   13 us [12;15]	(  31 S)
+ [ 8] count:   10,  width:    1 us [1;1]	(   2 S)
+ [ 9] count:   18,  width:    5 us [5;5]	(  12 S)
+ [10] count:    6,  width:   18 us [16;21]	(  43 S)
+ [11] count:    1,  width:  226 us [226;226]	( 543 S)
+ [12] count:    5,  width:   24 us [20;27]	(  58 S)
+ [13] count:    8,  width:   54 us [48;67]	( 130 S)
+ [14] count:    2,  width:   34 us [32;36]	(  81 S)
+Pulse timing distribution:
+ [ 0] count:  149,  width:    1 us [1;1]	(   3 S)
+ [ 1] count:   99,  width:    5 us [4;7]	(  11 S)
+ [ 2] count:  278,  width:    1 us [1;1]	(   2 S)
+ [ 3] count:  155,  width:    2 us [2;2]	(   5 S)
+ [ 4] count:  248,  width:    0 us [0;0]	(   1 S)
+ [ 5] count:  118,  width:    3 us [3;5]	(   8 S)
+ [ 6] count:   29,  width:    9 us [7;11]	(  21 S)
+ [ 7] count:   83,  width:    2 us [2;2]	(   4 S)
+ [ 8] count:   23,  width:    6 us [6;8]	(  15 S)
+ [ 9] count:    1,  width:  225 us [225;225]	( 541 S)
+ [10] count:    8,  width:   20 us [18;24]	(  48 S)
+ [11] count:    7,  width:   13 us [11;15]	(  31 S)
+ [12] count:    1,  width:  306 us [306;306]	( 734 S)
+ [13] count:    7,  width:   51 us [47;55]	( 123 S)
+ [14] count:    3,  width:   28 us [25;31]	(  66 S)
+Level estimates [high, low]:   3626,     80
+RSSI: -6.5 dB SNR: 16.6 dB Noise: -23.1 dB
+Frequency offsets [F1, F2]:    -518,   -106	(-19.0 kHz, -3.9 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {9823}e03fffcdf062000007000400fc01007fc060d9ffc00007ffe7ff85033fffffec03fe7f9ffc38179ffc008047be3808fffc1b7fffee000fe473f9813f9083f003ff06ff60c0cc03183003800000000c0060180003fc3f0007fcdfff887c038000720010fefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff9ffe398001f70003f9efc4ce01bff904e03fffe006003010101c0800604801bff9d9f80bfe07d08607fc0ff8f7fc37d0fc73f03ee0413e79d81ffffbfbbfffffffffffffcffffffffffff7fffffdfeff90981ffff083fe000000000000000000000000000000c000000000000000000800000000003c6020000000000000000000000000000000000000000000000000000000000ffdf8dff9df02360df800001083c3f00303067ff9f81800e0e00011ffffffff23f0ce0f87fffff008f1fffff3ff37e7e061a0030e099e06391c07ff9e0000f1adffeffffdfff7e3ffe07c0f3183fc11ff27013df7ffffefc1b09f21010fff07f87ff000fff1ffbc01ff0870760ffbe701bff818000f00003ff8b9c7000fffffeff33fb0ce63ff3ff7c8c070907fdfff8fc01e600300000000000080c000000000000000000000000000000000000000000000003ff07fffcffffefbfff7fbff8ffe3ffffffffffa7ee3fffffe6fe7ee000000000000000000000000000000000000000000000000000000000000000000c0000000000000010000000000000000000000000000000000000001a000000000000000000000000000010000000000000000000000000000000007001e0f5f63dffe0fe007fe0007f000001c31f00000040000761c1b903ec7e0fe67000ff00feefeef800010018ff00010ffff83fbc01c39018001800000000000000000000000000000008000000000000000000000000000000190000000000000000000000000000000000000000000000000000001000000000000002000000000000000100000000000000000000060000003f85ff9fc7ffdccffff98bf7fbff0e03c007f31846090b840401803e60003000000000000000000000000000000000000000000000000000000000002000400c1fffffc1ff00c001a0018060f81c1b0401f37073903878c081e3dff9fec7fbf2499c383f03fffffffe09800ffffffff7fffefffcfffe78000e3f3000000000000000000000000000000000800000380003000000000000000000000000000080000000000d90000c0c07c0060191e60fffffffe1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff81f7fe39c80800006007f00cff807e3ffe1f1be37fffe07ffffffdff0ffdf9ff31fe7e819ff06073bff200060027c0101a1a1ffc03834e40667f22360c043186702408610fdf398003fff9c0002f304c043ff0700f830012603dc700071b3ffe001ffc0c7c4608013fffff881e003c00670000008fc3ff03810077ffec607c03ffffff07e1ffde600ffff8ffc1ff80e040fff8c07fff7ffc701833000041ffff9fc808fff002004019e002600fe407ffdf11fc0460181dc3fff88000000000000
+
+*** Saving signal to file g017_906.8M_2400k.cu8 (125800 samples, 262144 bytes)
+Detected OOK package	2026-10-21 21:18:42.294167
+Analyzing pulses...
+Total count:    1,  width: 38.76 ms		(93023 S)
+Pulse width distribution:
+ [ 0] count:    1,  width: 38760 us [38760;38760]	(93023 S)
+Gap width distribution:
+Pulse period distribution:
+Pulse timing distribution:
+ [ 0] count:    1,  width: 38760 us [38760;38760]	(93023 S)
+ [ 1] count:    1,  width: 100000 us [100000;100000]	(240001 S)
+Level estimates [high, low]:   3942,     81
+RSSI: -6.2 dB SNR: 16.9 dB Noise: -23.1 dB
+Frequency offsets [F1, F2]:    -493,      0	(-18.1 kHz, +0.0 kHz)
+Guessing modulation: Single pulse detected. Probably Frequency Shift Keying or just noise...
+view at https://triq.org/pdv/#AAB1029767FFFF8155
+
+*** Saving signal to file g018_906.8M_2400k.cu8 (365792 samples, 786432 bytes)
+Detected FSK package	2026-10-21 21:18:43.954139
+Analyzing pulses...
+Total count: 1031,  width: 8.13 ms		(19516 S)
+Pulse width distribution:
+ [ 0] count:   17,  width:   12 us [10;14]	(  29 S)
+ [ 1] count:   71,  width:    5 us [5;7]	(  13 S)
+ [ 2] count:  225,  width:    1 us [1;1]	(   2 S)
+ [ 3] count:  111,  width:    2 us [2;2]	(   5 S)
+ [ 4] count:    4,  width:   77 us [72;87]	( 184 S)
+ [ 5] count:   65,  width:    3 us [3;3]	(   7 S)
+ [ 6] count:  240,  width:    0 us [0;0]	(   1 S)
+ [ 7] count:  100,  width:    1 us [1;1]	(   3 S)
+ [ 8] count:   83,  width:    2 us [2;2]	(   4 S)
+ [ 9] count:   14,  width:   17 us [15;21]	(  41 S)
+ [10] count:   11,  width:   32 us [27;38]	(  76 S)
+ [11] count:   40,  width:    4 us [4;5]	(   9 S)
+ [12] count:    6,  width:   47 us [41;51]	( 112 S)
+ [13] count:   32,  width:    8 us [7;10]	(  19 S)
+ [14] count:    3,  width:   23 us [22;24]	(  55 S)
+ [15] count:    4,  width:  112 us [105;122]	( 270 S)
+Gap width distribution:
+ [ 0] count:   68,  width:    2 us [2;2]	(   4 S)
+ [ 1] count:  282,  width:    0 us [0;0]	(   1 S)
+ [ 2] count:  120,  width:    1 us [1;1]	(   3 S)
+ [ 3] count:   58,  width:    5 us [4;7]	(  12 S)
+ [ 4] count:   17,  width:   10 us [8;11]	(  23 S)
+ [ 5] count:   96,  width:    2 us [2;2]	(   5 S)
+ [ 6] count:   77,  width:    3 us [3;4]	(   7 S)
+ [ 7] count:   20,  width:    7 us [6;9]	(  17 S)
+ [ 8] count:  243,  width:    1 us [1;1]	(   2 S)
+ [ 9] count:   18,  width:    4 us [4;5]	(   9 S)
+ [10] count:    7,  width:   27 us [24;31]	(  65 S)
+ [11] count:    6,  width:   48 us [40;55]	( 115 S)
+ [12] count:    8,  width:   16 us [13;19]	(  38 S)
+ [13] count:    5,  width:   80 us [75;89]	( 191 S)
+ [14] count:    1,  width:  393 us [393;393]	( 944 S)
+ [15] count:    3,  width:   20 us [20;21]	(  49 S)
+Pulse period distribution:
+ [ 0] count:   36,  width:   13 us [11;16]	(  32 S)
+ [ 1] count:  153,  width:    6 us [5;7]	(  14 S)
+ [ 2] count:  167,  width:    2 us [2;2]	(   5 S)
+ [ 3] count:    9,  width:   79 us [73;90]	( 189 S)
+ [ 4] count:   79,  width:    9 us [8;11]	(  21 S)
+ [ 5] count:  136,  width:    4 us [4;5]	(  10 S)
+ [ 6] count:  108,  width:    2 us [2;2]	(   4 S)
+ [ 7] count:  121,  width:    1 us [1;1]	(   3 S)
+ [ 8] count:  128,  width:    3 us [3;3]	(   7 S)
+ [ 9] count:   19,  width:   19 us [17;23]	(  46 S)
+ [10] count:   17,  width:   28 us [24;35]	(  68 S)
+ [11] count:   31,  width:    1 us [1;1]	(   2 S)
+ [12] count:   14,  width:   47 us [38;56]	( 112 S)
+ [13] count:    2,  width:  356 us [319;394]	( 855 S)
+Pulse timing distribution:
+ [ 0] count:   30,  width:   11 us [9;14]	(  27 S)
+ [ 1] count:  131,  width:    5 us [4;7]	(  12 S)
+ [ 2] count:  468,  width:    1 us [1;1]	(   2 S)
+ [ 3] count:  207,  width:    2 us [2;2]	(   5 S)
+ [ 4] count:    9,  width:   78 us [72;89]	( 188 S)
+ [ 5] count:  114,  width:    3 us [3;3]	(   7 S)
+ [ 6] count:  522,  width:    0 us [0;0]	(   1 S)
+ [ 7] count:  220,  width:    1 us [1;1]	(   3 S)
+ [ 8] count:  151,  width:    2 us [2;2]	(   4 S)
+ [ 9] count:   23,  width:   18 us [15;21]	(  42 S)
+ [10] count:   17,  width:   30 us [25;38]	(  72 S)
+ [11] count:   87,  width:    4 us [4;5]	(   9 S)
+ [12] count:   12,  width:   48 us [40;55]	( 114 S)
+ [13] count:   55,  width:    8 us [7;10]	(  19 S)
+ [14] count:    5,  width:   23 us [22;24]	(  55 S)
+ [15] count:    4,  width:  112 us [105;122]	( 270 S)
+Level estimates [high, low]:   3575,     81
+RSSI: -6.6 dB SNR: 16.4 dB Noise: -23.1 dB
+Frequency offsets [F1, F2]:    -528,    -88	(-19.3 kHz, -3.2 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {19570}ffffffe1fffd8fbfffffffffffffffffffffffffffffffffffffffffffffffffffefbf0003f888c43f0000001fc100fe186802380200000fff99fbcfd800600004f020003ffffffffff27fffffffffffffffffffd9ffff3dffffffffffffffffffffb7ffffffffcfffffffcffe7fffffffedfdfe78f02b00306fffee7ffcff31f3e703f2078027300019cef3f8cfff04019e40080033bf84200fffffffffffffffffffffffffffffffffffffffffff9ffffffffffffffff0c300008480000420000000000000000070010000001f00000403800fb83c3bfffffffffffffffffffffffff9fffeffe01cfffef9e7dff9fffc40060103f78f3fd33fee400fffd8fe03f81ffbc3fc0119fff007c80fc1ff0381b00000000000000000000000000020000000000000000000000000000004600cc61c3ffcfffffff3f3fff87f9f801f037ffcffff7fffc6c2001d4806fb00002c018001fffbff10f00eff87e4000000004f003fd05f623107f8f001fffc78f01e1fff8012640ecf8fc07fc0006000040000803178003b8900e09fff3ffbff7fffffffc0f0de45c7f80e7fdfe7cf9f8fffffdfd9ffffc1f7fc600fffffe5ffffff05f1fffffffffff3efa0cfefcc05bf8300000108000b80000010000000004000000008000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000007ffff9fff3fffffeffffffdfffffe787ffffffeffdffe00cfce7c17f30040000000000000000000000000000000000000000000000000000080000d37ffffffffffffffffffffffffffffbffff67ff8e3fdfcfff9be7872d8183bf8f3cdfffcdff70203f64c307ffffffffffedffefbefffdfcff01ffff9fe0c301f004381f37fbfef36731d8f8fffff800fff27c087f807e00080081c8000000000100000000000000000000000000000000000000000000070009a3fbc3ffe7feffbf8c3cd0447ff08c78c3ffcfc3c0137c040063fa00c00000000000001000000000000000000000000000000800000000000000080fffffffffff7ffffffffffffdfffffffffffdffff7ffffffffffffffffffffffbfff3fffffffecffffffbdcffffffffe07ff808fdfff23ff7ff8905bc00078649fe3effb13fc7e2680efd000001e000ff9fffff000000cffc0fffff33cffe65000071c067fcd1c98fff7ff3fffff0020f9fe0c78c03067d83c0e31f4083e03327ff0fbfa3ba7fff9ff037fc279c700000c0000000000800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004007fcb7e77e7bff9fb000bec1fe05b0206013ff8001ccc0c01f093c7007e001000000000000000000000000000000000000000000000000c0314423fff7fffffffffffffffeffffffffffffff7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbfbfffffffffffffe7fffefffffffffffffffffffffffffffffdffffffffffefffffffffffffffffdfff77e200000000000081000002000000000000000000000000000000000c0000000380000000000000060006f18020007fc007e0001fc1ffffbffe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbbf89fff6c007c3fe7f182cffe00000c001c7e0f001e003ffffefefffffdfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcfffffcfb99ebffff9000003f8f30000fffb81bf99efffe9fffffbffffffffffffffffffffffffffffffffffffffffffff7fffffffffffffffffffe0e3004007e0e000723fff7ffff000400048000378003e028fffffffffdffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffee7d1984803e080167fbe7e6319fffff387fe1270e003081cf3f841ffe0fbfffbffffffffbffffbffffffffffffffffffffffffffffff78f7fffdc00000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000fc3f9ffcdcf3ffffffff7fffffffffffefc01133ffcedff7ff38686fe7ffcf61c1f03018fc07cf3ff803ff7fff77ff3fefcf8cffffffff8338f0c0301c07f06002000000000000000020000007800f003b200006f70fd0f9ffcfffffffffbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff31fe0fcc00019007c7cc0c030001bbfb00000000000020022036ec603f7ffe3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdfffffffffffffffec0ffffdfffffcc1e00200003010718006801820200e0f801ef0f8361fffff9fffffffe91ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8e001c000000000000000000000000000200000000000000000040038000000000fec6640c0916c1e0d2cf0017ecfff1b3c7dfffbf1fffa0fdffffffffff7ffffffffffffffffffffffff7fffffffffffffffffffffefffffffffffffffff7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcfffffffffffffffffffffffffffffbfffcdffc00001c00000000000000031fe0fe02c01c6e07f803fe00d13ffffe7ffffffffffffffffffeffffffffffffffffffffffffffffffffffffffffffffbefc000000000001e3f0020004180847ffc7f38feff9ffffffffffdfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f20fc0784e03f003b93be2370788074800ffffa07bf01ffffff03980fffffff9907ffff3c01fffefb830839dff004018007fc0c9bc7ff07f10ff064fec08743c801ff98802c2d388f80c9f1c000007fff00d1e0600430041b8000007ffff019e9ff0f074000260000600f8feddec380780080000ffffc2dff807847f3fedb1b7e1bc00003f800022007e6d8023ffff3dfffffc84c413c00000c3ef8f005e049fbf49cc79927dbe000000000008000007c00dfd3fff00000000000000
+
+*** Saving signal to file g019_906.8M_2400k.cu8 (125802 samples, 262144 bytes)
+Detected FSK package	2026-10-21 21:18:45.615507
+Analyzing pulses...
+Total count: 1075,  width: 6.59 ms		(15819 S)
+Pulse width distribution:
+ [ 0] count:  239,  width:    1 us [1;1]	(   2 S)
+ [ 1] count:  133,  width:    1 us [1;1]	(   3 S)
+ [ 2] count:   23,  width:   10 us [8;12]	(  24 S)
+ [ 3] count:  244,  width:    0 us [0;0]	(   1 S)
+ [ 4] count:   89,  width:    2 us [2;2]	(   4 S)
+ [ 5] count:  180,  width:    2 us [2;3]	(   5 S)
+ [ 6] count:   82,  width:    4 us [3;5]	(   9 S)
+ [ 7] count:    1,  width:   64 us [64;64]	( 153 S)
+ [ 8] count:    5,  width:   16 us [14;18]	(  38 S)
+ [ 9] count:   53,  width:    5 us [5;7]	(  13 S)
+ [10] count:   11,  width:    8 us [8;8]	(  18 S)
+ [11] count:    3,  width:   24 us [23;26]	(  58 S)
+ [12] count:    1,  width:  382 us [382;382]	( 917 S)
+ [13] count:    2,  width:  118 us [115;122]	( 284 S)
+Gap width distribution:
+ [ 0] count:  127,  width:    1 us [1;1]	(   3 S)
+ [ 1] count:  223,  width:    0 us [0;0]	(   1 S)
+ [ 2] count:   84,  width:    4 us [3;5]	(   9 S)
+ [ 3] count:  130,  width:    2 us [2;2]	(   5 S)
+ [ 4] count:  266,  width:    1 us [1;1]	(   2 S)
+ [ 5] count:   16,  width:   10 us [9;12]	(  24 S)
+ [ 6] count:   61,  width:    6 us [5;8]	(  14 S)
+ [ 7] count:   61,  width:    3 us [3;3]	(   7 S)
+ [ 8] count:   73,  width:    2 us [2;2]	(   4 S)
+ [ 9] count:   13,  width:   15 us [13;18]	(  36 S)
+ [10] count:    1,  width:  178 us [178;178]	( 426 S)
+ [11] count:    4,  width:   32 us [27;35]	(  76 S)
+ [12] count:    3,  width:   61 us [57;66]	( 146 S)
+ [13] count:    2,  width:   21 us [20;22]	(  50 S)
+ [14] count:    1,  width:   46 us [46;46]	( 110 S)
+Pulse period distribution:
+ [ 0] count:  192,  width:    2 us [2;2]	(   5 S)
+ [ 1] count:  105,  width:    1 us [1;1]	(   3 S)
+ [ 2] count:  114,  width:    2 us [2;2]	(   4 S)
+ [ 3] count:   20,  width:   16 us [13;20]	(  39 S)
+ [ 4] count:  160,  width:    3 us [3;3]	(   7 S)
+ [ 5] count:   22,  width:    1 us [1;1]	(   2 S)
+ [ 6] count:  214,  width:    4 us [4;5]	(  10 S)
+ [ 7] count:    4,  width:   63 us [58;69]	( 151 S)
+ [ 8] count:   59,  width:   10 us [9;13]	(  25 S)
+ [ 9] count:  152,  width:    6 us [5;9]	(  15 S)
+ [10] count:    5,  width:   25 us [23;28]	(  60 S)
+ [11] count:    1,  width:  382 us [382;382]	( 918 S)
+ [12] count:    7,  width:  116 us [103;129]	( 279 S)
+ [13] count:    1,  width:  178 us [178;178]	( 427 S)
+ [14] count:    4,  width:   36 us [35;38]	(  86 S)
+Pulse timing distribution:
+ [ 0] count:  505,  width:    1 us [1;1]	(   2 S)
+ [ 1] count:  260,  width:    1 us [1;1]	(   3 S)
+ [ 2] count:   41,  width:   10 us [8;12]	(  24 S)
+ [ 3] count:  467,  width:    0 us [0;0]	(   1 S)
+ [ 4] count:  162,  width:    2 us [2;2]	(   4 S)
+ [ 5] count:  310,  width:    2 us [2;3]	(   5 S)
+ [ 6] count:  180,  width:    4 us [3;5]	(   9 S)
+ [ 7] count:    4,  width:   62 us [57;66]	( 148 S)
+ [ 8] count:   18,  width:   15 us [13;18]	(  36 S)
+ [ 9] count:  106,  width:    6 us [5;7]	(  14 S)
+ [10] count:   20,  width:    8 us [7;8]	(  18 S)
+ [11] count:    7,  width:   23 us [20;27]	(  56 S)
+ [12] count:    1,  width:  382 us [382;382]	( 917 S)
+ [13] count:    7,  width:  115 us [102;129]	( 277 S)
+Level estimates [high, low]:   3931,     81
+RSSI: -6.2 dB SNR: 16.9 dB Noise: -23.1 dB
+Frequency offsets [F1, F2]:    -520,   -119	(-19.0 kHz, -4.4 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {15874}c6efffffff800810209e45003fc76dfdf1604ffbe09fe237fffffffffffffffffffffffffffffffffffffdffffffffffe7fffffc7007c000000c00000180118200001f12000f807dfffe1fc3deff3ffc7d8e0fffc19f3103e369e7f83e79fde70f043ff0c07ffff00083800f006000cc6018f83ffc4e027b9cf80267fff801e3807eb3fffde3f8efffcffff3ff3fffffffffffffff3ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffec000c0ff0c0f803fe71e7d8981181dfb6e760e01ffc1ffffff03f8f7cf04003f80012000820c807c2001c31c006183dc03cf040fbffffcfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff203fdcfcff8bb01bf07c6fee12ddc01fbc480180017f000008c0002201f0003ff807fe01fc9fb80001706387c03e46fc03008803fbf0780000d002000002000000000d842778c8010fde604e03ffefff739ffbd0483fe0003ffc7667ffffc803ffc0f9e0261ff207fffb8fbfe02007f3e000000001e184ff80c7ffb3fff1ffffeffff7e3e0ffbfe2f7decc033cfc1e83fffdf7f107fe67ffe838dfc01ffef3c01fff93e07c02087000180f89fb324007f01e0c07dc790380f00201f03fe799b807ffff77dffffffdf9fe7f1f7f399fff80fffffc7fffe7b80fffddfbffff0707ff70fb8607ffffefeff9fdf3dce3fdffffcffccf0010003000100446003e0bfff8078fc01bff0377c00c00010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000203c000000000000000000006000000000000000000000000000000000001000100000000c0067c01ffffffc7fbfff3fe63e7fce3e39c01821e007eff38e0d9ffe0f87c0600cd9fff01800f63f03fc3049c383f8e118fffe60005fdfbbfe7f887f00000000000000000000000000000000000000020000010000000000010137fbb37f1ffff0ffffdffcc1c79803f2787813dfdfc3a58038ffe000400000c0000001000002000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000000000000000600465b07bffffffffff7fffe6cfffffff7ffefcfe3bfcffff01c6260c00f23f01c6fffc00fbfb3fa4023004f004ff000000000000000000080000210000004010e0000000e7fefc10000c00f8378007fe4e3f807fffefffd02000000018000000000000000000000000000000000000000000000000000000ffc33fffff9dffc3fcf7ffefe7f9ffcffe33fffffc0f6007c000f0fecbfc000004000730000000060000000000c00000000000000000001c102006063ff7f9f77d3ffffff2fa3ffe1bfc00007c7be007fd0607fe00442ce40ff3ff00063bfc20e3fc1f37318fc204c0ffe001fffffffffce7c0fe7c000000000000000000000000000000000000000000000000000000000000000000007e00007f78ff801c000ffd3f067003ffe001fff01f0df3c8bf880020000000000000000000000000000000000000000000000000000000080e000003000e7ecc800c000660f81f1c0000000049e03c83e41d8047f8033360400000000000000000000000000000000000000000000000003ffc201087fc7ffffffffffffffffffffffffffff7fffffffffffffffffffffefffff9c07c0640080000000000f000000000c0000000001820001c22008f830300003000030fdfe7c041d3f8402403e03f8301d980f673860027ffc0803f780c001ff99f600d1fc3fff84003ffffffff380663ffff8e07fffff7ff9826366ffdfe6018e87ff85f63ff86ffa001fcfc001f01fff77001cfe007ffc3ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcf99ff98c1000c8ff1c3ef9c07fff7fcfdefffec407c0187c3337e3ffffffff7fffffffffffffe67fffffffffffff9ffffffe63fffffd0ff39001000070fffffe78079c9c06634c7c3c00400020101fffe30002240001000000000000000000000000000000000000000000000000000000000000031fb3780c0c067fdffffe7c0fffff9903f9a40027fe9efc7060f0c00000800030000000000000000000000000000000000400000000000008000000000000000000000000000000000000000000000000000000400000000058fc0e7bdf87bfff207ff274f3cc0e7c13930f9dffffe7ff19c9f0e4830200000000000000000000000000000000000000000000000000000000000001e00e1b83e0ffff01f383831e000003c0e7cfc980030100300b07f703c00041c0f91f818000987000c409fb9807bffffff07fe605ff7bf01cf823f000000000c00008000000000000000000000000000000000000000000000000000000000000000000000000000020000000000000000f8060100000001000080000c00000186002000260e1c643ffffffbf6e0003ff8bf07e79fffc2005e7806000e0041ff733f1fff23e3c0cfe33ffc0003e1800e0000c000007f9019f80030344ffff9fce081f89040e72020cf91bd0f1cfff071c047fde6ec0f80003f881823fbdbf9f98e7807fef921c1f8ff0ffe40f01efb0dff9ffffffe00000000000000
+
+*** Saving signal to file g020_906.8M_2400k.cu8 (125800 samples, 262144 bytes)
+Detected FSK package	2026-10-21 21:18:47.320595
+Analyzing pulses...
+Total count: 1035,  width: 7.84 ms		(18815 S)
+Pulse width distribution:
+ [ 0] count:   82,  width:    2 us [2;2]	(   4 S)
+ [ 1] count:  128,  width:    2 us [2;2]	(   5 S)
+ [ 2] count:  269,  width:    1 us [1;1]	(   2 S)
+ [ 3] count:  229,  width:    0 us [0;0]	(   1 S)
+ [ 4] count:   57,  width:    4 us [4;5]	(  10 S)
+ [ 5] count:   55,  width:    3 us [3;4]	(   7 S)
+ [ 6] count:  108,  width:    1 us [1;1]	(   3 S)
+ [ 7] count:    8,  width:   17 us [14;20]	(  41 S)
+ [ 8] count:   22,  width:   10 us [8;12]	(  23 S)
+ [ 9] count:    8,  width:   81 us [71;93]	( 194 S)
+ [10] count:    2,  width:   62 us [60;65]	( 150 S)
+ [11] count:   12,  width:   25 us [21;31]	(  61 S)
+ [12] count:   43,  width:    6 us [5;8]	(  15 S)
+Gap width distribution:
+ [ 0] count:  248,  width:    1 us [1;1]	(   2 S)
+ [ 1] count:  110,  width:    1 us [1;1]	(   3 S)
+ [ 2] count:  226,  width:    0 us [0;0]	(   1 S)
+ [ 3] count:   94,  width:    2 us [2;2]	(   4 S)
+ [ 4] count:  114,  width:    2 us [2;2]	(   5 S)
+ [ 5] count:   79,  width:    4 us [4;5]	(  10 S)
+ [ 6] count:   52,  width:    3 us [3;3]	(   7 S)
+ [ 7] count:    7,  width:   73 us [56;88]	( 175 S)
+ [ 8] count:   26,  width:    9 us [7;11]	(  21 S)
+ [ 9] count:   15,  width:   15 us [12;18]	(  35 S)
+ [10] count:   48,  width:    6 us [5;8]	(  14 S)
+ [11] count:    3,  width:  177 us [164;200]	( 425 S)
+ [12] count:    5,  width:   21 us [20;22]	(  50 S)
+ [13] count:    4,  width:   28 us [25;31]	(  67 S)
+ [14] count:    2,  width:   12 us [12;12]	(  28 S)
+Pulse period distribution:
+ [ 0] count:  260,  width:    2 us [2;3]	(   5 S)
+ [ 1] count:  115,  width:    3 us [3;4]	(   8 S)
+ [ 2] count:  105,  width:    1 us [1;1]	(   3 S)
+ [ 3] count:  152,  width:    5 us [4;5]	(  11 S)
+ [ 4] count:   90,  width:    6 us [5;8]	(  15 S)
+ [ 5] count:  113,  width:    2 us [2;2]	(   4 S)
+ [ 6] count:   22,  width:   16 us [13;21]	(  38 S)
+ [ 7] count:   54,  width:   10 us [9;14]	(  25 S)
+ [ 8] count:   17,  width:   76 us [58;93]	( 182 S)
+ [ 9] count:   39,  width:    8 us [8;10]	(  19 S)
+ [10] count:   18,  width:   26 us [22;32]	(  63 S)
+ [11] count:   27,  width:    1 us [1;1]	(   2 S)
+ [12] count:    6,  width:  181 us [165;201]	( 435 S)
+ [13] count:    6,  width:   20 us [20;22]	(  49 S)
+ [14] count:    6,  width:   39 us [35;43]	(  93 S)
+Pulse timing distribution:
+ [ 0] count:  176,  width:    2 us [2;2]	(   4 S)
+ [ 1] count:  242,  width:    2 us [2;2]	(   5 S)
+ [ 2] count:  517,  width:    1 us [1;1]	(   2 S)
+ [ 3] count:  455,  width:    0 us [0;0]	(   1 S)
+ [ 4] count:  129,  width:    4 us [4;5]	(  10 S)
+ [ 5] count:  107,  width:    3 us [3;4]	(   7 S)
+ [ 6] count:  218,  width:    1 us [1;1]	(   3 S)
+ [ 7] count:   21,  width:   17 us [14;20]	(  40 S)
+ [ 8] count:   34,  width:   10 us [8;12]	(  24 S)
+ [ 9] count:   13,  width:   80 us [70;93]	( 191 S)
+ [10] count:    4,  width:   61 us [56;65]	( 147 S)
+ [11] count:   20,  width:   25 us [21;31]	(  61 S)
+ [12] count:  102,  width:    6 us [5;8]	(  14 S)
+ [13] count:   12,  width:    8 us [8;9]	(  19 S)
+Level estimates [high, low]:   3715,     80
+RSSI: -6.4 dB SNR: 16.7 dB Noise: -23.1 dB
+Frequency offsets [F1, F2]:    -514,    172	(-18.8 kHz, +6.3 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {18871}f3e79f1bf0c608007ffc7c3e1f6ffcfdde0303e0020008677ff201f00191ffcfc0cfe7ffcff9f9dffffffffffbffdffffffefffbffcfbfffffff13e030387ff70600000000000000000000000000000000000000c0000004000008000000000200dfffffffffffffffffffffffffffffffffffffffffffffffffffbedffffffdfffffffffffffffffffffffffffffffffffecffffffffffffffffffc7ec7f81fcc1f87d869ff80035fccfe7000f9e07e73c600307f3fffc00700008000019c00f01e4f07e0fdfe19c7f0813600006000f47fe007df027df77ce0018321c26cd3fc3f00000000113380037fffffffff001c025fbc200000000010000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040c0003cfdfffffffffffffff7ffffffffffffffffffffffffffffffffffffffdf1288000e0000c406001ffffa7e601f8ee01f47ff03fca7725e3cf1f87ff980ffe3c10ff7f23e841fe7fff80cfffc9198401c19801ff8be0007f8ff870fffd87ffffffffffffb47ffffffefffff87fff861e00002006190bfffe063fc01fda03cf7c0fffe010000003323f0007c7fe60ffc01fe400203d9e7c7dfbfff0c0081c0ce383c3b3106c0801cfcdf3201fbf03e473000fbc69f860c00180001000000002020000400080000001e001e4c01ff8bffff8fe7f7fffffffffffffffffffffffffffffffffffffffffe7fffffffffffffff30601000000000c300400061c00019b3bfc3030001be3e043c07e07fe237963fc0001fffffbfc000003e0306cff07c00e04002000c00600401ffffffffffffffffffffffe7fffffffffffffffffffffffffffffffffffffffffffffffffde0401c2fe00001f001be7cc07d8e063f8001c081600ecf81fffdff7ffffdfffffcfffffffffffffffffffffffffffffffffffffffffffffffcffff7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbfffffffffffffffffffffff73fff9fdffffffff5ffcfffffffffffffff8ff801e0000080000000000040000000000000000400000000000000180004c03886dffffb3fe3f5bfff882781c307bf33c4000c7fffe0000c7ff3180ffb1cc0060000001000100000020020180040000000000c000006000c000c00c0013f800304e000100fbfffb003fffffe67ffffcffff9ff33dfbfcffffcffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbffffffffffffffffffff00040000200000003007e40000000000001000000000c0000800001e04cfcffefff884fcff87837000200033e670c007fffc9f3e7fbe04303808060cfbf0c9ba736f27f0c309fffff9fffff7fe33f7f8df03fff819c3f03cb0030dfe08031e01026503fdc8660fce3981e3f67906727e01e6c1f90bfffe78021f000dffbfffcb47bec0667f0c1f0420077c000cc3fe19fdcfffffffffffffffffffffffffffffffffffffffffffffffffeeffffffffffffffff9ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcc00c300f640fd0404ff8fff81c39a700613f07003d8029cf871984900ec7fff8789df0100df0ffff203930003c801bb338c7f067c000000001801f00011060006040001901e0000000000007902180031f81ffe9bfffff1ecff987fff40e0e606010387e11c1fffc0c067f0002000cfffb3d9f3e07ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0008001ffffff31f3e0810f8ffc667ff0000307b00000ff0fffbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffffffffff8ffffffffffffffffff7fffffffffff3ffffff3ffffef3ffffffffc3fffff7e0603fff267fffcc063fe1d8013800006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c00cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbff000060009e00f080020100000001c320e04300000027c7fffff8fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc77fe83ec0e3000de85dff801010ffc01cf9c6df0580000c4031ffffffffffffffffffffffffffffffffffffffffffdfffffffffffffffffffffffffd000000bf002000020fc00670f08b3c070ffe077ff10000fffdbff7ffffffffffffffffffffffffffffffffffffffffffffffffbfffffffffffffffeff800370867fe1e0befc001ffdf83b1f8007fffc1018c7ffffff8e04000f7fc3ffde0fc07f00ff83f7fff8079e78bc810c19b23007fc8e781fd87f7fffffffffde7fffffffffff199f8003efae3c6064fbffff826ff003c3b80dcfc7bf983f018e79c00180001fdffc1801077898348600dfcf8e0000f0000000000000000000000000000000001b00001e0000001dc0006000003e42003f819c71e1feff800024e18c1bfcddc0f80000000000003c00000000102700401c0600022000e03ffb6fff39bffec3f1fc3e281ec3fff3003e38e209ffffffffffffffffffffff7dfe0059fffffe3dc77ffc782000318000800000000000000000000000000000000000000000001000000000000ffff27ffbfff7ffffffffffffff99ffffffffffffdfff7fcfffffffffffffffdf0fffffffffffef9cf8783c62024f3f8fff81fef8783fbf20021006000000000000000000000000000000000000000000000000000060000000000c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000000008000000000000000000000000000000000000000000000000c200000000000000000000000000000000000000000100000003000000000000000004000000000000000000000000000000000000000000000060000000000000000007ffe00000000000000
+
+*** Saving signal to file g021_906.8M_2400k.cu8 (125801 samples, 262144 bytes)
+Detected FSK package	2026-10-21 21:18:48.976036
+Analyzing pulses...
+Total count: 1050,  width: 6.80 ms		(16328 S)
+Pulse width distribution:
+ [ 0] count:  215,  width:    1 us [1;1]	(   2 S)
+ [ 1] count:   91,  width:    2 us [2;2]	(   4 S)
+ [ 2] count:   90,  width:    4 us [4;5]	(  10 S)
+ [ 3] count:  106,  width:    1 us [1;1]	(   3 S)
+ [ 4] count:  118,  width:    2 us [2;2]	(   5 S)
+ [ 5] count:   60,  width:    6 us [5;8]	(  15 S)
+ [ 6] count:  241,  width:    0 us [0;0]	(   1 S)
+ [ 7] count:    4,  width:   39 us [38;42]	(  94 S)
+ [ 8] count:   75,  width:    3 us [3;3]	(   7 S)
+ [ 9] count:   23,  width:   10 us [9;13]	(  25 S)
+ [10] count:    2,  width:   50 us [49;51]	( 120 S)
+ [11] count:    9,  width:   18 us [14;21]	(  42 S)
+ [12] count:    7,  width:   28 us [25;30]	(  66 S)
+ [13] count:    2,  width:   84 us [77;91]	( 201 S)
+ [14] count:    1,  width:  181 us [181;181]	( 435 S)
+Gap width distribution:
+ [ 0] count:  274,  width:    1 us [1;1]	(   2 S)
+ [ 1] count:  256,  width:    0 us [0;0]	(   1 S)
+ [ 2] count:   85,  width:    4 us [4;5]	(  10 S)
+ [ 3] count:   81,  width:    2 us [2;2]	(   4 S)
+ [ 4] count:   92,  width:    2 us [2;3]	(   5 S)
+ [ 5] count:   52,  width:    3 us [3;4]	(   7 S)
+ [ 6] count:    2,  width:   62 us [62;62]	( 148 S)
+ [ 7] count:    8,  width:   21 us [19;25]	(  50 S)
+ [ 8] count:   26,  width:   10 us [8;12]	(  24 S)
+ [ 9] count:  127,  width:    1 us [1;1]	(   3 S)
+ [10] count:   30,  width:    7 us [5;8]	(  16 S)
+ [11] count:    7,  width:   31 us [24;35]	(  74 S)
+ [12] count:    2,  width:  293 us [275;311]	( 704 S)
+ [13] count:    6,  width:   94 us [80;102]	( 226 S)
+ [14] count:    1,  width:   15 us [15;15]	(  35 S)
+Pulse period distribution:
+ [ 0] count:  111,  width:    2 us [2;2]	(   4 S)
+ [ 1] count:  172,  width:    2 us [2;2]	(   5 S)
+ [ 2] count:  194,  width:    4 us [4;5]	(  10 S)
+ [ 3] count:  114,  width:    6 us [5;7]	(  14 S)
+ [ 4] count:   82,  width:   10 us [8;12]	(  23 S)
+ [ 5] count:  147,  width:    3 us [3;3]	(   7 S)
+ [ 6] count:    5,  width:   70 us [62;81]	( 167 S)
+ [ 7] count:   17,  width:   22 us [20;26]	(  53 S)
+ [ 8] count:  112,  width:    1 us [1;1]	(   3 S)
+ [ 9] count:   16,  width:   33 us [29;43]	(  80 S)
+ [10] count:   25,  width:    8 us [8;8]	(  18 S)
+ [11] count:   24,  width:    1 us [1;1]	(   2 S)
+ [12] count:    2,  width:   50 us [50;52]	( 121 S)
+ [13] count:   18,  width:   14 us [12;17]	(  33 S)
+ [14] count:    6,  width:   96 us [90;103]	( 231 S)
+Pulse timing distribution:
+ [ 0] count:  489,  width:    1 us [1;1]	(   2 S)
+ [ 1] count:  172,  width:    2 us [2;2]	(   4 S)
+ [ 2] count:  172,  width:    4 us [4;5]	(  10 S)
+ [ 3] count:  233,  width:    1 us [1;1]	(   3 S)
+ [ 4] count:  209,  width:    2 us [2;2]	(   5 S)
+ [ 5] count:   95,  width:    6 us [5;8]	(  15 S)
+ [ 6] count:  497,  width:    0 us [0;0]	(   1 S)
+ [ 7] count:    8,  width:   36 us [32;42]	(  87 S)
+ [ 8] count:  126,  width:    3 us [3;3]	(   7 S)
+ [ 9] count:   47,  width:   10 us [8;13]	(  24 S)
+ [10] count:    4,  width:   56 us [49;62]	( 134 S)
+ [11] count:   16,  width:   18 us [14;22]	(  44 S)
+ [12] count:   13,  width:   27 us [22;31]	(  64 S)
+ [13] count:    8,  width:   92 us [77;102]	( 220 S)
+ [14] count:    1,  width:  181 us [181;181]	( 435 S)
+Level estimates [high, low]:   3421,     84
+RSSI: -6.8 dB SNR: 16.1 dB Noise: -22.9 dB
+Frequency offsets [F1, F2]:    -523,   -104	(-19.2 kHz, -3.8 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {16386}cf7fec001df879f033e03007fffe01c1c0cc1f8079800600087078000000000000000000000000000000000000300000000000400000013ff31ffc7ffffffffffffffffffffff3ffef9cfff6fefbffffffbfff1fbfb4feefff9dffffdbe7fbf9ff0e0e040000fff03f97e7fff3e00e760ffdff98000006000e08080000800000000000003000c000003000000000000000019070080000004003c06ff3474ffc9d9e007f2767f0f9e1e4ffff98fbe7efffefffffffffffffffffffffffffffffddfffffffffefffffffffffffff80184000001c300088000f01c7fc20a00000c01e3ff403e01183ffff9fffffffffffffffffffffffff3fbffffffffffffffffffffff7fffffffffffffffffffffffffffffffffffffffffffff9ffffffffffffffffffffffff7ffff1ffffe40100004c7803c9f880038006003ffd003c000000ffdfff7e7fff9ffffeffffffffffffffffffffffffffffffffffffffffffffffffffffffde60000000000000000003000000c000001000ffff8c00ffcfbf0007c7dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdfffffffffff2ff800880003c000c003000001831300000f839ffffff73fe1f9c20bcff7ffbffffffffffffffffdfffcefffffffffffffffbfffffffffffffffffffffffffffffffffffffe7ffff9b3fbffffffffe7bffefffff7e7fee67fc7f8100020039001ffffffff7edffff9b8f9337f87e0240004de182f800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000081000ffffdfffc7eefff9f80000cfffdfeffba4063fdfffffbfbcf3c00000040000000000000000000000000000000000000000000000010000001237effeffffeffff83ffff7ffffe7fcfdf7ffff3fffc7fc082791ecc00401000000000000000000000000000000000000000000000000000000000000110037dfcfe5bfe19ffb74f0fc0b60f3ffc04c1efe413ff80203e040ff0fe1db90c7f1981e383f000fff0e1ffe3c8cbf12380f7c760200007f7fcde18223ff2f1e71ffe1ef80000fcc005c00000279e1fc80c398013d8ff81fff807e63fe37ffff9b1cffc7fe0fc801008fffc00801ff1800787ef3603fc7ffd9ffe03c081ff0013e7bfff01f38060121fc905c7fc23ff0009fe47e0027da27e3e0ff9e01ffc1f9c0f00807f00fe79fff200c781ef811f91a00000c1041f03990800f7f3cee0384efc0000c3f7fffffe378fcfffb8c187ff87ffb8e1ffefe7e7c0ee7e04d982ef0784011fe39800c21fc69fb32f0001878200000000000000000003000004008000800000000000000000000fc000000000006020c00000000000030000007f020000000000000741f001e0007fffffdfbdfff97fdfdff100ffd9f3f00f03f3820c677fff3930effff8000007fff00318001c390001ff9fffdf3e3f7e8ff3ff7fc34ff61b988021000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000c00fefffffffffffffffff9fffbfffffffffffffffff9ffffffffffffe1ffffffefffffffffffffffffe7eff7fff7fffffff37fffffdfff7fffff8cf3fa0000000000000000000400000000000000000000000000000000000000000000000000000001002000000003800000000000040e4c01e8004391ffffdfb83fffffffffff9ffff3fffffefff3fffffdffffff7ffffffffc9ffffffffffe06f7f800fcff8d8003e3e008ff003f9f0040061fffc3fffffffc0000ed800007f9ffffec038cffc99fd99ff93837c7d1c4ffdf2003d800077f3fffffe407fb8000190000030000180ff3fc807ffef7fbc7fff5fcc1f7fe000004000000000000000000040000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000100000000000000000000000000000000000009dff83ffffffffffffffffffffffffffffffbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7bffffffffffe7ffdffffffe7f7c37ffffcffffffffffffdff307ffff013cee4013cfffb0e73ff789ffc19e0e023f9f8000000000000ffbc0007c21f8187fffcfff065c7e3f8f0dffe0bfbd0f7e00c3ffe27ffffe61ff007ffffff9fffffffffffffff3e5fbf803f0e3f8803fedc0403c07f930ffffdbc7fffc3c7fc4fbfffff03ffffffcfeffbf1fc0001c73e91020002079010fe07fa1f9b360200000000000000000000000000000000000000000000000000000000000004000001087d237f3f1fffbff87320013f26f203fffc03ffffffc199c3e27ec73f00ffe404c93ff9bff3801918ffffffe338fe00300007fe078019803300000c40000003e60068018831801900000026000000801c600fff3bdb1fee23c7c7748600fc0006370f73c07fbe1ffc3ffce6807f7e0000879ffe0003cc0fe3cfff06002cfc78c003afa13bfbfffe0601f8878b1fa064400dfe1b8ccbf08e1f6707c77ff387fffffc3f10063f3c6ff087903f90f0b00003c8ff9e7fe0046fd330012003fb200781bffbfe5b3f10ffc0000000000000037fc800c00240801f01803fe7e006fffff31100cfff1fc1820c13ff1c0c0c383fffe7ff000000000000000
+
+*** Saving signal to file g022_906.8M_2400k.cu8 (125800 samples, 262144 bytes)
+Detected FSK package	2026-10-21 21:18:50.637526
+Analyzing pulses...
+Total count:  903,  width: 4.91 ms		(11778 S)
+Pulse width distribution:
+ [ 0] count:    4,  width:   18 us [16;20]	(  43 S)
+ [ 1] count:   52,  width:    5 us [4;6]	(  11 S)
+ [ 2] count:  226,  width:    1 us [1;1]	(   2 S)
+ [ 3] count:  106,  width:    2 us [2;3]	(   5 S)
+ [ 4] count:   83,  width:    2 us [2;2]	(   4 S)
+ [ 5] count:  221,  width:    0 us [0;0]	(   1 S)
+ [ 6] count:   96,  width:    1 us [1;1]	(   3 S)
+ [ 7] count:   27,  width:    8 us [6;10]	(  18 S)
+ [ 8] count:   66,  width:    3 us [3;5]	(   7 S)
+ [ 9] count:    7,  width:   12 us [10;15]	(  30 S)
+ [10] count:    4,  width:   82 us [75;92]	( 197 S)
+ [11] count:    2,  width:  105 us [104;107]	( 253 S)
+ [12] count:    3,  width:   40 us [36;43]	(  95 S)
+ [13] count:    3,  width:    6 us [6;6]	(  14 S)
+ [14] count:    2,  width:   30 us [29;32]	(  73 S)
+Gap width distribution:
+ [ 0] count:  105,  width:    1 us [1;1]	(   3 S)
+ [ 1] count:  202,  width:    0 us [0;0]	(   1 S)
+ [ 2] count:  206,  width:    1 us [1;1]	(   2 S)
+ [ 3] count:  116,  width:    2 us [2;3]	(   5 S)
+ [ 4] count:   69,  width:    2 us [2;2]	(   4 S)
+ [ 5] count:   49,  width:    3 us [3;4]	(   7 S)
+ [ 6] count:   80,  width:    4 us [4;6]	(  10 S)
+ [ 7] count:   20,  width:   11 us [9;13]	(  26 S)
+ [ 8] count:   26,  width:    7 us [6;8]	(  16 S)
+ [ 9] count:   12,  width:    8 us [8;10]	(  20 S)
+ [10] count:    1,  width:  116 us [116;116]	( 278 S)
+ [11] count:    2,  width:   53 us [48;58]	( 127 S)
+ [12] count:    6,  width:   27 us [24;31]	(  64 S)
+ [13] count:    3,  width:   39 us [38;39]	(  93 S)
+ [14] count:    3,  width:   77 us [70;88]	( 184 S)
+Pulse period distribution:
+ [ 0] count:    6,  width:   21 us [18;25]	(  51 S)
+ [ 1] count:  187,  width:    4 us [4;6]	(  10 S)
+ [ 2] count:  109,  width:    2 us [2;2]	(   4 S)
+ [ 3] count:  212,  width:    3 us [2;4]	(   7 S)
+ [ 4] count:   92,  width:    2 us [2;2]	(   5 S)
+ [ 5] count:   74,  width:    8 us [7;10]	(  19 S)
+ [ 6] count:   92,  width:    1 us [1;1]	(   3 S)
+ [ 7] count:   36,  width:   12 us [10;14]	(  28 S)
+ [ 8] count:   26,  width:    1 us [1;1]	(   2 S)
+ [ 9] count:    7,  width:   15 us [15;17]	(  37 S)
+ [10] count:    8,  width:   83 us [72;104]	( 200 S)
+ [11] count:   37,  width:    6 us [6;7]	(  14 S)
+ [12] count:    2,  width:  112 us [109;116]	( 270 S)
+ [13] count:    7,  width:   41 us [37;49]	(  98 S)
+ [14] count:    6,  width:   29 us [27;32]	(  70 S)
+Pulse timing distribution:
+ [ 0] count:    7,  width:   18 us [15;21]	(  42 S)
+ [ 1] count:  121,  width:    4 us [4;6]	(  10 S)
+ [ 2] count:  432,  width:    1 us [1;1]	(   2 S)
+ [ 3] count:  220,  width:    2 us [2;3]	(   5 S)
+ [ 4] count:  152,  width:    2 us [2;2]	(   4 S)
+ [ 5] count:  423,  width:    0 us [0;0]	(   1 S)
+ [ 6] count:  201,  width:    1 us [1;1]	(   3 S)
+ [ 7] count:   64,  width:    8 us [6;10]	(  18 S)
+ [ 8] count:  116,  width:    3 us [3;5]	(   7 S)
+ [ 9] count:   24,  width:   11 us [10;15]	(  27 S)
+ [10] count:    7,  width:   80 us [70;92]	( 191 S)
+ [11] count:    3,  width:  109 us [104;116]	( 261 S)
+ [12] count:    7,  width:   40 us [36;48]	(  97 S)
+ [13] count:   18,  width:    5 us [5;6]	(  13 S)
+ [14] count:    8,  width:   28 us [24;32]	(  66 S)
+Level estimates [high, low]:   3544,     83
+RSSI: -6.6 dB SNR: 16.3 dB Noise: -23.0 dB
+Frequency offsets [F1, F2]:    -532,   -109	(-19.5 kHz, -4.0 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {11828}ffffffffffff1fffb3fbc08407833fff804073f37ffefd800879fcc00000010408002080041009e0c010000000fffff9d27fe79fff3ff807e60181e3fbbd163ffde0003819cf0186cff6f8c303ff67f9f00809981afffffe1ffffcc400c611fffcfbffffce0fffffff3e011fffffffffd393e8fbdb7804ffffcfff7cb3ff7ce100000fc184efc4fff00bf8b3bfe7ffff0f3ffffffff0fffffffffffffffffffffffffffffffffffffffffffffb7fffc0c40000000400180004000000300000100000000e00000018000100046098070001c0641b0ffa712060007fc00081e7e0112ef0003ff9f9cffc7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc3f9dfc00001806011ff264d846018f6c03e0bff7fecfbef873803a7e3800026fe40e7dff1fbe70fcf0040fb67b3cff0ff93ff9200000060dfce07bf619ffe3ffbfffffffffffc83c18783fff3000346ffff8a3c07e58ff83f103f33e300631ffde1bf103bbffff687f0f0fbe5f7dfe000300010060000100000000000000000000000000000000000000000000000000000000000000000000037ec3f0399c0180ff303603fbdecc7ff63025ffeff81b803bc7f0000080000000000000000000000000000600000e0000000000000003000017f7ffffffffafffff9fffffffffffffffffffffffdffc7ffe07086848801000000000000000080000000000000000000000400000000000000008000000000000020000000000000000000000000000000000000000000000000000202000600000000000000000070000003006000200000f8003fe0fc1c01fff03fb01406f8ff990c79f199fffffc060f103787e1b36019f020083ffffffffffffffffffffffffffffffffffffffffffffffffeffffffffff0fe20001000030083200000c0238007fff081fe3d03ff80ff8583c0eff38ffff7ffffffffffffffffffffffffffffffffffffffffffffffffffffffcffc1ff8000c008c00000020401fe1dc00ffbf0ccffc0000903f10014180c77fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdf93f80000039f706302fffc1fe1000300038cb00f00080d8403fb703c00027ce3e11991f81f80001f2380f1f81bf3c383007366007df787f839ffff7fffffffffffffffffffffffffbffffffffffffffffffefffffffdfe0e5cfc8000000000000004000007c00003e000019ecc20043e4cdc1c01ffff800433801c6040fff8000010000c71cffffef07f7ff67fb7fe600cfe5f0e3ef1c3033fff2000604000088001fe64007f700fd81f3f903020f0f7f73400400f800e0c008c8003e5e07c0307c0f8030007ff035e00800079e2700033dfffe3cfe00f80304f0e643c01f867c8003ff9c00f02183ffff64dedcffcfffffff7ffffffffffffffffffffffffffffffffffffffffffffffe3de47803047e00007fec733f7b918019fffc0e830f92f03000701820efd8bc011f8fd8c3e478f9ffc00000187ef03f87ce0e007ff8fcd93fe73ff003fffe7ffffffdfffffdfffffffffffffffff9fffffffffffffffffffffdffff8000002480300f3dc003f88118180fc61e3ffc60060021cf07fdb199bfcf07fe0e0986f78001fc3ffb60c078e9fcd800c9fff000ffff73f01df8cf310060000000000000000000000000000000000000000000400000c000208c7cf3f70fffffd0fffff3ffe7f7ff040001800001801fbf7ff9c0043fcf240007dbfff0003fffff0049bfffffe3001d022641013f97f1f70c10610000001e000000000000000000000000000000000000000001ff1000000000000000000000000000000000010000000c0000000000000000000000100000000000000000000000300000e800000000801e00000300001a00707ff811f7c13f04d84f03cff91fffff81bc2008ffef7ff03fff7df1e170fec04627f8ff00181fc320ec7efeffff11800603c00e01efe8819380c003e03ff07cf7fffeef0fff8e080c03c70003e4e608cfd00010004000001001000000000c103b3ee1ffe0c000000000000
+
+*** Saving signal to file g023_906.8M_2400k.cu8 (125800 samples, 262144 bytes)
+Detected FSK package	2026-10-21 21:18:52.297351
+Analyzing pulses...
+Total count:  977,  width: 8.56 ms		(20540 S)
+Pulse width distribution:
+ [ 0] count:   85,  width:    2 us [2;2]	(   5 S)
+ [ 1] count:  257,  width:    0 us [0;0]	(   1 S)
+ [ 2] count:  108,  width:    1 us [1;1]	(   3 S)
+ [ 3] count:   51,  width:    3 us [3;4]	(   7 S)
+ [ 4] count:   54,  width:    2 us [2;2]	(   4 S)
+ [ 5] count:   30,  width:   10 us [9;13]	(  25 S)
+ [ 6] count:  236,  width:    1 us [1;1]	(   2 S)
+ [ 7] count:   54,  width:    5 us [5;7]	(  13 S)
+ [ 8] count:   16,  width:   31 us [24;36]	(  74 S)
+ [ 9] count:    4,  width:   22 us [20;25]	(  52 S)
+ [10] count:    3,  width:  114 us [98;128]	( 274 S)
+ [11] count:   36,  width:    4 us [4;5]	(   9 S)
+ [12] count:   20,  width:    8 us [7;9]	(  18 S)
+ [13] count:    5,  width:   59 us [55;63]	( 142 S)
+ [14] count:    4,  width:  165 us [155;176]	( 395 S)
+Gap width distribution:
+ [ 0] count:  113,  width:    1 us [1;1]	(   3 S)
+ [ 1] count:  228,  width:    0 us [0;0]	(   1 S)
+ [ 2] count:   80,  width:    4 us [3;5]	(   9 S)
+ [ 3] count:   99,  width:    2 us [2;3]	(   5 S)
+ [ 4] count:   33,  width:    8 us [7;11]	(  20 S)
+ [ 5] count:  227,  width:    1 us [1;1]	(   2 S)
+ [ 6] count:   59,  width:    2 us [2;2]	(   4 S)
+ [ 7] count:   14,  width:   12 us [10;15]	(  30 S)
+ [ 8] count:   43,  width:    5 us [5;7]	(  13 S)
+ [ 9] count:   29,  width:    3 us [3;3]	(   7 S)
+ [10] count:   15,  width:   17 us [15;20]	(  41 S)
+ [11] count:    9,  width:   50 us [41;56]	( 120 S)
+ [12] count:   10,  width:   36 us [31;40]	(  86 S)
+ [13] count:    4,  width:   73 us [66;82]	( 175 S)
+Pulse period distribution:
+ [ 0] count:  223,  width:    2 us [2;3]	(   6 S)
+ [ 1] count:  110,  width:    2 us [2;2]	(   4 S)
+ [ 2] count:  112,  width:    6 us [5;9]	(  15 S)
+ [ 3] count:   72,  width:   10 us [9;13]	(  25 S)
+ [ 4] count:  155,  width:    4 us [4;5]	(  10 S)
+ [ 5] count:  103,  width:    1 us [1;1]	(   3 S)
+ [ 6] count:   22,  width:    1 us [1;1]	(   2 S)
+ [ 7] count:   34,  width:   16 us [13;20]	(  38 S)
+ [ 8] count:   27,  width:   33 us [25;40]	(  79 S)
+ [ 9] count:   16,  width:   22 us [20;26]	(  54 S)
+ [10] count:    5,  width:  115 us [99;129]	( 276 S)
+ [11] count:   19,  width:    8 us [8;9]	(  19 S)
+ [12] count:   16,  width:   57 us [46;70]	( 136 S)
+ [13] count:   48,  width:    3 us [3;3]	(   8 S)
+ [14] count:    5,  width:  163 us [156;176]	( 392 S)
+Pulse timing distribution:
+ [ 0] count:  181,  width:    2 us [2;2]	(   5 S)
+ [ 1] count:  485,  width:    0 us [0;0]	(   1 S)
+ [ 2] count:  221,  width:    1 us [1;1]	(   3 S)
+ [ 3] count:  108,  width:    3 us [3;4]	(   7 S)
+ [ 4] count:  113,  width:    2 us [2;2]	(   4 S)
+ [ 5] count:   54,  width:   10 us [9;13]	(  25 S)
+ [ 6] count:  463,  width:    1 us [1;1]	(   2 S)
+ [ 7] count:  110,  width:    5 us [5;7]	(  13 S)
+ [ 8] count:   28,  width:   31 us [24;38]	(  75 S)
+ [ 9] count:   17,  width:   21 us [18;25]	(  50 S)
+ [10] count:    5,  width:  114 us [98;128]	( 274 S)
+ [11] count:   78,  width:    4 us [4;5]	(   9 S)
+ [12] count:   37,  width:    8 us [7;9]	(  18 S)
+ [13] count:   14,  width:   57 us [48;68]	( 136 S)
+ [14] count:    5,  width:  163 us [155;176]	( 391 S)
+Level estimates [high, low]:   3591,     82
+RSSI: -6.6 dB SNR: 16.4 dB Noise: -23.0 dB
+Frequency offsets [F1, F2]:    -504,    113	(-18.5 kHz, +4.1 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {20602}f88eff80203c00003ffffff1801383f0c7ffc025ff01fbfffa71fffffffe7f67fffffff1bfe3c7f1cfbbf0fffffffffffffffffffefffffffffffffff7ffffff7fffffffffffffffdfec1d0000007c00b80000071c020207f27cd907fc6fffb06ff7630010803800000380034218d006f99823ffe2f9803bf7df307f9fffd0df8003fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbf873fff80002690278709ff9810f0000ffe9effffc4076973f78380ffff467ffe8009b104001e1d9018fef319e36fbec00002e033fe5d3ffffffffffffff3ffffefffffffffffffffffff7ff7f3fffffffffffffffffffff7ffffffffffffffffdfffffffffffffffffffff9bffffffffffffffffff9d0000000010000000000000000000000000000000400000000080000200040980000030c700040000000001a40001038871fcfe01c9cc188f0c9fff7fff7ffffffbffffffffffffffffffffffffffffffffffffc3fff7fffff0610384600c1a7c8c00006600016740f8f01c08130007ffeffe620000e0e023931807e000fc818013041f00ec07c1b0fff01720fe27879980fffffffffffffffffffffffffffffffffffffe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb7cef3fefffffe064ec01c00200b80cffdf3ffe3f8eff98de5f9fbfff07e7fefdff58607f9f80e803600007ffffc3ffff800000803fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbffffe7ff7c3ff9ffb3b23fdefb303c80e487000fe00000030e003c8300c1bfffbcffdfffc1bffc919003ff33ff0df3fe0000000000e33009fc03ff800ffffffbfffffffffff9ffffffffffffffffffffffffffffdffffffff3ffc81a100000000000000000000040000000000000000000000010000000000000000000000000000000000000002000000000000000000000018000001bcfff9ff8ffffff81d1dfff7fe60001c03e0ffff91fb8e1b382201c00106000000000000000000000000000000000000000000000000000000000000007f8fff9ffffffffff7fffffffffffcfffffffbffffe7ffffff3ffe7e4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000001800000000000000000000000000000000180000e60498dff8fffdfffffffffffffffffffbffffffffff83fffcfff3ffffffe0c7f03e0000000000000000000000000000000000000000341e000000000804000000180180000c44080007c001fa0033ff900479f9ffff818e000000002074d76c08ee38fbffe3fff87fdf066ffb3c80fe01fec03f1f879fcff84e007ffff3ffffffefff9ffffffff003a03fff007fffde7f7ffffef3f1800240000000000000000000000000000098800000000000000000000000000010000000000000000000008000000000000000000800000000001040490006fffff77ffffffefff7efffff3fffcc1befbb80020303fc7c700080000000000c00000000000000000000000000000200000000000200000000000000000000000100000000010000006000000000000000000000000000000000000000000000000000000000000000000000000000c000000000000000038fffffff3fedff00c87fbf03e7fe0333ffffff0fe8013c9830e00300610010000000703000000000018000000000060000000000000000000009fe3ffff9f7ffffffc7ffffffff7fffffffffffffffffcfeffffff7ffffdffffe6431cfc1fff1b13f1ff3f78fc7505beff060d801300fffe7ff8007c400000000000004800000000000000000000040000040000000100000000600000000040000000000000000000000000046003030000000090000000000000c00300010000003e0037b001e2600f1fffffeff0f7ffffffbe7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff933ffffffffc3c07fffffe7ffe0bf967c4020fffffc0c9dbf301627d9cfbf11a67fcf0ff8e6400f6089e7fff1f91f80900000000300040067c000000000004003080020c0380003f8000e3e7f600487fff9ffffdffffffffffffffffffffe7fffffffffffffffffffffffffffffffffffefff9cc61f8180000000000000030000040018101f7380700ffe63801fdc1fe3ffffffffffffffffffffffffffffffffbffffffffffffbfffffffffffffffffddc300000100100000000200000180070808c1f83c641fcc3807801ff0872f676c0479ffffbffe011e486e3e79ff9e8ffffde3bfdff1e0ff7ffff3ffffffff7ffffffffffffffff9ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe78000000000000300000000000000000000000000000000040000000c0003001800000000000010000020000000860e800083004ccc7fff841ffcffffc000007000eedfcc206020e0803000038e0fff87ef003c16ffe9ffcff7ce3ffffffffffffffeffdffffffffff9ffffffffffffffffffffbffffffffffffffffffffffffffcffffffffffffffffffffffffffffffffffbffffffff660000100000800000000000000000000000080000000000000003f0c10e0000f00000008c0f9ff1101b0300cdfcc0fffff818004110000000010180ee00000ff7fff0fc1fff807000018fb06007ff0200811401003ffffffcffffdffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc4ff9d0002008840000000c00801818600031066018603fe40003e3fefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbffffffffffffb3fffff83e006000801008c002c0033e007f3fcffffe0000c39ff3809e0defec9e7b1b83300009f7ff8cf887fc00200ffffffb97e0000803f0700023c0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcfffffffffffffffffffff7ffffe00000000000000000000000000000000020000000000000000000000000000000000000000000000000401000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010001000000000000600000000000000000000020000000000000000006000800000200000000000000310000000000000000ff0000000000000000
+
+*** Saving signal to file g024_906.8M_2400k.cu8 (125800 samples, 262144 bytes)
+Detected FSK package	2026-10-21 21:18:53.947088
+Analyzing pulses...
+Total count:  872,  width: 6.01 ms		(14430 S)
+Pulse width distribution:
+ [ 0] count:  203,  width:    0 us [0;0]	(   1 S)
+ [ 1] count:  208,  width:    1 us [1;1]	(   2 S)
+ [ 2] count:   41,  width:    6 us [5;7]	(  14 S)
+ [ 3] count:   78,  width:    2 us [2;2]	(   4 S)
+ [ 4] count:  108,  width:    2 us [2;3]	(   5 S)
+ [ 5] count:   88,  width:    1 us [1;1]	(   3 S)
+ [ 6] count:   21,  width:    9 us [8;11]	(  21 S)
+ [ 7] count:   41,  width:    4 us [4;5]	(  10 S)
+ [ 8] count:   59,  width:    3 us [3;3]	(   7 S)
+ [ 9] count:    1,  width:  438 us [438;438]	(1052 S)
+ [10] count:    2,  width:   85 us [79;91]	( 204 S)
+ [11] count:    2,  width:  210 us [188;232]	( 504 S)
+ [12] count:    3,  width:   56 us [53;62]	( 134 S)
+ [13] count:   11,  width:   15 us [12;19]	(  37 S)
+Gap width distribution:
+ [ 0] count:  102,  width:    2 us [2;3]	(   5 S)
+ [ 1] count:   91,  width:    1 us [1;1]	(   3 S)
+ [ 2] count:  227,  width:    1 us [1;1]	(   2 S)
+ [ 3] count:  209,  width:    0 us [0;0]	(   1 S)
+ [ 4] count:   71,  width:    2 us [2;2]	(   4 S)
+ [ 5] count:   56,  width:    3 us [3;4]	(   7 S)
+ [ 6] count:   33,  width:    5 us [5;7]	(  13 S)
+ [ 7] count:   29,  width:    4 us [4;5]	(   9 S)
+ [ 8] count:   15,  width:    9 us [7;11]	(  21 S)
+ [ 9] count:    4,  width:   49 us [41;53]	( 117 S)
+ [10] count:   14,  width:   18 us [15;22]	(  42 S)
+ [11] count:    2,  width:   27 us [26;27]	(  64 S)
+ [12] count:    9,  width:   13 us [12;15]	(  31 S)
+ [13] count:    2,  width:  190 us [189;191]	( 456 S)
+Pulse period distribution:
+ [ 0] count:  216,  width:    2 us [2;4]	(   5 S)
+ [ 1] count:   81,  width:    1 us [1;1]	(   3 S)
+ [ 2] count:  161,  width:    4 us [4;7]	(  10 S)
+ [ 3] count:  100,  width:    2 us [2;2]	(   4 S)
+ [ 4] count:   99,  width:    3 us [3;4]	(   8 S)
+ [ 5] count:   26,  width:    1 us [1;1]	(   2 S)
+ [ 6] count:   92,  width:    7 us [5;9]	(  16 S)
+ [ 7] count:   36,  width:   11 us [9;14]	(  26 S)
+ [ 8] count:    7,  width:   55 us [50;63]	( 133 S)
+ [ 9] count:   28,  width:   17 us [14;20]	(  40 S)
+ [10] count:    4,  width:   26 us [22;30]	(  63 S)
+ [11] count:    1,  width:  439 us [439;439]	(1053 S)
+ [12] count:    5,  width:   93 us [79;109]	( 223 S)
+ [13] count:    4,  width:  201 us [189;233]	( 482 S)
+ [14] count:    5,  width:   39 us [37;42]	(  93 S)
+Pulse timing distribution:
+ [ 0] count:  412,  width:    0 us [0;0]	(   1 S)
+ [ 1] count:  435,  width:    1 us [1;1]	(   2 S)
+ [ 2] count:   72,  width:    6 us [5;7]	(  14 S)
+ [ 3] count:  149,  width:    2 us [2;2]	(   4 S)
+ [ 4] count:  206,  width:    2 us [2;3]	(   5 S)
+ [ 5] count:  179,  width:    1 us [1;1]	(   3 S)
+ [ 6] count:   34,  width:    9 us [8;11]	(  21 S)
+ [ 7] count:  103,  width:    4 us [3;5]	(   9 S)
+ [ 8] count:   90,  width:    3 us [3;3]	(   7 S)
+ [ 9] count:    1,  width:  438 us [438;438]	(1052 S)
+ [10] count:    4,  width:   89 us [79;96]	( 213 S)
+ [11] count:    4,  width:  200 us [188;232]	( 480 S)
+ [12] count:    7,  width:   55 us [49;62]	( 131 S)
+ [13] count:   29,  width:   16 us [12;19]	(  38 S)
+Level estimates [high, low]:   3488,     80
+RSSI: -6.7 dB SNR: 16.4 dB Noise: -23.1 dB
+Frequency offsets [F1, F2]:    -514,    -91	(-18.8 kHz, -3.3 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {14488}80c49fffb2100428078000fe408f9fc6087321cf03e7fffffefe7fe1807f3ec3fffefbc7ff3f83fff87ff003ef800002001c00100cc0803f7c23e66f0ef7e07e1feffbdfeff1f7f3f63cc7ff24e3f0f18f039806002027c40f820000000000000000000000000000040000000000c010000000000000000000000000000000100000000000000006000003880000000000418c00800080070000131c0060000000fb3ff0618ffe0101003df836007ffffff7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbffffffffffffffffffffffffffffffffffffffffffffffefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0d8c00000000000c00060003c00079e0c060000000dcfcf300dfdcc3e24bf3fffe1ffff6fff81f9fffff3f8ffe63cbffef0c03bffc77c19e1f003fe203bf63c6607dd9ffbb37d9ffe070400ffc33f6073d81848031806200001040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000187ffbfbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe7ffffffffffffffffffffffffffffffffffff8ff938000006f800800059f3f067e0200c3003c87e0ff927fef17c4fb1feffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffe7f00318082761000000310083300fe9c0461cfdff6c77cf23fe67fc73feffd18ffffe0ffbffffefffffffffff9ffffffffff9fffffffe0fc0c3ff020000e030800000000c00000000180000000000000000000000010200000003dfff3effffffffffffffffffffffcffffffffef7ffffcfdfffffdffffffffbfff7f67efff3fffffc1fbfff7fff803c107a4d97f0401f87c031000afffedf8ffff80c98fc11101801ef2fdfc0103b03d00ff7ff600000007978108081f803dce00ffccccfff9c0fec7ffbdfbfffe7ff93fcefe0012013f9887f383847fff7f9f00fff007ffffffe47fffcfffff9e0ffc1f00b0006000000000008000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000bc1e7fff83fffffe7fbffffdfffbfff3f406c63d9bf8dcc37ff200000006400000000000000000000000000000000000000000000000000000c008047dfff13f66fe2fccf9fe5fcdbf3803b683ccc066fe7f0001fff0c600c000000000000000000000000000000000000000000000000000000000c001ffffdff3fffffffffffffffffffffffffffffff9fe7fffffffe0f7fffffff8003ffe6783dfe7407ef0dffe3e0700987c18ce0f1fff99fe1c9e0406c080000000000260000000000000000000000400800000000000040000000000400000000c0018000000001ffffff00f303f3e40018438e738edffffbdffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff04000000000000000000000000000000000000000030000000000000000000001000000000fc000000800000000800c088000000043f0400048ffffffffffffffffffffffffffffffff9fffffffffffffffffffffff3fffffffffffffffff3ffe7fffffffffdcfe7ffffffffffdffffffdfffff800eefffb32fffd320810733603733b0ffe0601fffc717ff9f083000000000000000000000000000000000000000000000000000000000000000000000000000000007f1c3190c1ff31ffc3fffffffe5bfffffff3ffff485f7c180039f3808000000000000000800800000000001000004000980000000000000000000000000000001000000906f8401fe01f99fb027c87ef79fc0007bf8cff3cf7ffe63fffff9ffff0ff019f3f79df90f3fc1f0104fe7fb0076fc000038408ffffb3023f21fc0017f8e0efee73e0f3f9db1e7fe73a060ee00000fc87e80f038f26fce420c07ffffffffff7f3ffe187fc30f0f73f00c0f09000780000000810000000001000042000000000000000000000000000000000000100fe0f0c048c000ecf03e660d9fe400c07bc0c93c2e0fe0007800000000078983c7200006f7f01fe620ee00c3fddf0600001e0f077e10001ff9603e0cdf7fc044010bffd0000f803cdfc019fe19b0b183be07e3d08fdf89efffffb83fdfcff80ddffbffc8f3ffffe7fe3bbfe079f91fcff304a005f046000cfc06073a1f8371fe198601e03fcfffedbee4e3f81f98c5fc4043fdc038000ffc00000000000000
+
+*** Saving signal to file g025_906.8M_2400k.cu8 (125801 samples, 262144 bytes)
+Detected FSK package	2026-10-21 21:18:55.633315
+Analyzing pulses...
+Total count: 1105,  width: 8.65 ms		(20754 S)
+Pulse width distribution:
+ [ 0] count:  247,  width:    0 us [0;0]	(   1 S)
+ [ 1] count:  106,  width:    1 us [1;1]	(   3 S)
+ [ 2] count:  250,  width:    1 us [1;1]	(   2 S)
+ [ 3] count:  122,  width:    2 us [2;3]	(   5 S)
+ [ 4] count:   75,  width:    3 us [3;4]	(   7 S)
+ [ 5] count:   83,  width:    4 us [4;5]	(  10 S)
+ [ 6] count:    8,  width:   61 us [51;76]	( 147 S)
+ [ 7] count:   11,  width:   15 us [13;18]	(  36 S)
+ [ 8] count:   58,  width:    7 us [6;9]	(  17 S)
+ [ 9] count:   95,  width:    2 us [2;2]	(   4 S)
+ [10] count:   21,  width:    5 us [5;6]	(  13 S)
+ [11] count:   13,  width:   11 us [9;13]	(  26 S)
+ [12] count:    5,  width:   44 us [37;50]	( 106 S)
+ [13] count:    1,  width:   31 us [31;31]	(  75 S)
+ [14] count:    2,  width:  145 us [136;155]	( 349 S)
+Gap width distribution:
+ [ 0] count:  112,  width:    1 us [1;1]	(   3 S)
+ [ 1] count:  143,  width:    2 us [2;2]	(   5 S)
+ [ 2] count:  255,  width:    0 us [0;0]	(   1 S)
+ [ 3] count:  248,  width:    1 us [1;1]	(   2 S)
+ [ 4] count:    2,  width:  196 us [185;206]	( 470 S)
+ [ 5] count:   72,  width:    3 us [3;3]	(   7 S)
+ [ 6] count:   72,  width:    4 us [4;5]	(   9 S)
+ [ 7] count:   46,  width:    5 us [5;7]	(  13 S)
+ [ 8] count:   25,  width:    8 us [7;9]	(  18 S)
+ [ 9] count:   81,  width:    2 us [2;2]	(   4 S)
+ [10] count:    9,  width:   96 us [83;115]	( 231 S)
+ [11] count:    6,  width:   32 us [27;35]	(  76 S)
+ [12] count:    3,  width:   63 us [55;70]	( 152 S)
+ [13] count:   13,  width:   11 us [10;12]	(  26 S)
+ [14] count:   12,  width:   20 us [18;24]	(  48 S)
+ [15] count:    2,  width:   15 us [14;15]	(  35 S)
+Pulse period distribution:
+ [ 0] count:  104,  width:    2 us [2;2]	(   4 S)
+ [ 1] count:  222,  width:    2 us [2;3]	(   5 S)
+ [ 2] count:    2,  width:  198 us [186;209]	( 474 S)
+ [ 3] count:  229,  width:    4 us [3;5]	(   9 S)
+ [ 4] count:  120,  width:    5 us [5;6]	(  12 S)
+ [ 5] count:   12,  width:   61 us [52;77]	( 147 S)
+ [ 6] count:   19,  width:   19 us [16;23]	(  46 S)
+ [ 7] count:  124,  width:    7 us [6;9]	(  17 S)
+ [ 8] count:  106,  width:    1 us [1;1]	(   3 S)
+ [ 9] count:   59,  width:   10 us [9;13]	(  25 S)
+ [10] count:    5,  width:   43 us [39;50]	( 103 S)
+ [11] count:    7,  width:   32 us [28;35]	(  77 S)
+ [12] count:   28,  width:    1 us [1;1]	(   2 S)
+ [13] count:   16,  width:   95 us [81;117]	( 228 S)
+Pulse timing distribution:
+ [ 0] count:  502,  width:    0 us [0;0]	(   1 S)
+ [ 1] count:  218,  width:    1 us [1;1]	(   3 S)
+ [ 2] count:  498,  width:    1 us [1;1]	(   2 S)
+ [ 3] count:  265,  width:    2 us [2;3]	(   5 S)
+ [ 4] count:  147,  width:    3 us [3;4]	(   7 S)
+ [ 5] count:  166,  width:    4 us [4;5]	(  10 S)
+ [ 6] count:   11,  width:   62 us [51;76]	( 148 S)
+ [ 7] count:   17,  width:   16 us [13;18]	(  38 S)
+ [ 8] count:  103,  width:    7 us [6;9]	(  17 S)
+ [ 9] count:  176,  width:    2 us [2;2]	(   4 S)
+ [10] count:   34,  width:    5 us [5;6]	(  13 S)
+ [11] count:   28,  width:   10 us [9;13]	(  25 S)
+ [12] count:    6,  width:   43 us [37;50]	( 104 S)
+ [13] count:    7,  width:   32 us [27;35]	(  76 S)
+ [14] count:    4,  width:  133 us [115;155]	( 319 S)
+Level estimates [high, low]:   3476,     79
+RSSI: -6.7 dB SNR: 16.4 dB Noise: -23.2 dB
+Frequency offsets [F1, F2]:    -516,    -82	(-18.9 kHz, -3.0 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {13055}8e0c1fb3f8000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c07fbffbffffffffffffffffffffffffffffffffffffffcfdffffffffffeffffc6013980681e3c18fdb800fd8fee07d801ff8ffff9ee7f07e77ffccc0f893fffffdffdef82008003ffc0410000330e00feffffffff0001cf07beffbfffffffffffffffffffffffffffff9ffffffffffffffffffffffffffdffcfffffffffffffffffffffffffffffffffffff7fffffbffbeffffffffffffffffffeffc0fffff044fb0fffff9e7c04bfe803e03f000dc0fbffec70000400040000000000000000000000000000000000000000000000000000000010fdf07ffffefffffa73fffe3c7fffc9cf9ff807fffef3cf39f0647fe000040180000000000000000000000000000000000000000000000000000001003d9c0efffe30600b4fffa0000080180f3fc1f0200393f00401c000ffe4000000000000000000004000000000000000000000000000000000000001d80107ffff8b99bffffe00b0027e7c00800e19f0c730303fffcfc0ff0000000000000000000000000000000000000000000000000000000000000000331f003ff9803ff220ff07ffc01fc1cfc00fdfe7fffbf9fee01e07ff01c00ef80f06201f04f0703407ffff87fff801860030300ffffffffeffbc9f3d078601e07cfdff3fcf80c030000007f3e4fc0dffc3fc0138dfff0dee04c20067fde3ffc0019f30307fffffffcfc3f1dce008007f0330e3e060641f98bfe4e10800000fc7fe3fe3e7de7c1c03df8d360647fe3d8601f07fb302400d000000000000200000000000000000c0000008000002000000179fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbfffffffffffffffffffffffffffffffffffffffffffffbffbffdfc0047f007ff04e03fff7efffffffffe7fffff3ffc1bdf7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffdffff8000c03886000000000e00004300021bfa0c4f62001701c00203c83006000f7fbbf081009f9ffff8fff7fe023ff0000020000404000c00201c186083c07607fff7ff87f99eff0fe13ef7ffc078000601e0003004000000e3f1fbc060063304c000ff87fff990f0001ff81b00006ffffffe5dfffbffffffffffffffffffffffffffffffff7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbfe000c180188101c0cff380003b3fe000cfb4fe7ff8783ff4e1013fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff99fffff0fff8300300001ffffefb006001ffcff9803c1fffd0180600040078fef99fcf20bde006c00fffffffbffe801ff83fe021c0fc380f70601cffe9fffffffffffffffffffffffdffd7ff3ffffffff81efffffffffb067f10008000000000000000000000000000000000000000000000000001e02000c3fff801dffff80f7f4600000807a2c089f007ffc18d3e2e00000000000000000000000000000000000000000000000000000000000000000000000000048583fff9ffe40000ff3e33ff884c7fefde0001834603f83e380063c01c000000000000000000008400000000000000000040000000100220008404e0049f80d8fffdffffffffff01c1e0ff38003f02642ffff03c7fe00dffff7e338fe35c3ff3fff024f9813f8ff0fc6000f00670000000e0ffc01008000c000001800000000000008000000000000000000008000000000060000000000770000180002000000000000006000000000000804000760c0ffbffefff37ffff7fffffff7f3e7ffffeffffdfff9fffffffffffffffffffffe0ffffff8ffffe33c80de880fc1c4dfb130126cdc61fff07c6008ff8f8417350c1fffc04c1fcfbcffd83ffc7fcf3fdf0fc820ffff00f81f86cf80c08006000000000000000000000000000000000000000000000000000000000f07ff21f791ffd9fdffcffff8f0001f80766874663fff8fdb3fe0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {7530}e04017f67eff8217003020799807c79dec2cff9fa3023d81e400000008000000000000000000000000000000000000000000000000000000000000008003f87ffffe7f07fffefffff9ffff20ce27fbc19fff801ef3f8c27ff99107f8ff1ffe7fc0ffff9e33f81f003c08fd004e0070c007fd3fff9be600001000000000000c000000000000000000000000000000003040000001f1ffffffffffffffffffffffffffffffffffffffcffffffffffffe9fff30000000000000000400000000000000000000000000000000000000000771fffffffffffffffffffffffffffffffffffffffffffffffffffffffffefff87e084ff840780003ffd671e000007e3c138cc43ff8f8693f823c3fffefffffffffffffffffffffffffffffffffffffffffffffffffeffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7fffffffbffe02efc018000000000006780c00c401019c001000606799fd8061bc5ffffffdffffffffffffffffffffffffffffffffffffffffffffffff3ffffffffffffffffffffffffffffffffffffdffffffffffffffffffffffffffffff0fffffffbff0000ff07f811fbd818f9f823fff9bfffc78c0003e00010ff9038f000019800126066fe00000000000181f00cdcfffe7c07ffde00003c883ff9f7ffffffffffffffffffffffffffffff7ffffffffffffffffffffffffffffffffffffffffffffffffefffffffffffffffffffffffffffffffff83fffffffc3ffffffffffddffffc37fffefff7fdfeffbe07f9e7c00003c000000000000000000000000000000000000000000000000000000000000000000003b13ffffe7ffff801f2021fc03e76e0ff7ff7fc3dfff8737fa000000040000000000000000000000000000000000000000000000000000e00000c00427bfdfff7ffffdf079e7ffff801ffffffdfe1f819ffb87ff383d87fe0ff3fe09f037f0e30c7f80e1f06007f000ff6fc602ffc1040cff87c40008020805ffbfdbe006187ec006079fffef7ffffffc7ffc07e1804fc1fe00000380000040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000018000000000000c0000000000000000000000000000000000000000000000000204000000000020000000000200010002300000000000000000000000100180700064000020b000043866d817dc00ff9dc0063807f3fcc9fc180000cf0b000ff007ff3ffffcff8fd9cf80003e70043d0790ffff3ff39207fb3c7ff01cfffff00000000000000
+
+*** Saving signal to file g026_906.8M_2400k.cu8 (125801 samples, 262144 bytes)
+Detected FSK package	2026-10-21 21:18:57.283050
+Analyzing pulses...
+Total count:  875,  width: 6.82 ms		(16360 S)
+Pulse width distribution:
+ [ 0] count:  190,  width:    0 us [0;0]	(   1 S)
+ [ 1] count:  193,  width:    1 us [1;1]	(   2 S)
+ [ 2] count:   67,  width:    2 us [2;2]	(   4 S)
+ [ 3] count:   10,  width:   12 us [10;15]	(  29 S)
+ [ 4] count:  101,  width:    1 us [1;1]	(   3 S)
+ [ 5] count:  103,  width:    2 us [2;2]	(   5 S)
+ [ 6] count:   61,  width:    3 us [3;3]	(   7 S)
+ [ 7] count:   16,  width:   21 us [17;26]	(  50 S)
+ [ 8] count:    7,  width:   38 us [36;41]	(  92 S)
+ [ 9] count:   33,  width:    6 us [5;8]	(  15 S)
+ [10] count:   55,  width:    4 us [4;5]	(  10 S)
+ [11] count:    6,  width:  103 us [90;114]	( 248 S)
+ [12] count:    6,  width:   16 us [16;17]	(  39 S)
+ [13] count:    2,  width:  151 us [139;164]	( 363 S)
+ [14] count:    7,  width:   58 us [52;66]	( 140 S)
+ [15] count:   12,  width:    8 us [8;10]	(  20 S)
+Gap width distribution:
+ [ 0] count:    3,  width:   89 us [78;95]	( 213 S)
+ [ 1] count:   14,  width:   14 us [12;18]	(  34 S)
+ [ 2] count:  109,  width:    1 us [1;1]	(   3 S)
+ [ 3] count:   59,  width:    2 us [2;2]	(   4 S)
+ [ 4] count:   83,  width:    2 us [2;2]	(   5 S)
+ [ 5] count:  218,  width:    1 us [1;1]	(   2 S)
+ [ 6] count:   54,  width:    3 us [3;3]	(   7 S)
+ [ 7] count:   48,  width:    5 us [5;7]	(  13 S)
+ [ 8] count:  203,  width:    0 us [0;0]	(   1 S)
+ [ 9] count:   38,  width:    4 us [4;5]	(   9 S)
+ [10] count:   16,  width:   10 us [9;12]	(  24 S)
+ [11] count:    2,  width:  117 us [116;118]	( 281 S)
+ [12] count:    6,  width:   22 us [20;25]	(  53 S)
+ [13] count:   14,  width:    8 us [7;8]	(  18 S)
+ [14] count:    1,  width:   60 us [60;60]	( 145 S)
+ [15] count:    4,  width:   38 us [35;42]	(  90 S)
+Pulse period distribution:
+ [ 0] count:   12,  width:  105 us [78;140]	( 253 S)
+ [ 1] count:   33,  width:   15 us [12;20]	(  37 S)
+ [ 2] count:  124,  width:    2 us [2;2]	(   5 S)
+ [ 3] count:   77,  width:    1 us [1;1]	(   3 S)
+ [ 4] count:  159,  width:    4 us [4;6]	(  10 S)
+ [ 5] count:  121,  width:    2 us [2;2]	(   4 S)
+ [ 6] count:  119,  width:    3 us [3;4]	(   7 S)
+ [ 7] count:   95,  width:    6 us [5;8]	(  15 S)
+ [ 8] count:   68,  width:    9 us [8;12]	(  22 S)
+ [ 9] count:   18,  width:    1 us [1;1]	(   2 S)
+ [10] count:   21,  width:   23 us [20;28]	(  55 S)
+ [11] count:   13,  width:   37 us [31;42]	(  88 S)
+ [12] count:    9,  width:   58 us [51;67]	( 140 S)
+Pulse timing distribution:
+ [ 0] count:  393,  width:    0 us [0;0]	(   1 S)
+ [ 1] count:  411,  width:    1 us [1;1]	(   2 S)
+ [ 2] count:  126,  width:    2 us [2;2]	(   4 S)
+ [ 3] count:   26,  width:   12 us [10;15]	(  30 S)
+ [ 4] count:  210,  width:    1 us [1;1]	(   3 S)
+ [ 5] count:  186,  width:    2 us [2;2]	(   5 S)
+ [ 6] count:  115,  width:    3 us [3;3]	(   7 S)
+ [ 7] count:   25,  width:   21 us [17;26]	(  50 S)
+ [ 8] count:   12,  width:   38 us [31;42]	(  90 S)
+ [ 9] count:   69,  width:    6 us [5;8]	(  15 S)
+ [10] count:  115,  width:    4 us [4;5]	(  10 S)
+ [11] count:   10,  width:  104 us [90;118]	( 250 S)
+ [12] count:    7,  width:   16 us [15;17]	(  39 S)
+ [13] count:    3,  width:  163 us [139;187]	( 391 S)
+ [14] count:    8,  width:   58 us [52;66]	( 140 S)
+ [15] count:   27,  width:    9 us [8;10]	(  21 S)
+Level estimates [high, low]:   3529,     81
+RSSI: -6.7 dB SNR: 16.4 dB Noise: -23.1 dB
+Frequency offsets [F1, F2]:    -543,    -88	(-19.9 kHz, -3.2 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {16412}800000000000000000000000000000000000000000000008000000000188413c03fffffff0388809e010001bdd9d98006f07a1f8e980000060c00000000000000000000000000000000000000000000000000000000000000000000003c41f231efdf33fc06007f1e0c0e0e111cf1981e4c005b80e03fc01f200000000400400c000000000000001998380000000003e1f0b3cffffffefffffffffffff7ffffffffffffffdffffffffffffffffffffffffdffffffffffffbefffffffffffff3fff9fffffffffffffffb7fffcfffdff9fdc010200400000010010000000004000000000000023000400008000880727ffffffffffffffffffffeffffffffffffffffffffffffffffffffffffffffffffffffffffff7ffffffffffffffffffffffff3fffffffffff7fffffffffdf007f46001fa037cf8303ffff79f983363be0000000c27807dbb87fffffff0fdfffffffffffffc7fffffffffff8fff40ff9ff7cb7f9b1f801c0c04460000000000000000000000000000000000008800000000c00000000000400000400000000700000000188e00c0000001f0079007af804020004032c10100133fcfe0003ff89780fe7f0c97ef8000fc000fc99c0f1ffeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe70f986000000000000000000000018000000007c000000001801e0180000002609e04800233c1fff7c01dc7ff000801ffe00300c03607ff1ffbffff7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe67fdffffffffbcff80e58001fe003f8047fe09c01c00010000380c660000483d008801f7880200000379c1bfc03f88000047fe33fffe3c1337ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffffffffff9fffffffffde7fffffffffffffffffffffdffffffffffffffffffffffffffffffe7fffffbffffffebfc7c1f880601ffaf13fffffccffff8300fff87c38ff8fffffffffefffff00000000000000000000000002100000000000000000018000000000006000000003ffffffffe7fffffffff7ffffffffffffffffffffffdffdfb9fffffffffeffffffffffffffffbffffffffffffffffffffffef9ffff7fffeffe06015e30001e0003032004e000210c00200ee380187f808ffc04600099ff7ffffe7fe607f91fec3e63c23f3e08040003f7fff000001cd8fc82033800ffffdf8870fff89e7cfc673fb07e67fece0f000c001e100ff3700ff8004f7f639e7fffffffffeffdeeffffffdf7fce0fffe7c12603c408ff09c73effff666e760063f93fe1c70019c00320ff387ff8439fe0023e0fffe70b7f1bc00020000000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000033f8003fff7ff898fcfdfcfe38019c1f8186400e7f1fe1ff8181fa0ffffc03f70cf83c101c7f9f80164e3e00cfffffffb7fffffdf03e7f81ffe0c000000000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000003fffffffffffffffdffffffdffffeffffefffffffffffddfe081e01b200000000000000000000000000000000000000000000000000000001807f9efffffffffffffffffffffffffffffffffffe7ffffffffffffffffffffffffffffffffffffffe7fff7fffffffffffdf7fffffffffffffffffcf7e23ffe00003000007000000000001bf800000000000000803cdffff7ff07f7f3bf000007fffdc1ff82033f077fe003bffc00038481dffffe40000c1fff3fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff88f1f8c8f2119013e03be059023c0018007867f04f0033c3ffffffffffffefffffffffffffffffffffffffffffffffdffffbfffffffffffffffffffffffffffffffffffffffffffbffffffffffffffffffffffffffffffffffffffffffffffffffffffe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc7f0e1d9908806ffb023c7cce8ffefc3ffffc01ffe5ff87ffffffffffffbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff73c07dfefde59c00000dfbef2010000003f47023927c001fe7f803fe0c0019011f87fffe7ffff1f8fc1e000020733e467de39c00dfffbfffc00ff7e00986fcff7489f731b0e0c7c3fcdc7c0c3cf340cdf3ffffcec7ffffffffffffffffffffffffffffffffffff7fffffffffffffffffdffffffffffffe01fc8003008080016807c030ff9f83183fe003000f8efec39c6ffe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffffffffffffffffffffffffffffffff9fffffffffefffefffffffffffffffffffffffffffffffff9ffffffffffffffffffffff6f87ffe00063000000800000000000000000000400000c0000000000000000000040001c00008800002000001e000000019ff80007ffbf8007f01fc80fc0007ffff073e0000ff839ff9f730e7e308c01ffc867ffc004003020f3e00003000e0000036f303effbe7f9fec1dc00011fb3e1ffcffb7e0f0ffffcfe4eff180000000c0333733c06133c3f0cfc24ff00107e3fe7ff39fbc60fce718fc0042007f3bbf1ef08ffffffffff8ff9dfc81ff8ffeff07ffffec980307f300003dfeffff0000000000000
+
+*** Saving signal to file g027_906.8M_2400k.cu8 (125800 samples, 262144 bytes)
+Detected FSK package	2026-10-21 21:18:58.964953
+Analyzing pulses...
+Total count: 1154,  width: 9.63 ms		(23116 S)
+Pulse width distribution:
+ [ 0] count:  276,  width:    1 us [1;1]	(   2 S)
+ [ 1] count:   88,  width:    5 us [4;6]	(  11 S)
+ [ 2] count:   10,  width:   39 us [34;42]	(  94 S)
+ [ 3] count:   21,  width:   12 us [10;15]	(  29 S)
+ [ 4] count:  128,  width:    2 us [2;2]	(   5 S)
+ [ 5] count:  128,  width:    1 us [1;1]	(   3 S)
+ [ 6] count:   42,  width:    8 us [7;10]	(  19 S)
+ [ 7] count:   59,  width:    3 us [3;3]	(   7 S)
+ [ 8] count:   13,  width:   24 us [20;28]	(  57 S)
+ [ 9] count:  283,  width:    0 us [0;0]	(   1 S)
+ [10] count:    2,  width:   30 us [29;32]	(  73 S)
+ [11] count:   67,  width:    2 us [2;2]	(   4 S)
+ [12] count:    9,  width:   93 us [80;105]	( 224 S)
+ [13] count:    4,  width:   57 us [51;63]	( 136 S)
+ [14] count:   12,  width:    6 us [6;7]	(  14 S)
+Gap width distribution:
+ [ 0] count:  279,  width:    0 us [0;0]	(   1 S)
+ [ 1] count:  124,  width:    1 us [1;1]	(   3 S)
+ [ 2] count:    8,  width:   18 us [16;20]	(  44 S)
+ [ 3] count:   46,  width:    6 us [5;8]	(  15 S)
+ [ 4] count:    2,  width:   48 us [44;52]	( 116 S)
+ [ 5] count:  281,  width:    1 us [1;1]	(   2 S)
+ [ 6] count:   80,  width:    4 us [4;5]	(  10 S)
+ [ 7] count:  167,  width:    2 us [2;4]	(   6 S)
+ [ 8] count:   11,  width:   77 us [65;83]	( 184 S)
+ [ 9] count:   15,  width:   29 us [24;37]	(  70 S)
+ [10] count:   33,  width:    9 us [8;11]	(  22 S)
+ [11] count:   72,  width:    2 us [2;2]	(   4 S)
+ [12] count:    4,  width:   38 us [37;39]	(  91 S)
+ [13] count:   12,  width:   12 us [12;15]	(  30 S)
+ [14] count:    1,  width:  293 us [293;293]	( 704 S)
+Pulse period distribution:
+ [ 0] count:  132,  width:    1 us [1;1]	(   3 S)
+ [ 1] count:  198,  width:    5 us [5;7]	(  13 S)
+ [ 2] count:   24,  width:   37 us [30;45]	(  89 S)
+ [ 3] count:   62,  width:   12 us [10;14]	(  28 S)
+ [ 4] count:  180,  width:    2 us [2;2]	(   5 S)
+ [ 5] count:  135,  width:    2 us [2;2]	(   4 S)
+ [ 6] count:   89,  width:    8 us [7;10]	(  19 S)
+ [ 7] count:  148,  width:    3 us [3;4]	(   7 S)
+ [ 8] count:   29,  width:   22 us [18;27]	(  52 S)
+ [ 9] count:    7,  width:   58 us [53;65]	( 140 S)
+ [10] count:   85,  width:    4 us [4;5]	(   9 S)
+ [11] count:   16,  width:   80 us [68;98]	( 193 S)
+ [12] count:    7,  width:   28 us [26;30]	(  68 S)
+ [13] count:    6,  width:   16 us [15;17]	(  38 S)
+ [14] count:   23,  width:    1 us [1;1]	(   2 S)
+ [15] count:    7,  width:  115 us [100;139]	( 276 S)
+Pulse timing distribution:
+ [ 0] count:  557,  width:    1 us [1;1]	(   2 S)
+ [ 1] count:  172,  width:    4 us [4;6]	(  10 S)
+ [ 2] count:   23,  width:   37 us [29;44]	(  88 S)
+ [ 3] count:   46,  width:   12 us [10;15]	(  28 S)
+ [ 4] count:  241,  width:    2 us [2;2]	(   5 S)
+ [ 5] count:  252,  width:    1 us [1;1]	(   3 S)
+ [ 6] count:   83,  width:    8 us [6;10]	(  18 S)
+ [ 7] count:  124,  width:    3 us [3;3]	(   7 S)
+ [ 8] count:   27,  width:   24 us [20;30]	(  58 S)
+ [ 9] count:  562,  width:    0 us [0;0]	(   1 S)
+ [10] count:  139,  width:    2 us [2;2]	(   4 S)
+ [11] count:   18,  width:   86 us [74;105]	( 206 S)
+ [12] count:    7,  width:   58 us [51;65]	( 139 S)
+ [13] count:   35,  width:    6 us [5;7]	(  14 S)
+Level estimates [high, low]:   3514,     81
+RSSI: -6.7 dB SNR: 16.4 dB Noise: -23.1 dB
+Frequency offsets [F1, F2]:    -530,    -76	(-19.4 kHz, -2.8 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {23166}dfff1ffffffffffffffffffffffffdfffffffc7dfffdffedfffffffffffffffffffffffddfffdbffffdfdfffffffdfffffffffffff7fffffff7ffffefffdc00000000003800020000000000000000000000000000000480030001300fcf8fffffffbffffffffffffffffffe3ffdffffffffffffffffffff9fce00900000000000000000000000000000000000000000000000800000000000000000800000000000000000000000000000000000000000000080000600071ffefffffffffffffffffffffff7ffffffffffffefffefff803fcfffff781ffc7e7fffcff81e63fef20ecfc600f00f8f010f80ffc3ce0603ffffe000001800000000000000000000008000000000000000000000790c1e3fc07feffffffffffffffffffffffffdffffffffffffefffffffffffffffdfff7fe000000040040040018000001000000000000000000400001100000000000098030f800003e477fffe7ff59c7f801f20807300f3f1049e7803c13fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc000001000000000000000000000000000000000000000000000000c8000000000000000000000000000000000000000000000400000000018000c0003f3fffffbffe7ffffffff99ffefffffff23f83e73e0bcc000033f00800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007180000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000107bfffffffffffffffffffffffffffffff3ffffffffffffffffffffffff9920001c20000204000000e3800000000000000001c0000000600000031f1361dd9f19a9ffe03fffcffffffe6dffc007fe1b218007f0c7c83c1c3fda402007f81e73e21fe32e527d8e07981a633e0127f3fc003f073df300003feff9996e0003ff87ffff7ff7bfc0cc1c1f1dbd9cc207c603ff9e23ff38000000000000000000000000000000000000000000000000400000000000004fc01f7ffffffffe0efe0fd304007ffbe3fc7e03fffe0183f0607e7dec8890e00000000000000000000000000000000000000000000000076000000000000000000000006600000003fe0001fc0100007f1c1bee78fffeffdf83000cf9ff9dc064043fe3fffff0f807ffcc30d0fc0fc1b3e801c1ffb7f97f83c197ffbf8007882278e06e19f800fbda37fff80180001ff879ffffffe7cff8ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe7c00c012200000018607cee0103efffffff67fffcfff9be07e43fffbfbfffffffffffffffff7fffffffffffffffffffffbffffffffffffff9fffffffbffffffffffffffefffffffffffffbff23fffeff1fffffc9fffffff900000004701908000ffffff01f1ff81c3fffeffbff8267ffe07c063f26fffc4000041fe6400003000e7424fdcffe43fe08724fc1fc7fe38039801987f2040080000000000000000000000000100000000000000000407f67ffff9fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbffffb000323300000001112e00013004c02f7f04e01fb24207fffffffdfffffffffffdffffffffffffffffffffffffffffffffffffffffffffffffffffeffffffffffffffdfffffffeffffffffffffffffffffffffffffffffffffffffffffffffcffffffffffffffffffffffffffffffffffffffffbf0efc49e000001000000000000000000000000000000000000000808000000000000001010001760800000000000008000fc40300005fffffdc00700001e033007b4318000100098076078003fb3f0000fc83ff80737fffff37fffdfffffffffffffffffffffffffffffffffffffffffffffffffffffffffc4ddfb7f9000000000026180018000000000020000070381f1c00fe000000000002000001300003000000fe009f7f13f04780107c38fc0efda0fde7ffffffffefffffffffffffffffffffffffbfffffffffffffffbfffffffffffffdffffffffffffffffffffffffffffffffffff7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7fffffffffffffffffffffffffffffffffffffbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3ffffffffff9fffffff9fffffbffffffffffffffffdffffffffffffffffffffffffffffffffffffffffffffffffffffe7fffffe7fffbff7fefffffbffffdffe3ffdfffff0ffffefffbffffc217038000020000000000000000000000000000000000000000000040230800008000003000000004100001c030000300040000070039c87ffbfc7ffce073e7c003ffff8f9cc7ff9e06067dbfff74088071400cd27cfffffffecdfffff9f7ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffb7fff0027800001fc0460fff9bffff247fffff3dffdbe49b063e00fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03200000000000000400000000000c000000000000000000000000000000000001800000000000000000000010000002000000000000000003fff1fffffffffffffffffffffffffbffffffffffffffffffffffffffffff84c0008040000000000000000000000000000000000000000000003180000000000000000000000000000000000000000000000000400000000000000000187ffd87ddfffffffffbbffa3f9bbffe63ffffb8e41919821fffff8000000800000000000000000060000018000000000000000001800300000000000000000000040000001801000000000000000803000000020001bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffdbffff7f15ffdf7807c08070ff38107fffff7f3efdf99a7f9001826c31ce0078000001c1fffe8140608064201800080084de7ef0008fff018020c0400f030007fff8ec00fc70060fec47c606001cc88c3ec00400007ffffffdfffffffffffffffffffffffffffffffffffffffffffffffdfffffffffffffffc000804000000000000000400004800001fef37807ff9f9099ffedfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7fdfffffffffffffffffffff9fffffffffe0fc0300000006198188000000000000000400060400fbfbfffc0620039dffc4bfbffdf9f0361e30df3060fcfff9dff3fe39f83f8c0098da030030007ffee2380ffdbe0661000ce76c07f807ffcc383923ffffff3e16be00180007c0180c3f6007fc0ce0fe60f1fd8f7f003e4980004801203ff8000000000e00000793ffeff00001100fffc7003ff3be9077effff7643c4ff97ec0001827cffe007fff303c01fe07f33e7e9de5efe7bcf1660047dfc0091d37bdb073f8006480e0004fc0004003e0400fc40040047c001f9019b79bfe0fec301ff101f1ffdfb1800661b3e0e37233e0f801bbf80e08efc1fe0ce66c0000001e1cc81f86200071cf00000000000000000000007701e0000fc033ffff3063f11dff3f000101c1003fdffff004000fd89990fc000e098ce009063ffffff9ffffff610c00ec1ffe0effcfbf8180300c26100ff9ff0070c000000006780373ec79803f70787cf9fffceffe1ff001c2000078000181e00230000061187ffff0000000000000
+
+*** Saving signal to file g028_906.8M_2400k.cu8 (125801 samples, 262144 bytes)
+Detected FSK package	2026-10-21 21:18:59.723128
+Analyzing pulses...
+Total count: 1075,  width: 7.29 ms		(17504 S)
+Pulse width distribution:
+ [ 0] count:   75,  width:    4 us [4;6]	(  10 S)
+ [ 1] count:    8,  width:   18 us [16;21]	(  43 S)
+ [ 2] count:   24,  width:   12 us [10;14]	(  28 S)
+ [ 3] count:    7,  width:   26 us [21;31]	(  63 S)
+ [ 4] count:  255,  width:    1 us [1;1]	(   2 S)
+ [ 5] count:  239,  width:    0 us [0;0]	(   1 S)
+ [ 6] count:   33,  width:    8 us [7;10]	(  19 S)
+ [ 7] count:   70,  width:    2 us [2;2]	(   4 S)
+ [ 8] count:  126,  width:    2 us [2;3]	(   5 S)
+ [ 9] count:  135,  width:    1 us [1;1]	(   3 S)
+ [10] count:   73,  width:    3 us [3;4]	(   7 S)
+ [11] count:    3,  width:   48 us [42;53]	( 116 S)
+ [12] count:    8,  width:   35 us [32;38]	(  83 S)
+ [13] count:   16,  width:    6 us [5;7]	(  14 S)
+Gap width distribution:
+ [ 0] count:  117,  width:    1 us [1;1]	(   3 S)
+ [ 1] count:  261,  width:    0 us [0;0]	(   1 S)
+ [ 2] count:  240,  width:    1 us [1;1]	(   2 S)
+ [ 3] count:  114,  width:    2 us [2;2]	(   5 S)
+ [ 4] count:   83,  width:    2 us [2;2]	(   4 S)
+ [ 5] count:   69,  width:    3 us [3;3]	(   7 S)
+ [ 6] count:   72,  width:    4 us [4;5]	(   9 S)
+ [ 7] count:    6,  width:  109 us [95;121]	( 262 S)
+ [ 8] count:   46,  width:    6 us [5;8]	(  15 S)
+ [ 9] count:    3,  width:   55 us [50;64]	( 133 S)
+ [10] count:   12,  width:   29 us [24;35]	(  69 S)
+ [11] count:    2,  width:    5 us [5;5]	(  12 S)
+ [12] count:   16,  width:   13 us [10;16]	(  31 S)
+ [13] count:   17,  width:    9 us [8;10]	(  21 S)
+ [14] count:    5,  width:   20 us [18;23]	(  49 S)
+Pulse period distribution:
+ [ 0] count:  202,  width:    5 us [4;6]	(  11 S)
+ [ 1] count:   26,  width:   16 us [14;22]	(  39 S)
+ [ 2] count:   57,  width:   11 us [9;14]	(  26 S)
+ [ 3] count:   24,  width:   30 us [25;36]	(  73 S)
+ [ 4] count:  100,  width:    1 us [1;1]	(   3 S)
+ [ 5] count:   34,  width:    1 us [1;1]	(   2 S)
+ [ 6] count:  169,  width:    2 us [2;3]	(   5 S)
+ [ 7] count:   99,  width:    8 us [6;10]	(  18 S)
+ [ 8] count:  203,  width:    3 us [3;5]	(   7 S)
+ [ 9] count:  115,  width:    2 us [2;2]	(   4 S)
+ [10] count:   13,  width:    6 us [5;6]	(  14 S)
+ [11] count:    6,  width:  110 us [97;125]	( 265 S)
+ [12] count:    6,  width:   53 us [45;65]	( 128 S)
+Pulse timing distribution:
+ [ 0] count:  146,  width:    4 us [4;6]	(  10 S)
+ [ 1] count:   16,  width:   18 us [15;22]	(  43 S)
+ [ 2] count:   42,  width:   12 us [10;14]	(  28 S)
+ [ 3] count:   19,  width:   27 us [21;32]	(  64 S)
+ [ 4] count:  495,  width:    1 us [1;1]	(   2 S)
+ [ 5] count:  500,  width:    0 us [0;0]	(   1 S)
+ [ 6] count:   79,  width:    8 us [6;10]	(  18 S)
+ [ 7] count:  153,  width:    2 us [2;2]	(   4 S)
+ [ 8] count:  240,  width:    2 us [2;3]	(   5 S)
+ [ 9] count:  252,  width:    1 us [1;1]	(   3 S)
+ [10] count:  142,  width:    3 us [3;4]	(   7 S)
+ [11] count:   11,  width:   45 us [38;54]	( 108 S)
+ [12] count:   10,  width:   35 us [32;38]	(  83 S)
+ [13] count:   31,  width:    5 us [5;7]	(  13 S)
+Level estimates [high, low]:   3595,     80
+RSSI: -6.6 dB SNR: 16.5 dB Noise: -23.1 dB
+Frequency offsets [F1, F2]:    -515,   -129	(-18.9 kHz, -4.7 kHz)
+Guessing modulation: Non Return to Zero coding (Pulse Code)
+Attempting demodulation... short_width: 0, long_width: 0, reset_limit: 427, sync_width: 0
+Use a flex decoder with -X 'n=name,m=FSK_PCM,s=0,l=0,r=427'
+[104;94m[[37mpulse_slicer_pcm[94m][0m Analyzer Device
+codes     : {17560}fff1fffffffffefffffffcfffffffffffffffffdac1ffffe78fe7ffffdf08300836011f980df01c03f88002000fc19080070100c01000000000000000000000000000000000000000000000000000000000000fc200fffbffbfbfcbe7ffe3fee0011f0c7c3fce403007ffd0efe00400000000000000000000000000000000000000000000000000000000000000000000031fc439fdff0403bf02030038f003fe01f73e640fc07fb00123fc180007000000000000000000000000000000004000000000000000040001c066fe3dffffffffffffff3fffffffffffffffffffffffffffffff9e19c39c3e00900600002000c0000000000000000050000180000000011800000861f603c016fc3ff71803fe78fccc07ff0000f8c2081ce60098073fbc8ffffffeffffffffffffeffffffffffe3ffffefffffffdff7ffffffffffff7fffffffffffffffffff7ffffffeffffffffffffffffffffcc1fffff3c1ffffff39fffef4674dfff38fcfe080000e0007e200020e060e07f8e07f81817c600020000080020000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000800000000000000000000000000000000000000000000000000ffffffffffffffffffffffefffffffffffffffffffffeffffcffffffff7fbffff031effffffff0c38dc3f00080008007e581fffe7ffffffd9f9fde31ffbe1c0040000c0260800000003801c080f1fd801827ffeef0f01fffff37e1f07cfdb3e00bffffe7fc000ff98167f98101f061ff0fe1e07898080980000000000000000001c0000000000000000000000000000000000000100000080000000000000004000002000000000000000000000000000000000000000000000020000000000000000000000000100000000000000000000000030000000000000000000000003200000006400000017000038001e006fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbffffffffffffffffbfffffffffffffffffffff7fffffffffffffffffffffffffffffffffffffffffff7ffffffffffffffffffffdffffffffffffffffffffffffffffff3fffffbf3dfffffffffcfffff07fffefdfff87ffffffbfffffc801813fe6fc21c018207005803ffc031c00004023f3ffffffff03ff4e7cdf2100e320233238befecf43fffff0000380f001c010000000c00000000000023000000000000000000f7e3f01d9ffbffdbfffffefffffffffffffffffffffffffffffffffffffffffff7fffff3c048c7c000020000000000001000000000000000000003b00300008083dbfd8ffff3fffffffffffffffffffffffff307fc3fffffff799fffffffffffc01ec2047ffffffe7137f83fd8f1e3be06ff83ffff80ffbffe7ffffb9803ee7f007f803fe07fc719bfc762fe000086c707ff0001fc008f003f3fffe01000ff3ff0e13832eee00007f0000e900004000020f0d305cff91fece400000001c00000000000000000000000000000000000000000000000000000000180000089c5fb01fffcf8f8ba7c7020738003f3fffdccc3f8800e0c19fb0386983efffc1d81bc3ffe7c7c46000027ee00209f00ff803fffe19e1c03ffffffff381fb3f0fdfffffffffffffff1f87c9f7ff779be7f9ee7e190f80000000000000000000000100000020600000000000800000007b003ce4ffffe7cfff7fffffff7ffffffffffffffffffdffffff9f3ffffe7fffffffff9ff1837fec00f80f9bf67f19ffff13f7f6e18773079ee807fff00040e0000000000000000000000000000000000000000000000000000000000000000000080000000000000000100000000000000000000000f0000000703860fffffe07ffffff87ffff3fffff7b7fdfc12773fe419ff833fcfc823820b00000001f000000000000001000040000000000000000000010000040008000e00000000004d000fc0df7db1fec0f01fefe001f0000000001cde01900000fe17dffa00201ffffffffffffffffffcfff363ff7e7cf90dfd8183c3600500ff1cc00003406f86e17000300200c0001b918000036184ec7ffffc1f9f3fe7ff9f7e7f1fbe3c1cf17f060180380000006080e9e31fe01fc3ff01fffffff97fc3f9ffff8fffdffff83810cccf80000600bbfec0003800000000000000000000000000000000000000000000000000000000000000007fdf18ccffff67f1fffff0006fc9318fe60fe1fffe05f9bf7077e80018c809fecffe670600438000442f718f01f0ff008f730fe078081ff8000000000000000000000000000000000000000000000000000000000000000000000001803330001ffceef8ff7fc036dbff79e7001ff9370fe8ffe0ffe1c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200017fc039feffffffff7fb2fffb3fe7bffffdffff97d03c00b04c0081e620880000000000000008580000000031800000000000000000000000000000900ffec673fffffff9a00eff067ffffffffff3ff9ff8000003e7df3edfffc0fe67f30e62663fcede408e1ffdb8f0ff88000c737803b03f41f1ffe6181638000000000000000000000000010600000000000000000730e400000019003f400000c046df9fc7fdf7fe0fc0243cf80c0100909f8fc00000660004380000783c0c00000000260063f1f9fc000200f07ffd0d803e7000008100026fdf800c7fff881f00800c6f8600c820660001fe7fff0000f00e8cff0202ffffffe7ff07e00879ffec3007fe07fffffffffffffffeeffffffffffffffffffff7ffff3bfffffffffff7fdffbff7f07ffec05f9ff1f0fc07f3fc00000001d80003c3091e77e03003c1f84000080000c8e40ff0061c7c8fede6601ff0030effc031e00ff3bfbf7f800030600f01b4003809ffc1c7ffe700bc1807ff00000000000000
+
+*** Saving signal to file g029_906.8M_2400k.cu8 (95079 samples, 262144 bytes)
+[102;92m[[30msdr_callback[92m][0m Time expired, exiting!

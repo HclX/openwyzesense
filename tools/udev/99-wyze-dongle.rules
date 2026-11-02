@@ -1,0 +1,4 @@
+# Wyze Sense USB dongle (WCH CH554 HID bridge, 1a86:e024): /dev/hidraw* access without root for host_link.py,
+# dongle_sbl.py, and wyzesense2mqtt-rs.
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="e024", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="e024", MODE="0660", GROUP="plugdev", TAG+="uaccess"

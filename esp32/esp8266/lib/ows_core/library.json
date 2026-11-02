@@ -1,0 +1,8 @@
+{
+  "name": "ows_core",
+  "description": "The relay core, the outage buffer, the gateway's host protocol and the contact's bootloader client, shared with the ESP32 and PC builds",
+  "build": {
+    "srcDir": "../../../..",
+    "srcFilter": ["-<*>", "+<esp32/relay/relay.c>", "+<esp32/relay/buffer.c>", "+<firmware/common/host_proto.c>", "+<esp32/contact/sbl.c>", "+<esp32/contact/gwsync.c>", "+<esp32/contact/gwnv.c>", "+<esp32/web/http_auth.c>"]
+  }
+}

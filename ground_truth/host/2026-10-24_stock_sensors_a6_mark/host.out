@@ -1,0 +1,48 @@
+handshake b'77A85A36'
+flags (12, 15)
+scan on [{'cmd': 21277, 'to_host': True, 'payload': b'', 't': 1792863758.2935426}]
+10:42:38.580 5332   b''
+10:43:01.106 alarm a2 77BD514D type 0e rssi -60 a237374244353134440e112b000101000b
+10:43:16.116 5320 a337374244353134440e21  b'\xa377BD514D\x0e!'
+PAIRING 77BD514D type 0e
+R1 ok
+VERIFIED 77BD514D
+10:43:17.602 alarm a2 77BD514D type 0e rssi -58 a237374244353134440e11290001010001
+10:43:17.724 alarm a1 77BD514D type 0e rssi -58 a137374244353134440e12290001010001
+10:43:26.475 alarm a2 77BD514D type 0e rssi -79 a237374244353134440e11290001000002
+10:43:27.082 alarm a2 77BD514D type 0e rssi -70 a237374244353134440e112b0001010003
+10:43:29.714 alarm a2 77BD514D type 0e rssi -74 a237374244353134440e112b0001000004
+10:43:30.514 alarm a2 77BD514D type 0e rssi -71 a237374244353134440e112b0001010005
+10:44:03.271 5320 a33737413843373933021e  b'\xa377A8C793\x02\x1e'
+PAIRING 77A8C793 type 02
+R1 ok
+VERIFIED 77A8C793
+10:44:04.768 alarm a1 77A8C793 type 02 rssi -53 a137374138433739330214590001010000
+10:44:04.896 alarm a2 77A8C793 type 02 rssi -53 a237374138433739330214590001010001
+10:44:20.889 5320 a33737433638313933070f  b'\xa377C68193\x07\x0f'
+PAIRING 77C68193 type 07
+R1 ok
+VERIFIED 77C68193
+10:44:21.550 alarm e8 77C68193 type 07 rssi -56 e8373743363831393307115f0003132839190e
+10:44:24.061 alarm a1 77C68193 type 07 rssi -48 a1373743363831393307115a000100190e
+10:44:51.489 alarm e8 77C68193 type 07 rssi -50 e8373743363831393307155d000313573c190f
+10:45:18.603 alarm e8 77C68193 type 07 rssi -50 e8373743363831393307155d00031422331910
+10:46:12.819 alarm e8 77C68193 type 07 rssi -54 e8373743363831393307155d0003143a301911
+10:47:03.618 alarm a2 77A8C793 type 02 rssi -56 a237374138433739330211590001000002
+10:47:23.881 alarm a2 77A8C793 type 02 rssi -56 a2373741384337393302115f0001010003
+DONE
+Traceback (most recent call last):
+  File "<repo>/tools/host_link.py", line 81, in _read
+    data = os.read(self.fd, 64 if self.hid else 512)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+BlockingIOError: [Errno 11] Resource temporarily unavailable
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<scratch>/j6/host.py", line 17, in <module>
+    m = l.backlog.pop(0) if l.backlog else l._read(0.2)
+                                           ^^^^^^^^^^^^
+  File "<repo>/tools/host_link.py", line 84, in _read
+    time.sleep(0.005)
+KeyboardInterrupt

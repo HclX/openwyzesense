@@ -1,0 +1,92 @@
+[
+ {
+  "role": "dongle",
+  "mac": "778B5F63",
+  "type": "v1 USB dongle (bridge /dev/hidraw0)"
+ },
+ {
+  "role": "sensor",
+  "mac": "77C681B2",
+  "type": "climate"
+ },
+ {
+  "role": "sensor",
+  "mac": "77BD52EE",
+  "type": "motionv2"
+ },
+ {
+  "role": "sensor",
+  "mac": "77A8C793",
+  "type": "motion"
+ },
+ {
+  "role": "sensor",
+  "mac": "77C6847F",
+  "type": "leak"
+ },
+ {
+  "role": "sensor",
+  "mac": "77C681D0",
+  "type": "climate"
+ },
+ {
+  "role": "sensor",
+  "mac": "777C1FCA",
+  "type": "motion"
+ },
+ {
+  "role": "sensor",
+  "mac": "77C685E4",
+  "type": "leak"
+ },
+ {
+  "role": "sensor",
+  "mac": "77A8C778",
+  "type": "motion"
+ },
+ {
+  "role": "sensor",
+  "mac": "77C681D1",
+  "type": "climate"
+ },
+ {
+  "role": "sensor",
+  "mac": "778B77D9",
+  "type": "motion"
+ },
+ {
+  "role": "sensor",
+  "mac": "77C68469",
+  "type": "leak"
+ },
+ {
+  "role": "sensor",
+  "mac": "77C681ED",
+  "type": "climate"
+ },
+ {
+  "role": "sensor",
+  "mac": "77C68217",
+  "type": "climate"
+ },
+ {
+  "role": "sensor",
+  "mac": "77C684C4",
+  "type": "leak"
+ },
+ {
+  "role": "unassociated",
+  "mac": "77C6853E",
+  "type": "leak"
+ },
+ {
+  "role": "unassociated",
+  "mac": "77C685AE",
+  "type": "leak"
+ },
+ {
+  "role": "unassociated",
+  "mac": "77BD514D",
+  "type": "switchv2"
+ }
+]

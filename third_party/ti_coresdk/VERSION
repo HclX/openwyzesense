@@ -1,0 +1,4 @@
+Subset of https://github.com/contiki-ng/coresdk_cc13xx_cc26xx (TI SimpleLink core SDK, BSD-3-Clause; see LICENSE)
+commit 60e7325e122e95660fa9a4019e7868aedb4c317d
+archive sha256 37148952eab63ee2791da879f9a87fd2791b3c1fb9c1ed315b9243ff99f78968
+created by tools/vendor_coresdk.sh; do not edit

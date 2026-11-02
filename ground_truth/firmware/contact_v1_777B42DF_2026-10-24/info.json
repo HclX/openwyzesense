@@ -1,0 +1,16 @@
+{
+  "device": "Wyze Sense v1 contact (door) sensor, MAC label/CCFG 777B42DF, one of the user's units counted dead",
+  "date": "2026-10-24",
+  "how": "JTAG 2-pin cJTAG (TMS, TCK, 3V3, GND soldered to the C and M pads, pad map from github.com/sycophantic/wyzeback) from the LaunchPad's XDS110 (TMS/TCK/TDO/TDI jumpers pulled), TI UniFlash 9.7.0.5873 dslite --mode memory with TI's cc13xx_cc26xx_2pin_cJTAG_XDS110.ccxml (included); read-only, nothing written, the CPU halted by the connect",
+  "files": {
+    "flash.bin": "0x00000-0x1FFFF, read twice, identical (sha256 042bd629...255e)",
+    "ccfg.bin": "0x1FFA8-0x1FFFF, read separately, equal to the end of flash.bin",
+    "fcfg1.bin": "0x50001000-0x500013FF"
+  },
+  "findings": {
+    "chip": "CC1310F128, FCFG1 USER_ID 0x20018000: package 5x5 (RHB)",
+    "ccfg": "BL_CONFIG 0x00FE0100: ROM bootloader DISABLED (the v1 motion and the dongles have C5FE01C5); TAP_DAP_0 FFC500C5; IMAGE_VALID 0; MAC field 0x1FFCC = '777B42DF' (intact)",
+    "code": "pages 0-29 and 31 identical to the door image in github.com/sycophantic/wyzeback (wyzesense_door_AABBCCDD.bin), CCFG identical except the MAC field",
+    "nv_page_30": "only item 6 (01 00 be be, 02 00 be be, 03 00 be be) and item 4 (0): no item 1 (network) and no item 8 (the door image has its MAC there)"
+  }
+}

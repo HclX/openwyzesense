@@ -1,0 +1,451 @@
+2026-11-02T05:54:35.140298Z  INFO wyzesense2mqtt_rs: ===============================================================
+2026-11-02T05:54:35.140356Z  INFO wyzesense2mqtt_rs:         wyzesense2mqtt-rs v0.1.3 Starting up... 
+2026-11-02T05:54:35.140365Z  INFO wyzesense2mqtt_rs: ===============================================================
+2026-11-02T05:54:35.140372Z  INFO wyzesense2mqtt_rs: Configuration loaded successfully. Log Level set to: debug
+2026-11-02T05:54:35.140380Z  INFO wyzesense2mqtt_rs: Initializing Wyze Sense to MQTT Bridge (Rust) Daemon mode...
+2026-11-02T05:54:35.140391Z  INFO wyzesense2mqtt_rs:   USB Device: /dev/hidraw10
+2026-11-02T05:54:35.191169Z  INFO wyzesense2mqtt_rs:   Web Console: http://localhost:8099
+2026-11-02T05:54:35.191671Z  INFO wyzesense2mqtt_rs: Loaded 2 sensors from state.yaml
+2026-11-02T05:54:35.191853Z  INFO wyzesense2mqtt_rs::engine: Starting dongle initialization handshake...
+2026-11-02T05:54:35.191892Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=4327, Payload=[<None>]
+2026-11-02T05:54:35.192967Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=4328, Payload=[01]
+2026-11-02T05:54:35.193248Z DEBUG wyzesense2mqtt_rs::engine: Handshake 1/5: Inquiry verified
+2026-11-02T05:54:35.294039Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=4302, Payload=[30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30]
+2026-11-02T05:54:35.298854Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=4303, Payload=[55,ff,eb,67,d8,c5,f8,70,b9,43,b0,21,cc,02,3e,ec]
+2026-11-02T05:54:35.299042Z DEBUG wyzesense2mqtt_rs::engine: Handshake 2/5: ENR Token retrieved: Packet: Cmd=4303, Payload=[55,ff,eb,67,d8,c5,f8,70,b9,43,b0,21,cc,02,3e,ec]
+2026-11-02T05:54:35.400952Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=4304, Payload=[<None>]
+2026-11-02T05:54:35.403267Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=4305, Payload=[37,37,41,38,35,41,33,36]
+2026-11-02T05:54:35.403666Z  INFO wyzesense2mqtt_rs::engine: Dongle MAC address: 77A85A36
+2026-11-02T05:54:35.403728Z DEBUG wyzesense2mqtt_rs::engine: Handshake 3/5: MAC Address retrieved
+2026-11-02T05:54:35.505712Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=5316, Payload=[<None>]
+2026-11-02T05:54:35.517355Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(5316)
+2026-11-02T05:54:35.517488Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=5317, Payload=[30,2e,30,2e,30,2e,34,37,20,56,31,2e,38,20,47,61,74,65,77,61,79,20,47,57,33,55]
+2026-11-02T05:54:35.517613Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 5317
+2026-11-02T05:54:35.517887Z  INFO wyzesense2mqtt_rs::engine: Dongle version: 0.0.0.47 V1.8 Gateway GW3U
+2026-11-02T05:54:35.517972Z DEBUG wyzesense2mqtt_rs::engine: Handshake 4/5: Version string retrieved
+2026-11-02T05:54:35.619253Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=5314, Payload=[ff]
+2026-11-02T05:54:35.629029Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(5314)
+2026-11-02T05:54:35.629055Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=5315, Payload=[<None>]
+2026-11-02T05:54:35.629076Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 5315
+2026-11-02T05:54:35.629284Z DEBUG wyzesense2mqtt_rs::engine: Handshake 5/5: Authentication completed
+2026-11-02T05:54:35.629302Z  INFO wyzesense2mqtt_rs::engine: Dongle handshake completed successfully! Dongle is unlocked.
+2026-11-02T05:54:35.629315Z  INFO wyzesense2mqtt_rs: Dongle on /dev/hidraw10 successfully unlocked and authenticated!
+2026-11-02T05:54:35.629326Z  INFO wyzesense2mqtt_rs: Registering dongle 77A85A36 (/dev/hidraw10) in engines registry
+2026-11-02T05:54:35.629335Z  INFO wyzesense2mqtt_rs: Warming up paired sensors cache from NVRAM for dongle 77A85A36...
+2026-11-02T05:54:35.629344Z  INFO wyzesense2mqtt_rs::engine: Retrieving sensor list...
+2026-11-02T05:54:35.629351Z  INFO wyzesense2mqtt_rs::engine: Retrieving sensor count...
+2026-11-02T05:54:35.629376Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=532E, Payload=[<None>]
+2026-11-02T05:54:35.639213Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(532E)
+2026-11-02T05:54:35.639285Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=532F, Payload=[00]
+2026-11-02T05:54:35.639329Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 532F
+2026-11-02T05:54:35.639476Z  INFO wyzesense2mqtt_rs::engine: 0 sensors reported by dongle
+2026-11-02T05:54:35.639525Z  INFO wyzesense2mqtt_rs::engine: No sensors paired to dongle.
+2026-11-02T05:54:35.671320Z  INFO wyzesense2mqtt_rs: Sensors memory cache for dongle 77A85A36 successfully warmed up!
+2026-11-02T05:54:35.671624Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T05:54:35.682232Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:54:35.682319Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,10,00,00,00,1f]
+2026-11-02T05:54:35.682386Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:54:35.682644Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[02,00]
+2026-11-02T05:54:35.692183Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:54:35.697148Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[02,4f,57,53,42,01,01,00,00,16,82,c8,6a,30,a8,ab,8e,67,61,74,65,77,61,79,2d,64,6f,6e,67,6c,65,00,00,00,00,00,00,00,00,00,00,67,61,74,65,77,61,79,00,00,00,00,00]
+2026-11-02T05:54:35.697307Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:54:35.697534Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[02,01]
+2026-11-02T05:54:35.707199Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:54:35.712203Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[02,16,82,c8,6a,30,a8,ab,8e,57,79,7a,65,20,53,65,6e,73,65,20,64,6f,6e,67,6c,65,00,00,00,00,00,00,00,34,30,66,38,35,38,34,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00]
+2026-11-02T05:54:35.712403Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:54:35.712651Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[02,02]
+2026-11-02T05:54:35.725235Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:54:35.725396Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[02,16,82,c8,6a,30,a8,ab,8e,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00]
+2026-11-02T05:54:35.725569Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:54:35.726004Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[04]
+2026-11-02T05:54:35.737357Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:54:35.737482Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[04,00,fe,65,25,d4,fd,48,4f,20,00,4b,12,00]
+2026-11-02T05:54:35.737573Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:54:35.737922Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[06,04,00]
+2026-11-02T05:54:35.748169Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:54:35.748258Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[06,04,e0,00,00]
+2026-11-02T05:54:35.748340Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:54:35.748583Z  INFO wyzesense2mqtt_rs::roaming: Gateway 77A85A36: OpenWyzeSense 40f8584 on PAN 65FE / D425 / 00124B00204F48FD (flags supported 0000001F, enabled 00000010, configured 00000010; 0 sensors)
+2026-11-02T05:54:35.748951Z  INFO wyzesense2mqtt_rs: MQTT Gateway is disabled. Serving Web Control Panel only.
+2026-11-02T05:54:35.749131Z  INFO wyzesense2mqtt_rs::web::server: Web interface successfully started. Listening on http://0.0.0.0:8099
+2026-11-02T05:54:35.749274Z  INFO wyzesense2mqtt_rs: STATE EVENT: MAC=77C68193, Data=UnknownEvent([])
+2026-11-02T05:54:35.753527Z  INFO wyzesense2mqtt_rs: STATE EVENT: MAC=77BD514D, Data=UnknownEvent([])
+2026-11-02T05:54:35.753615Z  WARN wyzesense2mqtt_rs::protocol::sensor: Sensor 77C68193 timed out (last seen 3673 seconds ago). Setting offline.
+2026-11-02T05:54:35.756880Z  WARN wyzesense2mqtt_rs: AvailabilityMonitor: Sensor 77C68193 timed out! Emitting offline telemetry event.
+2026-11-02T05:54:35.759879Z  INFO wyzesense2mqtt_rs: STATE EVENT: MAC=77C68193, Data=Offline
+2026-11-02T05:54:35.937487Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=5332, Payload=[<None>]
+2026-11-02T05:54:35.937678Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 5332
+2026-11-02T05:54:35.938508Z DEBUG wyzesense2mqtt_rs::engine: Received time sync request (0x5332). Replying with timestamp.
+2026-11-02T05:54:35.948292Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(5333)
+2026-11-02T05:54:36.427614Z  INFO wyzesense2mqtt_rs::web::server: New WebSocket bridge connection from 192.168.0.72:61413 (device: Some("esp32-3f9a78"))
+2026-11-02T05:54:36.427689Z  INFO wyzesense2mqtt_rs::engine: Starting dongle initialization handshake...
+2026-11-02T05:54:36.427710Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=4327, Payload=[<None>]
+2026-11-02T05:54:36.566781Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=4328, Payload=[01]
+2026-11-02T05:54:36.567161Z DEBUG wyzesense2mqtt_rs::engine: Handshake 1/5: Inquiry verified
+2026-11-02T05:54:36.668063Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=4302, Payload=[30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30]
+2026-11-02T05:54:36.696306Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=4303, Payload=[00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00]
+2026-11-02T05:54:36.696518Z DEBUG wyzesense2mqtt_rs::engine: Handshake 2/5: ENR Token retrieved: Packet: Cmd=4303, Payload=[00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00]
+2026-11-02T05:54:36.797613Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=4304, Payload=[<None>]
+2026-11-02T05:54:36.826295Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=4305, Payload=[37,37,38,38,43,43,46,36]
+2026-11-02T05:54:36.826458Z  INFO wyzesense2mqtt_rs::engine: Dongle MAC address: 7788CCF6
+2026-11-02T05:54:36.826472Z DEBUG wyzesense2mqtt_rs::engine: Handshake 3/5: MAC Address retrieved
+2026-11-02T05:54:36.927252Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=5316, Payload=[<None>]
+2026-11-02T05:54:36.959573Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(5316)
+2026-11-02T05:54:36.959741Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=5317, Payload=[30,2e,30,2e,30,2e,34,37,20,56,31,2e,38,20,47,61,74,65,77,61,79,20,47,57,33,55]
+2026-11-02T05:54:36.959839Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 5317
+2026-11-02T05:54:36.960110Z  INFO wyzesense2mqtt_rs::engine: Dongle version: 0.0.0.47 V1.8 Gateway GW3U
+2026-11-02T05:54:36.960130Z DEBUG wyzesense2mqtt_rs::engine: Handshake 4/5: Version string retrieved
+2026-11-02T05:54:37.061005Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=5314, Payload=[ff]
+2026-11-02T05:54:37.085765Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(5314)
+2026-11-02T05:54:37.087257Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=5315, Payload=[<None>]
+2026-11-02T05:54:37.087325Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 5315
+2026-11-02T05:54:37.087450Z DEBUG wyzesense2mqtt_rs::engine: Handshake 5/5: Authentication completed
+2026-11-02T05:54:37.087461Z  INFO wyzesense2mqtt_rs::engine: Dongle handshake completed successfully! Dongle is unlocked.
+2026-11-02T05:54:37.087481Z  INFO wyzesense2mqtt_rs::web::server: WebSocket bridge dongle registered: MAC=7788CCF6
+2026-11-02T05:54:37.087492Z  INFO wyzesense2mqtt_rs::web::server: Warming up sensors cache for bridge dongle 7788CCF6...
+2026-11-02T05:54:37.087503Z  INFO wyzesense2mqtt_rs::engine: Retrieving sensor list...
+2026-11-02T05:54:37.087511Z  INFO wyzesense2mqtt_rs::engine: Retrieving sensor count...
+2026-11-02T05:54:37.087528Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=532E, Payload=[<None>]
+2026-11-02T05:54:37.358138Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(532E)
+2026-11-02T05:54:37.358260Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=532F, Payload=[02]
+2026-11-02T05:54:37.358310Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 532F
+2026-11-02T05:54:37.358501Z  INFO wyzesense2mqtt_rs::engine: 2 sensors reported by dongle
+2026-11-02T05:54:37.358544Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=5330, Payload=[02]
+2026-11-02T05:54:37.385946Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=5332, Payload=[<None>]
+2026-11-02T05:54:37.386019Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 5332
+2026-11-02T05:54:37.386084Z DEBUG wyzesense2mqtt_rs::engine: Received time sync request (0x5332). Replying with timestamp.
+2026-11-02T05:54:37.410541Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(5330)
+2026-11-02T05:54:37.410641Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=5331, Payload=[37,37,42,44,35,31,34,44]
+2026-11-02T05:54:37.410681Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 5331
+2026-11-02T05:54:37.410753Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=5331, Payload=[37,37,43,36,38,31,39,33]
+2026-11-02T05:54:37.410776Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 5331
+2026-11-02T05:54:37.410887Z  INFO wyzesense2mqtt_rs::engine: Sensor 1/2: MAC=77BD514D
+2026-11-02T05:54:37.410904Z  INFO wyzesense2mqtt_rs::engine: Sensor 2/2: MAC=77C68193
+2026-11-02T05:54:37.410918Z  INFO wyzesense2mqtt_rs::engine: Successfully retrieved 2 paired sensors
+2026-11-02T05:54:37.410954Z  INFO wyzesense2mqtt_rs::web::server: Assigned 2 NVRAM sensors to bridge dongle 7788CCF6
+2026-11-02T05:54:37.411109Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T05:54:37.411198Z  INFO wyzesense2mqtt_rs: STATE EVENT: MAC=77BD514D, Data=UnknownEvent([])
+2026-11-02T05:54:37.417075Z  INFO wyzesense2mqtt_rs: STATE EVENT: MAC=77C68193, Data=UnknownEvent([])
+2026-11-02T05:54:37.437580Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(5333)
+2026-11-02T05:54:37.466375Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:54:37.467971Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,10,00,00,00,1f]
+2026-11-02T05:54:37.468001Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:54:37.468056Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[02,00]
+2026-11-02T05:54:37.576233Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:54:37.577727Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[02,4f,57,53,42,01,01,00,00,d7,a7,f2,c2,70,51,1d,aa,67,61,74,65,77,61,79,2d,63,6f,6e,74,61,63,74,2d,76,31,00,00,00,00,00,00,67,61,74,65,77,61,79,00,00,00,00,00]
+2026-11-02T05:54:37.577978Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:54:37.578247Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[02,01]
+2026-11-02T05:54:37.879935Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:54:37.898978Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[02,d7,a7,f2,c2,70,51,1d,aa,57,79,7a,65,20,53,65,6e,73,65,20,76,31,20,63,6f,6e,74,61,63,74,00,00,00,34,30,66,38,35,38,34,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00]
+2026-11-02T05:54:37.899201Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:54:37.899526Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[02,02]
+2026-11-02T05:54:38.076294Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:54:38.078256Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[02,d7,a7,f2,c2,70,51,1d,aa,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00]
+2026-11-02T05:54:38.078472Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:54:38.078894Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[04]
+2026-11-02T05:54:38.336222Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:54:38.337774Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[04,00,fe,65,25,d4,fd,48,4f,20,00,4b,12,00]
+2026-11-02T05:54:38.337908Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:54:38.338067Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[06,04,00]
+2026-11-02T05:54:38.596275Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:54:38.597548Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[06,04,00,02,00,00,00,37,37,42,44,35,31,34,44,03,00,00]
+2026-11-02T05:54:38.597679Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:54:38.597879Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[06,04,01]
+2026-11-02T05:54:38.815776Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:54:38.817215Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[06,04,00,02,01,01,00,37,37,43,36,38,31,39,33,04,00,00]
+2026-11-02T05:54:38.817250Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:54:38.817296Z  INFO wyzesense2mqtt_rs::roaming: Gateway 7788CCF6: OpenWyzeSense 40f8584 on PAN 65FE / D425 / 00124B00204F48FD (flags supported 0000001F, enabled 00000010, configured 00000010; 2 sensors)
+2026-11-02T05:55:05.750523Z  WARN wyzesense2mqtt_rs::protocol::sensor: Sensor 77C68193 timed out (last seen 3703 seconds ago). Setting offline.
+2026-11-02T05:55:05.851496Z  WARN wyzesense2mqtt_rs: AvailabilityMonitor: Sensor 77C68193 timed out! Emitting offline telemetry event.
+2026-11-02T05:55:05.851646Z  INFO wyzesense2mqtt_rs: STATE EVENT: MAC=77C68193, Data=Offline
+2026-11-02T05:55:21.194057Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T05:55:21.205769Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:55:21.205972Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,10,00,00,00,1f]
+2026-11-02T05:55:21.206095Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:55:25.193318Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T05:55:25.216912Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:55:25.217068Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,10,00,00,00,1f]
+2026-11-02T05:55:25.217215Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:56:07.193928Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T05:56:07.205064Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:56:07.205212Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,10,00,00,00,1f]
+2026-11-02T05:56:07.205313Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:56:11.193482Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T05:56:11.216575Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:56:11.216598Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,10,00,00,00,1f]
+2026-11-02T05:56:11.216617Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:56:53.193290Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T05:56:53.202686Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:56:53.202709Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,10,00,00,00,1f]
+2026-11-02T05:56:53.202729Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:56:57.192971Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T05:56:57.219547Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:56:57.219572Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,10,00,00,00,1f]
+2026-11-02T05:56:57.219589Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:57:39.192968Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T05:57:39.203020Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:57:39.203081Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,10,00,00,00,1f]
+2026-11-02T05:57:39.203109Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:57:43.193357Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T05:57:43.217588Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:57:43.217727Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,10,00,00,00,1f]
+2026-11-02T05:57:43.217831Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:58:25.194021Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T05:58:25.205578Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:58:25.205688Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,10,00,00,00,1f]
+2026-11-02T05:58:25.205781Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:58:29.194210Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T05:58:29.218268Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:58:29.218427Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,10,00,00,00,1f]
+2026-11-02T05:58:29.218533Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:59:11.193754Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T05:59:11.204922Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:59:11.205059Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,10,00,00,00,1f]
+2026-11-02T05:59:11.205167Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:59:15.193407Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T05:59:15.228886Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:59:15.229130Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,10,00,00,00,1f]
+2026-11-02T05:59:15.229283Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T05:59:57.193239Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T05:59:57.204457Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T05:59:57.204620Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,10,00,00,00,1f]
+2026-11-02T05:59:57.204745Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:01.193146Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:02.694527Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:03.193356Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:04.695201Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:04.938193Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,b0,95,a2,37,37,42,44,35,31,34,44,0e,14,2b,00,01,01,00,3d,28]
+2026-11-02T06:00:04.938324Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:04.939490Z  INFO wyzesense2mqtt_rs: STATE EVENT: MAC=77BD514D, Data=Alarm { battery: 43, rssi: -40, state: 1, die_temperature_c: 20, event_sequence: 61 }
+2026-11-02T06:00:05.185345Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,b1,84,a2,37,37,42,44,35,31,34,44,0e,14,2b,00,01,01,00,3d,29]
+2026-11-02T06:00:05.185543Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:05.193067Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:05.794281Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,b3,c5,a2,37,37,42,44,35,31,34,44,0e,14,2b,00,01,00,00,3e,2b]
+2026-11-02T06:00:05.794483Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:05.795765Z  INFO wyzesense2mqtt_rs: STATE EVENT: MAC=77BD514D, Data=Alarm { battery: 43, rssi: -43, state: 0, die_temperature_c: 20, event_sequence: 62 }
+2026-11-02T06:00:06.045467Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,b4,b3,a2,37,37,42,44,35,31,34,44,0e,14,2b,00,01,00,00,3e,2c]
+2026-11-02T06:00:06.045727Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:06.297348Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,b5,a3,a2,37,37,42,44,35,31,34,44,0e,14,2b,00,01,00,00,3e,2c]
+2026-11-02T06:00:06.297569Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:06.549461Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,b6,92,a2,37,37,42,44,35,31,34,44,0e,14,2b,00,01,00,00,3e,2c]
+2026-11-02T06:00:06.549708Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:06.695017Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:07.194208Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:07.429729Z DEBUG wyzesense2mqtt_rs::web::server: Bridge client missed ping (1/3)
+2026-11-02T06:00:07.519359Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,ba,2e,a2,37,37,42,44,35,31,34,44,0e,14,2b,00,01,00,00,3e,2c]
+2026-11-02T06:00:07.519543Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:07.766274Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,bb,1e,a2,37,37,42,44,35,31,34,44,0e,14,2b,00,01,00,00,3e,2c]
+2026-11-02T06:00:07.766496Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:08.695370Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:08.968222Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,bf,92,a2,37,37,42,44,35,31,34,44,0e,11,2a,00,01,01,00,3f,2a]
+2026-11-02T06:00:08.968406Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:08.969647Z  INFO wyzesense2mqtt_rs: STATE EVENT: MAC=77BD514D, Data=Alarm { battery: 42, rssi: -42, state: 1, die_temperature_c: 17, event_sequence: 63 }
+2026-11-02T06:00:09.193375Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:09.218166Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,c0,81,a2,37,37,42,44,35,31,34,44,0e,11,2a,00,01,01,00,3f,29]
+2026-11-02T06:00:09.218348Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:09.820675Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,c2,c5,a2,37,37,42,44,35,31,34,44,0e,14,2a,00,01,00,00,40,2d]
+2026-11-02T06:00:09.820740Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:09.821217Z  INFO wyzesense2mqtt_rs: STATE EVENT: MAC=77BD514D, Data=Alarm { battery: 42, rssi: -45, state: 0, die_temperature_c: 20, event_sequence: 64 }
+2026-11-02T06:00:10.069063Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,c3,ac,a2,37,37,42,44,35,31,34,44,0e,14,2a,00,01,00,00,40,2e]
+2026-11-02T06:00:10.069203Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:10.314269Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,c4,99,a2,37,37,42,44,35,31,34,44,0e,14,2a,00,01,00,00,40,2e]
+2026-11-02T06:00:10.314501Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:10.564060Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,c5,83,a2,37,37,42,44,35,31,34,44,0e,14,2a,00,01,00,00,40,2e]
+2026-11-02T06:00:10.564218Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:10.695183Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:11.193064Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:11.427366Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,c8,b7,a2,37,37,42,44,35,31,34,44,0e,14,2a,00,01,00,00,40,2e]
+2026-11-02T06:00:11.427579Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:11.670226Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,c9,9c,a2,37,37,42,44,35,31,34,44,0e,14,2a,00,01,00,00,40,2b]
+2026-11-02T06:00:11.670442Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:11.915172Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,ca,8d,a2,37,37,42,44,35,31,34,44,0e,15,2a,00,01,01,00,41,2b]
+2026-11-02T06:00:11.915363Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:11.916829Z  INFO wyzesense2mqtt_rs: STATE EVENT: MAC=77BD514D, Data=Alarm { battery: 42, rssi: -43, state: 1, die_temperature_c: 21, event_sequence: 65 }
+2026-11-02T06:00:12.165379Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,cb,77,a2,37,37,42,44,35,31,34,44,0e,15,2a,00,01,01,00,41,2b]
+2026-11-02T06:00:12.165625Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:12.550293Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,cc,e8,a2,37,37,42,44,35,31,34,44,0e,11,29,00,01,00,00,42,2e]
+2026-11-02T06:00:12.550489Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:12.551980Z  INFO wyzesense2mqtt_rs: STATE EVENT: MAC=77BD514D, Data=Alarm { battery: 41, rssi: -46, state: 0, die_temperature_c: 17, event_sequence: 66 }
+2026-11-02T06:00:12.694426Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:12.793411Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,cd,c9,a2,37,37,42,44,35,31,34,44,0e,11,29,00,01,00,00,42,2e]
+2026-11-02T06:00:12.793654Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:13.193987Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:13.603143Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,d0,d0,a2,37,37,42,44,35,31,34,44,0e,11,29,00,01,00,00,42,2e]
+2026-11-02T06:00:13.603276Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:13.854521Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,d1,be,a2,37,37,42,44,35,31,34,44,0e,11,29,00,01,00,00,42,30]
+2026-11-02T06:00:13.854669Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:14.695538Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:14.696084Z  INFO wyzesense2mqtt_rs::engine: Deleting sensor: 77BD514D
+2026-11-02T06:00:14.696151Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=5325, Payload=[37,37,42,44,35,31,34,44]
+2026-11-02T06:00:14.748411Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,d5,12,a2,37,37,42,44,35,31,34,44,0e,11,29,00,01,00,00,42,24]
+2026-11-02T06:00:14.748663Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:14.999094Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[20,03,00,00,00,01,a1,9a,d7,d6,00,a2,37,37,42,44,35,31,34,44,0e,11,29,00,01,00,00,42,22]
+2026-11-02T06:00:14.999219Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:19.698117Z  WARN wyzesense2mqtt_rs::roaming: Roaming: handing 77BD514D over from gateway 7788CCF6 to gateway 77A85A36 failed: delete at old owner: Command 5325 timed out waiting for response 5326
+2026-11-02T06:00:19.698362Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:21.200246Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:21.200737Z  INFO wyzesense2mqtt_rs::engine: Deleting sensor: 77BD514D
+2026-11-02T06:00:21.200797Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=5325, Payload=[37,37,42,44,35,31,34,44]
+2026-11-02T06:00:26.202929Z  WARN wyzesense2mqtt_rs::roaming: Roaming: old owner 7788CCF6 of 77BD514D unreachable (Command 5325 timed out waiting for response 5326); handing over anyway
+2026-11-02T06:00:26.203199Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[06,03,37,37,42,44,35,31,34,44,03,00,0e]
+2026-11-02T06:00:26.215468Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T06:00:26.215628Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[06,03,00,01]
+2026-11-02T06:00:26.215736Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:26.216061Z  INFO wyzesense2mqtt_rs::roaming: Roaming: 77BD514D handed over from gateway 7788CCF6 to gateway 77A85A36 (its owner no longer ACKs it)
+2026-11-02T06:00:26.247608Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:27.749684Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:27.749901Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:29.253207Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:29.253551Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:30.755294Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:30.755585Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:32.257661Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:32.258060Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:33.759749Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:33.759860Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:35.261797Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:35.261873Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:36.763237Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:36.772121Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:37.431616Z DEBUG wyzesense2mqtt_rs::web::server: Bridge client missed ping (2/3)
+2026-11-02T06:00:38.273653Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:38.274046Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:39.775995Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:39.776301Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:41.278079Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:41.278419Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:42.780096Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:42.780268Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:42.791538Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T06:00:42.791696Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,10,00,00,00,1f]
+2026-11-02T06:00:42.791803Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:42.792068Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:44.293413Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:44.293821Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:45.795530Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:45.795906Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:47.297947Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:47.298251Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:47.727555Z  INFO wyzesense2mqtt_rs::web::server: New WebSocket bridge connection from 192.168.0.72:63288 (device: Some("esp32-3f9a78"))
+2026-11-02T06:00:47.727794Z  INFO wyzesense2mqtt_rs::engine: Starting dongle initialization handshake...
+2026-11-02T06:00:47.727880Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=4327, Payload=[<None>]
+2026-11-02T06:00:47.880556Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=4328, Payload=[01]
+2026-11-02T06:00:47.880885Z DEBUG wyzesense2mqtt_rs::engine: Handshake 1/5: Inquiry verified
+2026-11-02T06:00:47.982502Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=4302, Payload=[30,30,30,30,30,30,30,30,30,30,30,30,30,30,30,30]
+2026-11-02T06:00:48.011832Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=4303, Payload=[00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00]
+2026-11-02T06:00:48.012170Z DEBUG wyzesense2mqtt_rs::engine: Handshake 2/5: ENR Token retrieved: Packet: Cmd=4303, Payload=[00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00]
+2026-11-02T06:00:48.113332Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=4304, Payload=[<None>]
+2026-11-02T06:00:48.150610Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=4305, Payload=[37,37,38,38,43,43,46,36]
+2026-11-02T06:00:48.151019Z  INFO wyzesense2mqtt_rs::engine: Dongle MAC address: 7788CCF6
+2026-11-02T06:00:48.151055Z DEBUG wyzesense2mqtt_rs::engine: Handshake 3/5: MAC Address retrieved
+2026-11-02T06:00:48.252102Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=5316, Payload=[<None>]
+2026-11-02T06:00:48.280289Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(5316)
+2026-11-02T06:00:48.281600Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=5317, Payload=[30,2e,30,2e,30,2e,34,37,20,56,31,2e,38,20,47,61,74,65,77,61,79,20,47,57,33,55]
+2026-11-02T06:00:48.281773Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 5317
+2026-11-02T06:00:48.282044Z  INFO wyzesense2mqtt_rs::engine: Dongle version: 0.0.0.47 V1.8 Gateway GW3U
+2026-11-02T06:00:48.282069Z DEBUG wyzesense2mqtt_rs::engine: Handshake 4/5: Version string retrieved
+2026-11-02T06:00:48.383888Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=5314, Payload=[ff]
+2026-11-02T06:00:48.414618Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(5314)
+2026-11-02T06:00:48.414770Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=5315, Payload=[<None>]
+2026-11-02T06:00:48.414832Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 5315
+2026-11-02T06:00:48.415064Z DEBUG wyzesense2mqtt_rs::engine: Handshake 5/5: Authentication completed
+2026-11-02T06:00:48.415086Z  INFO wyzesense2mqtt_rs::engine: Dongle handshake completed successfully! Dongle is unlocked.
+2026-11-02T06:00:48.415116Z  INFO wyzesense2mqtt_rs::web::server: WebSocket bridge dongle registered: MAC=7788CCF6
+2026-11-02T06:00:48.415137Z  INFO wyzesense2mqtt_rs::web::server: Warming up sensors cache for bridge dongle 7788CCF6...
+2026-11-02T06:00:48.415158Z  INFO wyzesense2mqtt_rs::engine: Retrieving sensor list...
+2026-11-02T06:00:48.415176Z  INFO wyzesense2mqtt_rs::engine: Retrieving sensor count...
+2026-11-02T06:00:48.415208Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=532E, Payload=[<None>]
+2026-11-02T06:00:48.670216Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(532E)
+2026-11-02T06:00:48.674176Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=532F, Payload=[02]
+2026-11-02T06:00:48.674349Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 532F
+2026-11-02T06:00:48.674609Z  INFO wyzesense2mqtt_rs::engine: 2 sensors reported by dongle
+2026-11-02T06:00:48.674677Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=5330, Payload=[02]
+2026-11-02T06:00:48.699720Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=5332, Payload=[<None>]
+2026-11-02T06:00:48.699900Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 5332
+2026-11-02T06:00:48.700027Z DEBUG wyzesense2mqtt_rs::engine: Received time sync request (0x5332). Replying with timestamp.
+2026-11-02T06:00:48.719513Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(5330)
+2026-11-02T06:00:48.721020Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=5331, Payload=[37,37,42,44,35,31,34,44]
+2026-11-02T06:00:48.721124Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 5331
+2026-11-02T06:00:48.721267Z  INFO wyzesense2mqtt_rs::engine: Sensor 1/2: MAC=77BD514D
+2026-11-02T06:00:48.722511Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=5331, Payload=[37,37,43,36,38,31,39,33]
+2026-11-02T06:00:48.722620Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 5331
+2026-11-02T06:00:48.722756Z  INFO wyzesense2mqtt_rs::engine: Sensor 2/2: MAC=77C68193
+2026-11-02T06:00:48.722776Z  INFO wyzesense2mqtt_rs::engine: Successfully retrieved 2 paired sensors
+2026-11-02T06:00:48.722821Z  INFO wyzesense2mqtt_rs::web::server: Assigned 2 NVRAM sensors to bridge dongle 7788CCF6
+2026-11-02T06:00:48.723074Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:48.723255Z  INFO wyzesense2mqtt_rs: STATE EVENT: MAC=77BD514D, Data=UnknownEvent([])
+2026-11-02T06:00:48.727126Z  INFO wyzesense2mqtt_rs: STATE EVENT: MAC=77C68193, Data=UnknownEvent([])
+2026-11-02T06:00:48.742370Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(5333)
+2026-11-02T06:00:48.772102Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T06:00:48.772248Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,00,00,00,00,1f]
+2026-11-02T06:00:48.772330Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:48.772543Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[02,00]
+2026-11-02T06:00:48.799152Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 did not answer the flag check
+2026-11-02T06:00:48.879648Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T06:00:48.882034Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[02,4f,57,53,42,01,01,00,00,d7,a7,f2,c2,70,51,1d,aa,67,61,74,65,77,61,79,2d,63,6f,6e,74,61,63,74,2d,76,31,00,00,00,00,00,00,67,61,74,65,77,61,79,00,00,00,00,00]
+2026-11-02T06:00:48.882240Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:48.882483Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:00:49.141558Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T06:00:49.152770Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,00,00,00,00,1f]
+2026-11-02T06:00:49.152990Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:49.153261Z  WARN wyzesense2mqtt_rs::roaming: Gateway 7788CCF6 lost its flags (it restarted?); setting them again
+2026-11-02T06:00:49.153359Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[02,01]
+2026-11-02T06:00:49.551282Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T06:00:49.551489Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[02,d7,a7,f2,c2,70,51,1d,aa,57,79,7a,65,20,53,65,6e,73,65,20,76,31,20,63,6f,6e,74,61,63,74,00,00,00,34,30,66,38,35,38,34,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00]
+2026-11-02T06:00:49.551665Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:49.551972Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01,00,00,00,10]
+2026-11-02T06:00:49.642011Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T06:00:49.643295Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,10,00,00,00,1f]
+2026-11-02T06:00:49.643487Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:49.643774Z  INFO wyzesense2mqtt_rs::roaming: Gateway 7788CCF6: flags set to 00000010
+2026-11-02T06:00:49.643972Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[02,02]
+2026-11-02T06:00:49.899303Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T06:00:49.899534Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[02,d7,a7,f2,c2,70,51,1d,aa,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00]
+2026-11-02T06:00:49.899686Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:49.900079Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[06,04,00]
+2026-11-02T06:00:50.131880Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T06:00:50.132028Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[06,04,00,02,00,00,00,37,37,42,44,35,31,34,44,03,00,00]
+2026-11-02T06:00:50.132111Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:50.132322Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[04]
+2026-11-02T06:00:50.420270Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T06:00:50.421513Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[04,00,fe,65,25,d4,fd,48,4f,20,00,4b,12,00]
+2026-11-02T06:00:50.421796Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:50.422170Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[06,04,01]
+2026-11-02T06:00:50.862665Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T06:00:50.862828Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[06,04,00,02,01,01,00,37,37,43,36,38,31,39,33,04,00,00]
+2026-11-02T06:00:50.863015Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:50.863360Z DEBUG wyzesense2mqtt_rs::roaming: Roaming: gateway 7788CCF6 table reloaded (2 sensors)
+2026-11-02T06:00:50.863657Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[06,04,00]
+2026-11-02T06:00:51.149927Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T06:00:51.150035Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[06,04,00,02,00,00,00,37,37,42,44,35,31,34,44,03,00,00]
+2026-11-02T06:00:51.150115Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:51.150341Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[06,04,01]
+2026-11-02T06:00:51.389795Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T06:00:51.389951Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[06,04,00,02,01,01,00,37,37,43,36,38,31,39,33,04,00,00]
+2026-11-02T06:00:51.390029Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:51.390231Z  INFO wyzesense2mqtt_rs::roaming: Gateway 7788CCF6: OpenWyzeSense 40f8584 on PAN 65FE / D425 / 00124B00204F48FD (flags supported 0000001F, enabled 00000000, configured 00000010; 2 sensors)
+2026-11-02T06:00:51.390314Z  INFO wyzesense2mqtt_rs::roaming: Roaming: 77BD514D is on gateways 77A85A36 and 7788CCF6; 77A85A36 keeps it, removing it from 7788CCF6
+2026-11-02T06:00:51.390351Z  INFO wyzesense2mqtt_rs::engine: Deleting sensor: 77BD514D
+2026-11-02T06:00:51.390376Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=5325, Payload=[37,37,42,44,35,31,34,44]
+2026-11-02T06:00:51.640172Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(5325)
+2026-11-02T06:00:51.640325Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=5326, Payload=[37,37,42,44,35,31,34,44,ff]
+2026-11-02T06:00:51.640426Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 5326
+2026-11-02T06:00:51.646927Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01,00,00,00,10]
+2026-11-02T06:00:51.950266Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T06:00:51.950410Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,10,00,00,00,1f]
+2026-11-02T06:00:51.950506Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:00:51.950807Z  INFO wyzesense2mqtt_rs::roaming: Gateway 7788CCF6: flags set to 00000010
+2026-11-02T06:00:56.942380Z  WARN wyzesense2mqtt_rs::engine: Transport read error, signaling disconnect: WebSocket read error: IO error: Connection reset by peer (os error 104)
+2026-11-02T06:00:56.942678Z  INFO wyzesense2mqtt_rs::web::server: Bridge dongle 7788CCF6 disconnected, cleaning up
+2026-11-02T06:00:56.942763Z  INFO wyzesense2mqtt_rs::web::server: Bridge dongle 7788CCF6 already re-registered by a newer connection
+2026-11-02T06:01:05.750774Z  WARN wyzesense2mqtt_rs::protocol::sensor: Sensor 77C68193 timed out (last seen 4063 seconds ago). Setting offline.
+2026-11-02T06:01:05.757956Z  WARN wyzesense2mqtt_rs: AvailabilityMonitor: Sensor 77C68193 timed out! Emitting offline telemetry event.
+2026-11-02T06:01:05.758061Z  INFO wyzesense2mqtt_rs: STATE EVENT: MAC=77C68193, Data=Offline
+2026-11-02T06:01:29.193203Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:01:29.204162Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T06:01:29.204188Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,10,00,00,00,1f]
+2026-11-02T06:01:29.204213Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1
+2026-11-02T06:01:37.193435Z DEBUG wyzesense2mqtt_rs::engine: ===> Sending command packet: Packet: Cmd=53F0, Payload=[01]
+2026-11-02T06:01:37.219993Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53FF, Payload=ACK(53F0)
+2026-11-02T06:01:37.220016Z DEBUG wyzesense2mqtt_rs::engine: <=== Received packet: Packet: Cmd=53F1, Payload=[01,00,00,00,10,00,00,00,1f]
+2026-11-02T06:01:37.220034Z DEBUG wyzesense2mqtt_rs::engine: Sending ACK packet for async command 53F1

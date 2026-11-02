@@ -1,0 +1,78 @@
+14:35:15 > info
+14:35:15 info 777B42DF type 01 state 0 pan 0000 coord 0000 short 0000 counter 0
+14:36:07 OpenWyzeSense sensor 3dd32c6-dirty on Wyze Sense v1 contact, MAC 777B42DF, TX path built in
+14:36:07 input event 0
+14:37:29 OpenWyzeSense sensor 3dd32c6-dirty on Wyze Sense v1 contact, MAC 777B42DF, TX path built in
+14:37:37 > watch 90
+14:37:55 > info
+14:38:13 OpenWyzeSense sensor 3dd32c6-dirty on Wyze Sense v1 contact, MAC 777B42DF, TX path built in
+14:39:22 OpenWyzeSense sensor 3dd32c6-dirty on Wyze Sense v1 contact, MAC 777B42DF, TX path built in
+14:39:29 > watch 120 1FC
+14:40:37 > watch 60 1C
+14:40:50 > info
+14:41:03 OpenWyzeSense sensor 3dd32c6-dirty on Wyze Sense v1 contact, MAC 777B42DF, TX path built in
+14:42:25 > info
+14:42:25 error
+14:42:33 > info
+14:42:33 info 777B42DF type 01 state 0 pan 0000 coord 0000 short 0000 counter 0
+14:42:35 > watch 120 1C
+14:42:36 ok
+14:42:47 > 
+14:42:47 dio 001C
+14:43:03 input event 0
+14:43:03 input event 1
+14:43:04 input event 0
+14:43:04 input event 1
+14:43:04 input event 0
+14:43:05 input event 1
+14:43:05 input event 0
+14:43:06 input event 1
+14:43:07 input event 0
+14:43:07 input event 1
+14:43:07 input event 0
+14:43:09 input event 1
+14:43:10 input event 0
+14:43:11 input event 1
+14:43:11 input event 0
+14:43:12 input event 1
+14:43:34 > watch 180 17C
+14:43:34 ok
+14:43:34 dio 017C
+14:43:35 > 
+14:44:22 > watch 180 7C00
+14:44:22 ok
+14:44:22 dio 7C00
+14:44:23 > 
+14:44:38 dio 7400
+14:44:38 dio 7C00
+14:44:39 dio 7400
+14:44:39 dio 7C00
+14:44:40 dio 7400
+14:44:40 dio 7C00
+14:45:06 OpenWyzeSense sensor 3dd32c6-dirty on Wyze Sense v1 contact, MAC 777B42DF, TX path built in
+14:45:58 > 
+14:45:59 > info
+14:46:59 > 
+14:46:59 error
+14:47:00 > info
+14:47:00 info 777B42DF type 01 state 0 pan 0000 coord 0000 short 0000 counter 0
+14:47:56 input button 1
+14:47:56 input button 0
+14:47:56 button short
+14:47:58 input button 1
+14:48:03 input button 0
+14:48:03 button short
+14:48:31 input button 1
+14:48:36 button long
+14:48:39 input button 0
+14:48:40 joined 65FE D425 0006, gateway ours
+14:49:02 input event 0
+14:49:03 input event 1
+14:49:04 input event 0
+14:49:04 input event 1
+14:49:04 input event 0
+14:49:05 input event 1
+14:49:06 input event 0
+14:49:07 input event 1
+14:49:07 input event 0
+14:49:08 input event 1

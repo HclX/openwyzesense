@@ -1,0 +1,28 @@
+menu "OpenWyzeSense relay"
+
+# The contact's pads by their silkscreen: R is its input (DIO1), T its output (DIO0)
+config OWS_CONTACT_UART_TX
+    int "GPIO to the contact's R pad (its UART input, DIO1)"
+    default 17
+config OWS_CONTACT_UART_RX
+    int "GPIO from the contact's T pad (its UART output, DIO0)"
+    default 18
+config OWS_CONTACT_RESET
+    int "GPIO to the contact's S pad (RESET_N), open-drain"
+    default 4
+config OWS_CONTACT_BOOT
+    int "GPIO to the contact's W pad (DIO10: low at reset = ROM bootloader), open-drain"
+    default 23 if IDF_TARGET_ESP32  # not GPIO5 there: a boot strap, and a LOLIN32's LED
+    default 5
+config OWS_RIG_SUPPLY_GPIO
+    int "GPIO that supplies the contact as the battery rig (#95; ADC1 and output capable), -1 for none"
+    default 32 if IDF_TARGET_ESP32  # ADC1 channel 4; GPIO33 also works; ADC2 pins do not (Wi-Fi uses ADC2)
+    default -1
+    help
+        Only used when the rig is enabled in the settings (POST /rig enable=1): the contact's + pad then hangs on
+        this GPIO instead of 3V3 (esp32/README.md).
+config OWS_STATUS_LED
+    int "GPIO of a status LED (active high), -1 for none"
+    default -1
+
+endmenu
