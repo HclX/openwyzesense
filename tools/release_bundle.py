@@ -34,14 +34,14 @@ FIRMWARE = [
         'ows-gateway-contact-v1-{v}.bin',
         'Wyze v1 contact',
         'gateway (for an ESP relay)',
-        'carried by the ESP relay images below; or `tools/uniflash.py provision --gateway --app FILE`',
+        'carried by the ESP relay images below; or `ows-flash v1 provision --gateway --app FILE`',
     ),
     (
         'boot-wyze_contact_v1.bin',
         'ows-sensor-contact-v1-boot-{v}.bin',
         'Wyze v1 contact',
         'sensor: boot selector',
-        '`tools/uniflash.py provision --sensor --boot FILE --slot-a <slot A>`',
+        '`ows-flash v1 provision --sensor --boot FILE --slot-a <slot A>`',
     ),
     (
         'sensor-contact-v1-slot-a.img',
@@ -62,7 +62,7 @@ FIRMWARE = [
         'ows-sensor-motion-v1-boot-{v}.bin',
         'Wyze v1 motion',
         'sensor: boot selector',
-        '`tools/uniflash.py provision --sensor --board wyze_motion_v1 --boot FILE --slot-a <slot A>`',
+        '`ows-flash v1 provision --sensor --board wyze_motion_v1 --boot FILE --slot-a <slot A>`',
     ),
     (
         'sensor-motion-v1-slot-a.img',
@@ -111,8 +111,15 @@ QUICK_START = [
     '4. Back to stock at any time: `ows-flash restore --backup backups/dongle-1 --yes`.',
     '',
     'Moving the sensors to an ESP relay instead: `ows-flash nv export backups/dongle-1/flash.bin -o nv.json`, then',
-    "Import `nv.json` on the relay's page. The relay's contact board is prepared once on the bench (a LaunchPad and",
-    'TI UniFlash, `tools/uniflash.py` in the repository): see docs/user-guide.md.',
+    "Import `nv.json` on the relay's page.",
+    '',
+    '## Without the repository: v1 sensors and the contact-board gateway',
+    '',
+    'Prepared once on the bench, wired to a LaunchPad (docs/user-guide.md §3): `ows-flash fetch-uniflash` (TI UniFlash',
+    "from TI, ~380 MB, once; TI's own tool, not redistributed here), install `71-ti-xds110.rules`, then",
+    '`ows-flash v1 provision --sensor --boot <boot>.bin --slot-a <slot A>.img` (a sensor) or `ows-flash v1 provision',
+    "--gateway --app ows-gateway-contact-v1-<version>.bin` (the relay's contact board). It backs the unit up first",
+    '(`backups/<board>/<MAC>`). Later updates go over the air: `ows-flash ota MAC <slot A> <slot B>`.',
     '',
 ]
 UDEV = [

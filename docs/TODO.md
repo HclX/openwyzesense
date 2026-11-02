@@ -79,8 +79,8 @@ is the stock Factory UART Test & Provisioning Mode strap pin in `main()` at `0x0
   against a simulated dongle and the golden NV vectors. Left: the first hardware run on the spare dongle 77A85A36
   (stock -> ours -> stock -> ours, from wyzesense2mqtt-rs or `ows-flash`), then the v0.1.0 tag (the user acks).
   OTA (#47): `ota` module + `ows-flash ota`, tested on the host programs (test_ows_flash_ota.py); left: a bench
-  run on the LaunchPad sensor and the spare dongle. Next: `ows-flash provision` / `fetch-uniflash` (uniflash.py in
-  Rust, TI's installer fetched, not shipped).
+  run on the LaunchPad sensor and the spare dongle. `ows-flash v1 provision` / `fetch-uniflash` (#50): done, tested
+  against a fake DSLite chip; left: a bench run on a v1 contact wired to the LaunchPad.
 
 - **Under-load coin-cell low-battery detection & zero-extra-hardware ESP32 HIL rig (`TASK-25`, [`docs/low-battery.md`](low-battery.md))**:
   done (#75): BATMON sampled during each frame (its lowest reading), reports carry it, the low-battery flag with

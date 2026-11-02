@@ -8,6 +8,8 @@
 //! - [`image`]: image checks and the build info block. [`manifest`]: the release manifest.
 //! - [`ota`]: sensor OTA updates through our gateway (a state machine, and [`ota::run`] over a [`host::Link`]).
 //! - [`host`]: the host protocol to the gateway (packets, framing, a blocking link).
+//! - [`uniflash`]: v1 contact / motion units over a LaunchPad's 2-pin cJTAG with TI's DSLite (backup, flash,
+//!   provision), and fetching TI UniFlash from TI.
 //! - [`sbl`]: the dongle's update mode and TI's ROM bootloader (reading commands public; writing only through
 //!   [`dongle`]).
 //!
@@ -23,6 +25,7 @@ pub mod manifest;
 pub mod nv;
 pub mod ota;
 pub mod sbl;
+pub mod uniflash;
 
 use std::time::Duration;
 
@@ -70,6 +73,9 @@ pub enum Error {
     Host(String),
     #[error("OTA: {0}")]
     Ota(String),
+    /// TI UniFlash (DSLite) on the v1 sensor bench.
+    #[error("UniFlash: {0}")]
+    Uniflash(String),
 }
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
