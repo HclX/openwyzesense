@@ -5,8 +5,10 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use ows_host::dongle::{self, Backup, FlashOptions, Phase, Progress};
-use ows_host::hidraw::{self, Hidraw};
+use ows_host::hidraw::{self, Hidraw, HidrawHost, Serial};
+use ows_host::host::{ByteLink, Link};
 use ows_host::nv::{self, NvChoice};
+use ows_host::ota::{self, Targets};
 use ows_host::{image, Error};
 
 const USAGE: &str = "ows-flash (OpenWyzeSense) -- the Wyze USB dongle through its bootloader
@@ -18,10 +20,15 @@ const USAGE: &str = "ows-flash (OpenWyzeSense) -- the Wyze USB dongle through it
                                                        as DIR/nv.json), wipe, keep, or a JSON to import
   ows-flash restore --backup DIR --yes [--fast]        the backup's pages 0-30: stock again
   ows-flash info IMAGE                                 an image's build info
+  ows-flash ota MAC[,MAC...]|all SLOT_A.img SLOT_B.img [--seconds N]
+                                                       update sensors over the air through our gateway (OTA on for
+                                                       it, back as it was after); press each sensor's button briefly
+                                                       once staged. all: every sensor of the images' board
   ows-flash nv export PAGE_OR_FLASH.bin [-o NV.json]   a page (4 KB, or page 30 of a 128 KB dump) to JSON
   ows-flash nv import NV.json -o PAGE.bin              JSON to a page in our format
 
-  --device /dev/hidrawN    default: the first USB 1a86:e024
+  --device PATH            the dongle's /dev/hidrawN (default: the first USB 1a86:e024); ota: also a serial port
+                           running our gateway (a LaunchPad's /dev/ttyACMn, a pty)
   --fast                   status per stretch, all-FF skipped, CRC-only verify (no read-back)
 
 Page 31 (code and CCFG) is never written. Flashing needs this chip's backup, and resets the dongle only after
@@ -35,11 +42,20 @@ struct Args {
     out: Option<PathBuf>,
     yes: bool,
     fast: bool,
+    seconds: u64,
 }
 
 fn parse() -> Result<Args, String> {
-    let mut a =
-        Args { pos: vec![], backup: None, device: None, nv: "migrate".into(), out: None, yes: false, fast: false };
+    let mut a = Args {
+        pos: vec![],
+        backup: None,
+        device: None,
+        nv: "migrate".into(),
+        out: None,
+        yes: false,
+        fast: false,
+        seconds: 360,
+    };
     let mut it = std::env::args().skip(1);
     while let Some(x) = it.next() {
         let mut val = |name: &str| it.next().ok_or(format!("{name} needs a value"));
@@ -50,6 +66,7 @@ fn parse() -> Result<Args, String> {
             "-o" | "--out" => a.out = Some(val("-o")?.into()),
             "--yes" => a.yes = true,
             "--fast" => a.fast = true,
+            "--seconds" => a.seconds = val("--seconds")?.parse().map_err(|_| "--seconds: a number")?,
             "-h" | "--help" => return Err(String::new()),
             "-V" | "--version" => {
                 println!("ows-flash {}", ows_host::VERSION);
@@ -211,6 +228,58 @@ fn run(a: Args) -> Result<(), String> {
             }
             for r in &doc.unrecognised {
                 eprintln!("  not imported: item {}/{} {}", r.item, r.sub, r.data);
+            }
+        }
+        ["ota", targets, slot_a, slot_b] => {
+            let read = |f: &str| std::fs::read(f).map_err(|x| format!("{f}: {x}"));
+            let builds = [read(slot_a)?, read(slot_b)?];
+            ota::validate_builds(&builds).map_err(e)?;
+            let (board, version, ..) = ota::header(&builds[0]);
+            let path = a.device.clone().or_else(hidraw::find_dongle).ok_or("no gateway: pass --device PATH")?;
+            let name = path.display().to_string();
+            let mut io: Box<dyn ByteLink> = if name.contains("hidraw") {
+                Box::new(HidrawHost(Hidraw::open(&path).map_err(|x| format!("{name}: {x}"))?))
+            } else {
+                Box::new(Serial::open(&path).map_err(|x| format!("{name}: {x}"))?)
+            };
+            let mut link = Link::new(&mut *io);
+            if !link.inquiry().map_err(e)? {
+                return Err(format!("{name}: no answer to Inquiry"));
+            }
+            let t = if targets.eq_ignore_ascii_case("all") || *targets == "*" {
+                let known = link.sensors().map_err(e)?;
+                println!("all sensors of board {board:#010x} ({} paired)", known.len());
+                Targets::Any { known }
+            } else {
+                let mut macs = vec![];
+                for m in targets.split(',').map(str::trim).filter(|m| !m.is_empty()) {
+                    macs.push(<[u8; 8]>::try_from(m.as_bytes()).map_err(|_| format!("{m}: a MAC is 8 characters"))?);
+                }
+                Targets::Macs(macs)
+            };
+            println!("offering version {version} (board {board:#010x}) for up to {} s", a.seconds);
+            let mac = |m: &[u8; 8]| String::from_utf8_lossy(m).into_owned();
+            let res = ota::run(&mut link, builds, t, std::time::Duration::from_secs(a.seconds), &mut |ev| match ev {
+                ota::Event::Staged(m) => println!("staged for {}: press its button briefly now", mac(m)),
+                ota::Event::Refused(m) => println!("{}: refused by the gateway", mac(m)),
+                ota::Event::Progress { mac: m, slot, done, total } => {
+                    eprint!("\r  {} slot {}: {done}/{total}   ", mac(m), ["A", "B"][*slot as usize & 1])
+                }
+                ota::Event::Done { mac: m, status } => eprintln!("\n  {}: {}", mac(m), ota::status_text(*status)),
+            })
+            .map_err(e)?;
+            let mut failed = false;
+            for (m, o) in &res {
+                let text = match o {
+                    ota::Outcome::Done(st) => ota::status_text(*st).to_string(),
+                    ota::Outcome::Refused => "refused".into(),
+                    ota::Outcome::TimedOut => "timeout (its button not pressed?)".into(),
+                };
+                failed |= *o != ota::Outcome::Done(0);
+                println!("result {}: {text}", mac(m));
+            }
+            if failed {
+                return Err("not every sensor was updated".into());
             }
         }
         ["nv", "import", json] => {

@@ -48,14 +48,14 @@ FIRMWARE = [
         'ows-sensor-contact-v1-slot-a-{v}.img',
         'Wyze v1 contact',
         'sensor: slot A',
-        'provision (above); OTA: `tools/host_link.py PORT --ota MAC SLOT_A SLOT_B`',
+        'provision (above); OTA: `ows-flash ota MAC SLOT_A SLOT_B` (or wyzesense2mqtt-rs)',
     ),
     (
         'sensor-contact-v1-slot-b.img',
         'ows-sensor-contact-v1-slot-b-{v}.img',
         'Wyze v1 contact',
         'sensor: slot B',
-        'OTA only (`tools/host_link.py --ota`)',
+        'OTA only (`ows-flash ota`, with slot A)',
     ),
     (
         'boot-wyze_motion_v1.bin',
@@ -69,14 +69,14 @@ FIRMWARE = [
         'ows-sensor-motion-v1-slot-a-{v}.img',
         'Wyze v1 motion',
         'sensor: slot A',
-        'provision (above); OTA: `tools/host_link.py PORT --ota MAC SLOT_A SLOT_B`',
+        'provision (above); OTA: `ows-flash ota MAC SLOT_A SLOT_B` (or wyzesense2mqtt-rs)',
     ),
     (
         'sensor-motion-v1-slot-b.img',
         'ows-sensor-motion-v1-slot-b-{v}.img',
         'Wyze v1 motion',
         'sensor: slot B',
-        'OTA only (`tools/host_link.py --ota`)',
+        'OTA only (`ows-flash ota`, with slot A)',
     ),
 ]
 ESP32 = [  # (build directory under --esp32, chip name)

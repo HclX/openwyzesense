@@ -203,19 +203,21 @@ An ESP32 (ESP32-S3, classic ESP32) or ESP8266 wired to the contact board (`+`, `
 Sensors flashed with our firmware can be updated without opening them, through **our** gateway (not a stock dongle):
 
 ```
-uv run python tools/host_link.py /dev/ttyACM0 --ota <MAC> build/fw/firmware/sensor-contact-v1-slot-a.img \
-                                                          build/fw/firmware/sensor-contact-v1-slot-b.img
+ows-flash ota <MAC> ows-sensor-contact-v1-slot-a-<version>.img ows-sensor-contact-v1-slot-b-<version>.img
 ```
+
+(`ows-flash` is in each release; without `--device` it uses the Wyze USB dongle running our gateway, or pass
+`--device /dev/ttyACM0` for a LaunchPad gateway. wyzesense2mqtt-rs does the same from its dashboard. In the
+repository, `tools/host_link.py PORT --ota` is the Python equivalent.)
 
 To stage an update for several sensors at once (comma-separated MACs) or for every paired sensor of that board type
 (`--ota-all`), so you can arm the update once and walk around short-pressing each sensor's button:
 
 ```
-uv run python tools/host_link.py /dev/ttyACM0 --ota-all build/fw/firmware/sensor-contact-v1-slot-a.img \
-                                                        build/fw/firmware/sensor-contact-v1-slot-b.img
+ows-flash ota all ows-sensor-contact-v1-slot-a-<version>.img ows-sensor-contact-v1-slot-b-<version>.img
 ```
 
-Use `/dev/hidrawN` for a dongle. The tool preserves existing gateway flags (`GW_FLAG_DEDUP`, `GW_FLAG_FIX_ZERO_MAC`,
+The tool preserves existing gateway flags (`GW_FLAG_DEDUP`, `GW_FLAG_FIX_ZERO_MAC`,
 etc.), turns the gateway's update feature on for the session, and defaults to a 360-second idle window that
 automatically extends as blocks advance. When it says `staged`, **give each target sensor's button a short press**:
 its 5-minute update window opens, and the gateway updates them one at a time (~3 minutes per sensor), restarting each

@@ -54,7 +54,7 @@ on and only to the sensor its host names.
 
 1. The host (which has the update's two builds, for slot A and slot B) stages it via `0x53F0` sub-ID `0x10`
    (`OWS_SUB_OTA_OFFER`) for up to **8 explicit sensor MACs** at once (`GW_MAX_OTA_TARGETS = 8`), or wildcard
-   `"********"` for all paired sensors of that board (`tools/host_link.py --ota` defaults to `--seconds 360`,
+   `"********"` for all paired sensors of that board (`ows-flash ota`, crates/ows-host's `ota` module, and `tools/host_link.py --ota` default to `--seconds 360`,
    dynamically extending while blocks advance, and snapshots + restores active `gw->flags` on exit rather than clearing
    them).
 2. The user gives each target (paired) sensor's button a short press: its 5-minute window opens and it **checks in**:

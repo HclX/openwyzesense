@@ -32,6 +32,14 @@ The tag `vX.Y.Z` is the crate's version, and its GitHub release holds the firmwa
   ours) and the JSON model (`docs/nv-format.md`).
 - `image::check_product(image, "gateway-dongle")`, `image::build_info(image)`: the build info block (product, app,
   board, version, image ID).
+- `ota::Ota`: a sensor OTA update through our gateway (#47), as a state machine with no I/O, for a program with its
+  own read loop: `Ota::new(builds, Targets::Macs(..) | Targets::Any { known }, timeout, now)`, `start()` -> packets
+  to send, then `handle(&packet, now)` for each packet from the gateway -> `Step { send, events }` (`Staged`: press
+  the sensor's button briefly now; `Progress`; `Done`), until `finished(now)`; `results()`; send `Ota::cancel()` at
+  the end. GW_FLAG_OTA must be on (`host::FLAG_OTA`). `ota::run(&mut Link, ...)` does all of it, flags included,
+  over a blocking `host::Link` (on a `host::ByteLink`: `hidraw::HidrawHost`, `hidraw::Serial`).
+- `host`: the host protocol (`build`, `parse`, `Framer`, `Packet`, `Link` with `call` / `ows_call` / `flags` /
+  `sensors`).
 - `manifest::Manifest::from_json(text)`, `.product("gateway-dongle")`, `ManifestFile::verify(bytes)`: a release's
   `manifest.json` and the SHA-256 of a downloaded file.
 - `Error`: `Io`, `Sbl`, `Refused` (a safety rule), `Verify` (the chip was not reset), `Backup`, `Image`, `Nv`,
