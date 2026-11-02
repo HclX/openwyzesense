@@ -36,6 +36,10 @@ jobs:
         shell: bash
         run: |
           export OWS_GATEWAY_IMAGE="$GITHUB_WORKSPACE/gateway/gateway-contact-v1-app.bin"  # the container's path
+          # the checkout belongs to another user in this container: without this git refuses it, git describe fails and
+          # the relay calls itself "unknown" (#55)
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git describe --always --dirty --tags
           grep -qx 'ESP_IDF_VERSION=v5.5.6' tools/toolchain.lock  # the container's tag follows the lock
           . "$IDF_PATH/export.sh"
           cd esp32/idf && idf.py set-target esp32s3 && idf.py build

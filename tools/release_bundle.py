@@ -127,6 +127,7 @@ UDEV = [
     ('72-esp-usb-serial.rules', 'ESP32 / ESP8266 USB serial'),
     ('71-ti-xds110.rules', 'LaunchPad XDS110 (v1 sensor bench)'),
 ]
+RELAY_TAG = b'OWS-RELAY-VERSION:'  # the relay's own version in its image (esp32/idf/main/web.c, esp8266 main.cpp)
 MANIFEST_FORMAT = 'openwyzesense-release'
 NO_VERSION = {'boot-wyze_contact_v1.bin', 'boot-wyze_motion_v1.bin'}  # boot selectors carry no version string
 
@@ -142,8 +143,12 @@ def bundle(version, firmware, out, esp32=None, esp8266=None, ows_flash=None):
             errors.append(f'missing: {src}')
             return
         data = src.read_bytes()
-        if versioned and version.encode() not in data:
-            errors.append(f'{src}: does not carry the version {version} (a different build?)')
+        # a relay carries the gateway image, which holds the version too: a relay is checked by its own tag (#55)
+        want = (versioned if isinstance(versioned, bytes) else b'') + version.encode()
+        if versioned and want not in data:
+            errors.append(
+                f'{src}: does not carry {want.decode()} (a different build, or one that did not know its version?)'
+            )
         shutil.copyfile(src, out / name)
         rows.append((name, device, what, how))
         files.append(
@@ -178,6 +183,7 @@ def bundle(version, firmware, out, esp32=None, esp8266=None, ows_flash=None):
                 'relay: first flash',
                 f'`esptool.py --chip {chip} write_flash 0x0 FILE` (also clears its settings: Wi-Fi set up '
                 'again via the OWS-relay-XXXX access point)',
+                versioned=RELAY_TAG,
                 product=f'relay-{chip}-full',
             )
             add(
@@ -186,6 +192,7 @@ def bundle(version, firmware, out, esp32=None, esp8266=None, ows_flash=None):
                 label,
                 'relay: update',
                 'the relay page: Update, or `curl --data-binary @FILE http://<relay>/ota`',
+                versioned=RELAY_TAG,
                 product=f'relay-{chip}-ota',
             )
     if esp8266:
@@ -195,6 +202,7 @@ def bundle(version, firmware, out, esp32=None, esp8266=None, ows_flash=None):
             'ESP8266 (D1 mini, NodeMCU)',
             'relay: first flash and update',
             'first: `esptool.py --chip esp8266 write_flash 0x0 FILE`; then the relay page: Update',
+            versioned=RELAY_TAG,
             product='relay-esp8266',
         )
     if ows_flash:

@@ -308,10 +308,23 @@ gwsync_result_t gwsync_run(const gwsync_io_t *io, uint32_t image_len, sbl_t *sbl
     io->sleep_ms(io->ctx, BOOT_MS);
     r->answered = query_page(io, 0, &r->running, &r->junk, TRIES);
     if (r->answered && !memcmp(r->running.id, r->carried.id, sizeof r->carried.id)) {
+        // the same code (the image ID leaves the version string out): nothing to flash. What it reports is its own
+        // build's version (pages 1-2), which can differ from the carried one's (#55): the carried one's if it does not say
+        if (query_page(io, 1, &r->running, &r->junk, 1)) {
+            if (!query_page(io, 2, &r->running, &r->junk, 1)) {
+                r->running.version[22] = '\0';
+            }
+        } else {
+            memcpy(r->running.board, r->carried.board, sizeof r->running.board);
+            memcpy(r->running.version, r->carried.version, sizeof r->running.version);
+        }
         query_mac(io, r->mac, &r->junk);
-        memcpy(r->running.board, r->carried.board, sizeof r->running.board);
-        memcpy(r->running.version, r->carried.version, sizeof r->running.version);
-        snprintf(r->msg, sizeof r->msg, "runs the carried gateway %s (%s)", r->carried.version, want);
+        if (strcmp(r->running.version, r->carried.version) != 0) {
+            snprintf(r->msg, sizeof r->msg, "runs the carried gateway's code (%s), built as %s (carried: %s)", want,
+                     r->running.version, r->carried.version);
+        } else {
+            snprintf(r->msg, sizeof r->msg, "runs the carried gateway %s (%s)", r->carried.version, want);
+        }
         return done(io, r, GWSYNC_SAME, false);
     }
 

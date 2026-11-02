@@ -20,10 +20,10 @@ def fake_build(tmp, version):
     esp = tmp / 'idf'
     for d, *_ in release_bundle.ESP32:
         (esp / d).mkdir(parents=True)
-        (esp / d / 'ows_relay.bin').write_bytes(b'relay ' + version.encode())
-        (esp / d / 'ows_relay_full.bin').write_bytes(b'boot+table+relay ' + version.encode())
+        (esp / d / 'ows_relay.bin').write_bytes(b'relay OWS-RELAY-VERSION:' + version.encode())
+        (esp / d / 'ows_relay_full.bin').write_bytes(b'boot+table+relay OWS-RELAY-VERSION:' + version.encode())
     e8266 = tmp / 'firmware.bin'
-    e8266.write_bytes(b'esp8266 ' + version.encode())
+    e8266.write_bytes(b'esp8266 OWS-RELAY-VERSION:' + version.encode())
     return fw, esp, e8266
 
 
@@ -56,7 +56,7 @@ def test_bundle_refuses_mixed_builds_and_missing_files(tmp_path):
     (esp / 'build-esp32' / 'ows_relay_full.bin').unlink()
     with pytest.raises(SystemExit) as e:
         release_bundle.bundle('v0.1.0', fw, tmp_path / 'dist', esp, e8266)
-    assert 'gateway-dongle-app.bin: does not carry the version v0.1.0' in str(e.value)
+    assert 'gateway-dongle-app.bin: does not carry v0.1.0' in str(e.value)
     assert 'missing:' in str(e.value) and 'ows_relay_full.bin' in str(e.value)
 
 
@@ -82,3 +82,12 @@ def test_the_crate_version_is_one_a_tag_can_carry():
     text = (ROOT / 'Cargo.toml').read_text()
     version = text.split('[workspace.package]', 1)[1].split('version = "', 1)[1].split('"', 1)[0]
     assert all(p.isdigit() for p in version.split('.')) and version.count('.') == 2
+
+
+def test_a_relay_that_does_not_know_its_version_is_refused(tmp_path):
+    # #55: the gateway image a relay carries holds the version string, so the relay is checked by its own tag
+    fw, esp, e8266 = fake_build(tmp_path, 'v0.2.0')
+    (esp / 'build' / 'ows_relay.bin').write_bytes(b'gateway v0.2.0 OWS-RELAY-VERSION:unknown')
+    with pytest.raises(SystemExit) as e:
+        release_bundle.bundle('v0.2.0', fw, tmp_path / 'dist', esp, e8266)
+    assert 'ows_relay.bin: does not carry OWS-RELAY-VERSION:v0.2.0' in str(e.value)

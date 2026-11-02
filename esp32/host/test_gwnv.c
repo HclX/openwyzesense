@@ -276,11 +276,51 @@ static void test_gwsync_probe_safe_mode(void)
     CHECK(strstr(rep.msg, "auto-sync paused") != NULL);
 }
 
+// #55: the carried image has the running gateway's code (the same image ID) but another version string: nothing is
+// flashed, and the report says what the radio itself runs (its build's version), not the carried version
+static void test_gwsync_same_code_reports_its_own_version(void)
+{
+    static probe_ctx_t p;
+    memset(&p, 0, sizeof p);
+    host_rx_init(&p.h.to_gw);
+    build_info_t running_bi = {.magic = BUILD_INFO_MAGIC,
+                               .format = BUILD_INFO_FORMAT,
+                               .id = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88},
+                               .product = "gateway-contact-v1",
+                               .board = "wyze_contact_v1",
+                               .app = "gateway",
+                               .version = "40f8584-dirty"};
+    build_info_t carried_bi = running_bi;
+    snprintf(carried_bi.version, sizeof carried_bi.version, "v0.2.0");
+    memcpy(p.img + 64, &carried_bi, sizeof carried_bi);
+    gw_io_t gw_io = {noop_tx, gw_to_esp, NULL, &p.h, NULL};
+    gw_init(&p.h.gw, 0x1111, 0x2222, 0x00124B0000000001ull, (const uint8_t *)"778B5F63", &gw_io);
+    p.h.gw.build_info = &running_bi;
+    p.h.gw.build_info_len = sizeof running_bi;
+
+    uint8_t scratch[SBL_PAGE];
+    sbl_t sbl;
+    gwsync_report_t rep;
+    gwsync_io_t io = {esp_write, esp_read, esp_flush, probe_reset, probe_bl, probe_sleep, probe_img, NULL, &p};
+    CHECK(gwsync_run(&io, sizeof p.img, &sbl, scratch, &rep) == GWSYNC_SAME);
+    CHECK(p.bootloaders == 0);  // nothing flashed
+    CHECK(!strcmp(rep.running.version, "40f8584-dirty") && !strcmp(rep.carried.version, "v0.2.0"));
+    CHECK(strstr(rep.msg, "built as 40f8584-dirty") != NULL);
+
+    // the same version: the usual message
+    snprintf(running_bi.version, sizeof running_bi.version, "v0.2.0");
+    memset(&p.h.to_gw, 0, sizeof p.h.to_gw);
+    host_rx_init(&p.h.to_gw);
+    CHECK(gwsync_run(&io, sizeof p.img, &sbl, scratch, &rep) == GWSYNC_SAME);
+    CHECK(!strcmp(rep.running.version, "v0.2.0") && strstr(rep.msg, "runs the carried gateway v0.2.0") != NULL);
+}
+
 int main(void)
 {
     test_json_validation();
     test_64_sensor_import_export_roundtrip();
     test_gwsync_probe_safe_mode();
+    test_gwsync_same_code_reports_its_own_version();
     printf("%d checks, %d failures\n", checks, failures);
     return failures != 0;
 }
