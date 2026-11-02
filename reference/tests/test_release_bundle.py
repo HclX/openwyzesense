@@ -31,7 +31,8 @@ def test_bundle_renames_per_device_with_sums_and_readme(tmp_path):
     fw, esp, e8266 = fake_build(tmp_path, 'v0.1.0')
     names = release_bundle.bundle('v0.1.0', fw, tmp_path / 'dist', esp, e8266)
     out = tmp_path / 'dist'
-    assert len(names) == len(release_bundle.FIRMWARE) + 2 * len(release_bundle.ESP32) + 1
+    assert len(names) == len(release_bundle.FIRMWARE) + 2 * len(release_bundle.ESP32) + 1 + len(release_bundle.UDEV)
+    assert '99-wyze-dongle.rules' in names
     assert 'ows-gateway-dongle-v0.1.0.bin' in names and 'ows-relay-esp32-full-v0.1.0.bin' in names
     assert 'ows-relay-esp8266-v0.1.0.bin' in names
     sums = dict(reversed(line.split('  ')) for line in (out / 'SHA256SUMS').read_text().splitlines())
@@ -45,6 +46,7 @@ def test_bundle_renames_per_device_with_sums_and_readme(tmp_path):
     assert dongle['board'] == 'wyze_dongle' and dongle['file'] == 'ows-gateway-dongle-v0.1.0.bin'
     assert dongle['size'] == (out / dongle['file']).stat().st_size
     readme = (out / 'README.md').read_text()
+    assert '## Without the repository' in readme and 'ows-flash backup' in readme
     assert readme.startswith('# OpenWyzeSense v0.1.0') and all(f'`{n}`' in readme for n in names)
 
 
@@ -61,7 +63,7 @@ def test_bundle_refuses_mixed_builds_and_missing_files(tmp_path):
 def test_partial_bundle_without_the_relays(tmp_path):
     fw, _, _ = fake_build(tmp_path, 'abc1234')
     names = release_bundle.bundle('abc1234', fw, tmp_path / 'dist')
-    assert len(names) == len(release_bundle.FIRMWARE)
+    assert len(names) == len(release_bundle.FIRMWARE) + len(release_bundle.UDEV)
 
 
 def test_every_firmware_file_names_its_product_and_board(tmp_path):
