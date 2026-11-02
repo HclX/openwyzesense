@@ -1,0 +1,64 @@
+{
+  "format": "openwyzesense-nv-json",
+  "version": 1,
+  "source": {
+    "layout": "stock"
+  },
+  "network": {
+    "pan": "65FE",
+    "short": "D425",
+    "ext": "00124B0012345678"
+  },
+  "sensors": [
+    {
+      "sub": 1,
+      "mac": "77A8C793",
+      "short": "0003"
+    },
+    {
+      "sub": 10,
+      "mac": "77A8C799",
+      "short": "000A"
+    }
+  ],
+  "join": null,
+  "cfg": null,
+  "dropped": [
+    {
+      "what": "sensor 2",
+      "why": "MAC 3737613863373934 is not 8 hex digits"
+    },
+    {
+      "what": "sensor 3",
+      "why": "short address FFFE not usable"
+    },
+    {
+      "what": "sensor 4",
+      "why": "PAN 1234 is not the network's"
+    },
+    {
+      "what": "sensor 5",
+      "why": "MAC 77A8C793 already in sensor 1"
+    },
+    {
+      "what": "sensor 6",
+      "why": "shares short address 0003 with 77A8C793: re-pair 77A8C797 after the migration",
+      "mac": "77A8C797"
+    },
+    {
+      "what": "sensor 7",
+      "why": "MAC 3030303030303030 is not 8 hex digits"
+    },
+    {
+      "what": "sensor 8",
+      "why": "16 bytes, not 24"
+    }
+  ],
+  "unrecognised": [
+    {
+      "item": 6,
+      "sub": 0,
+      "data": "01020304"
+    }
+  ]
+}

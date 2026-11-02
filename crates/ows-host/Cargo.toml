@@ -1,0 +1,22 @@
+[package]
+name = "ows-host"
+description = "OpenWyzeSense host tools: the Wyze dongle's bootloader (backup, flash, restore), the NV page JSON, image checks, the release manifest"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[features]
+default = ["hidraw"]
+# a HidTransport over Linux /dev/hidrawN, and finding the dongle (USB 1a86:e024) in sysfs
+hidraw = ["dep:libc"]
+
+[dependencies]
+crc32fast = "1"
+hex = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+thiserror = "1"
+libc = { version = "0.2", optional = true }

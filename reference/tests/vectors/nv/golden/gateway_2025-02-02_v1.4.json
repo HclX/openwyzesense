@@ -1,0 +1,84 @@
+{
+  "format": "openwyzesense-nv-json",
+  "version": 1,
+  "source": {
+    "layout": "stock"
+  },
+  "network": {
+    "pan": "2357",
+    "short": "C907",
+    "ext": "00124B001D90494A"
+  },
+  "sensors": [
+    {
+      "sub": 4,
+      "mac": "777C1FCA",
+      "short": "0004"
+    },
+    {
+      "sub": 7,
+      "mac": "7779749A",
+      "short": "0006"
+    },
+    {
+      "sub": 8,
+      "mac": "7788CD06",
+      "short": "0005"
+    },
+    {
+      "sub": 10,
+      "mac": "7788D076",
+      "short": "0007"
+    },
+    {
+      "sub": 11,
+      "mac": "778B8C64",
+      "short": "0008"
+    },
+    {
+      "sub": 12,
+      "mac": "778B9A48",
+      "short": "0009"
+    },
+    {
+      "sub": 13,
+      "mac": "778B9E20",
+      "short": "000A"
+    },
+    {
+      "sub": 14,
+      "mac": "778BB041",
+      "short": "000B"
+    },
+    {
+      "sub": 15,
+      "mac": "778B9A83",
+      "short": "000C"
+    },
+    {
+      "sub": 16,
+      "mac": "778BA7C4",
+      "short": "000D"
+    }
+  ],
+  "join": null,
+  "cfg": null,
+  "dropped": [
+    {
+      "what": "sensor 5",
+      "why": "shares short address 0004 with 777C1FCA: re-pair 7788CCF6 after the migration",
+      "mac": "7788CCF6"
+    },
+    {
+      "what": "sensor 6",
+      "why": "MAC 0000000000000000 is not 8 hex digits"
+    }
+  ],
+  "unrecognised": [
+    {
+      "item": 6,
+      "sub": 0,
+      "data": "78300020"
+    }
+  ]
+}

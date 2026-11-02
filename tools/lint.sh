@@ -4,7 +4,7 @@
 #   tools/lint.sh --fix    rewrite what the formatters can fix (clang-format, ruff format / --fix, shfmt), then check
 # C: clang-format (.clang-format) on firmware/ and esp32/; clang-tidy (.clang-tidy) on the files built for the host (it needs
 # build/host/compile_commands.json, configured here if missing). Python: ruff format + ruff check (pyproject.toml).
-# Shell: shfmt + shellcheck. third_party/, ground_truth/ and .toolchain/ are never touched.
+# Shell: shfmt + shellcheck. Rust (crates/, #42): cargo fmt + clippy, when cargo is installed (CI's rust job always runs them). third_party/, ground_truth/ and .toolchain/ are never touched.
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
@@ -31,6 +31,7 @@ if ((fix)); then
     uv run ruff format --quiet .
     uv run ruff check --fix --quiet . || true
     uv run shfmt -i 4 -ci -sr -w "${sh_files[@]}"
+    if command -v cargo > /dev/null; then cargo fmt; fi
 fi
 
 step clang-format uv run clang-format --dry-run --Werror "${c_files[@]}"
@@ -42,6 +43,10 @@ step ruff-format uv run ruff format --check --quiet .
 step ruff-check uv run ruff check --quiet .
 step shfmt uv run shfmt -i 4 -ci -sr -d "${sh_files[@]}"
 step shellcheck uv run shellcheck -x "${sh_files[@]}"
+if command -v cargo > /dev/null; then
+    step cargo-fmt cargo fmt --check
+    step clippy cargo clippy --quiet --all-targets -- -D warnings
+fi
 
 if ((${#failed[@]})); then
     echo "lint: FAILED: ${failed[*]} (tools/lint.sh --fix rewrites what can be fixed automatically)"

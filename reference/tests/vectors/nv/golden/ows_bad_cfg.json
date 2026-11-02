@@ -1,0 +1,18 @@
+{
+  "format": "openwyzesense-nv-json",
+  "version": 1,
+  "source": {
+    "layout": "ows"
+  },
+  "network": null,
+  "sensors": [],
+  "join": null,
+  "cfg": null,
+  "dropped": [
+    {
+      "what": "cfg",
+      "why": "sensor cfg 0000070000000000 not usable"
+    }
+  ],
+  "unrecognised": []
+}

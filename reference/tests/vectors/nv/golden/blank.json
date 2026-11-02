@@ -1,0 +1,13 @@
+{
+  "format": "openwyzesense-nv-json",
+  "version": 1,
+  "source": {
+    "layout": "blank"
+  },
+  "network": null,
+  "sensors": [],
+  "join": null,
+  "cfg": null,
+  "dropped": [],
+  "unrecognised": []
+}

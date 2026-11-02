@@ -1,0 +1,18 @@
+{
+  "format": "openwyzesense-nv-json",
+  "version": 1,
+  "source": {
+    "layout": "ows"
+  },
+  "network": null,
+  "sensors": [],
+  "join": null,
+  "cfg": null,
+  "dropped": [
+    {
+      "what": "join",
+      "why": "PAN 845B / short address 0005 not usable"
+    }
+  ],
+  "unrecognised": []
+}

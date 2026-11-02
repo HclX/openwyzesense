@@ -98,6 +98,8 @@ decisions so far.
   1. `cmake --preset host && cmake --build --preset host && ctest --preset host` (12 C unit suites + host binaries)
   2. `cmake --preset fw && cmake --build --preset fw` (CC1310 firmware images)
   3. `uv run pytest` (reference, ground-truth replay, host-tool PTY tests, and `test_firmware.py` ELF checks)
+  3a. `cargo test` (the Rust host crate `crates/ows-host`, #42: a simulated dongle, and the golden NV vectors that
+     `tools/nv_golden.py` writes from the Python reference; change one, regenerate, both must agree)
   4. `tools/lint.sh` (mandatory before every commit, CI fails otherwise; `--fix` for the formatters)
   5. Optional full-stack host E2E: `OWS_W2M=<wyzesense2mqtt-rs> uv run pytest reference/tests/test_host_e2e.py`
      (requires `mosquitto` and `mosquitto-clients`).

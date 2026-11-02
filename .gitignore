@@ -8,3 +8,4 @@ build/
 
 # local stock-firmware backups of Wyze devices and session data (recordings, scripts): never committed
 /backups/
+/target

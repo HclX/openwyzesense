@@ -1,0 +1,31 @@
+{
+  "format": "openwyzesense-nv-json",
+  "version": 1,
+  "source": {
+    "layout": "ows"
+  },
+  "network": null,
+  "sensors": [],
+  "join": {
+    "type": "0E",
+    "gw_ours": true,
+    "pan": "65FD",
+    "coord": "7B1F",
+    "short": "0005",
+    "gw_features": "0003"
+  },
+  "cfg": {
+    "type": "0E",
+    "invert": true,
+    "pull": "down",
+    "debounce_ms": 250
+  },
+  "dropped": [],
+  "unrecognised": [
+    {
+      "item": 48,
+      "sub": 1,
+      "data": "aabbccdd"
+    }
+  ]
+}
