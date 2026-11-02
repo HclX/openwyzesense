@@ -528,7 +528,7 @@ pub enum NvChoice {
 }
 
 /// What the choice writes over `current`: `(page, doc)`. `page` None: nothing written; `doc`: the model carried
-/// over (Migrate, Json), for the caller to show and keep (dongle_sbl.py saves it as nv.json in the backup).
+/// over (Migrate, Json), for the caller to show and keep (ows-flash saves it as nv.json in the backup).
 pub fn page_for(choice: &NvChoice, current: &[u8]) -> Result<(Option<Vec<u8>>, Option<NvDoc>), Error> {
     match choice {
         NvChoice::Keep => Ok((None, None)),

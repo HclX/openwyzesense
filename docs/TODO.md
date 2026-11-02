@@ -190,5 +190,5 @@ Stock behaviour resolved from `contact_v1`, `motion_v1` and `gateway_v1.8` disas
 - House sensors off the house network since the tests: 77BD514D (on the spare dongle), 77A8C793 and 77C68193 (no
   gateway). The user: fine to leave them unpaired for now; no need to remind.
 - The LaunchPad runs our sensor firmware (`fw` `sensor-launchpad`).
-- The spare dongle 77A85A36 runs our gateway; `tools/dongle_sbl.py restore` gives stock back.
+- The spare dongle 77A85A36 runs our gateway; `ows-flash restore` gives stock back.
 - wyzesense2mqtt-rs (the user's): could learn the multiplexed `0x53F0`/`0x53F1` sub-IDs (feature flags, build info, network, NV import, OTA).

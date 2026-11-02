@@ -1,9 +1,9 @@
-# tools/dongle_sbl.py against a simulated dongle: the CH554's HID framing and TI's ROM serial bootloader over a
+# tools/sbl_common.py (the write path tools/uart_sbl.py uses; the dongle itself: ows-flash, crates/ows-host) against a
+# simulated dongle: the CH554's HID framing and TI's ROM serial bootloader over a
 # 128 KiB flash (erase -> 0xFF, programming only clears bits). The point: the tool never touches pages 30-31 (the
 # sensor table, and the CCFG whose BL_CONFIG keeps the bootloader reachable), and resets the chip only after
 # verifying what it wrote.
 import binascii
-import hashlib
 import json
 import pathlib
 import sys
@@ -12,8 +12,8 @@ import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
-import dongle_sbl as sbl  # noqa: E402
 import nv_json  # noqa: E402
+import sbl_common as sbl  # noqa: E402
 import stock_like  # noqa: E402
 from wyzesense_ref import nvows  # noqa: E402
 
@@ -243,11 +243,6 @@ def test_the_full_image_is_refused():
         pytest.skip('no firmware build')
     with pytest.raises(ValueError, match='app.bin'):
         sbl.check_image(full.read_bytes())
-
-
-def test_the_backup_is_sound(tmp_path):
-    info, flash = sbl.check_backup(stock_like.dongle_backup(tmp_path / 'backup'))
-    assert hashlib.sha256(flash).hexdigest() == info['flash.bin']['sha256'] and info['reset_source'] == 'pin reset'
 
 
 def holed_image():

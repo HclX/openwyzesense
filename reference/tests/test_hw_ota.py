@@ -4,7 +4,7 @@
 # sensor's MAC, and a short press of its button (its OTA window, a check-in) gets it going; the sensor takes the
 # slot-B build, restarts into it, reports, and confirms itself. It TRANSMITS
 # (test PAN only): opt in with OWS_HW=1 and OWS_HW_TX=1. The dongle must run our gateway with GW_FLAG_OTA (built
-# from this tree, preset fw, gateway-dongle-app.bin, through tools/dongle_sbl.py). OWS_HW_SAVE=<dir> keeps the
+# from this tree, preset fw, gateway-dongle-app.bin, through ows-flash). OWS_HW_SAVE=<dir> keeps the
 # dongle's host traffic and the board's log there.
 import json
 import os

@@ -1,4 +1,4 @@
-//! The Wyze USB dongle: backup, flash and restore through its ROM bootloader, as `tools/dongle_sbl.py` does, with
+//! The Wyze USB dongle: backup, flash and restore through its ROM bootloader, as the Python `dongle_sbl.py` (replaced by this, #44) does, with
 //! all of its guards:
 //!
 //! - page 31 (code and the CCFG with BL_CONFIG) is never erased or written; page 30 (NV) only by the NV write;
@@ -70,7 +70,7 @@ pub enum Phase {
     Done,
 }
 
-/// A whole-chip backup: what `dongle_sbl.py backup` writes to its directory (info.json, flash.bin, ccfg.bin,
+/// A whole-chip backup: what the Python `dongle_sbl.py backup` wrote to its directory (info.json, flash.bin, ccfg.bin,
 /// fcfg1.bin); either reads the other's.
 #[derive(Debug, Clone)]
 pub struct Backup {
@@ -92,7 +92,7 @@ impl Backup {
         &self.flash[NV_PAGE as usize..(NV_PAGE + PAGE) as usize]
     }
 
-    /// dongle_sbl.py check_backup(): 128 KB, its SHA-256 as info.json says, and the stock BL_CONFIG.
+    /// As dongle_sbl.py's check_backup() did: 128 KB, its SHA-256 as info.json says, and the stock BL_CONFIG.
     pub fn check(&self) -> Result<(), Error> {
         let want = self.info["flash.bin"]["sha256"].as_str().unwrap_or("");
         if self.flash.len() != FLASH_SIZE as usize || sha256_hex(&self.flash) != want {
@@ -224,7 +224,7 @@ pub struct FlashReport {
     pub build_info: Option<BuildInfo>,
     pub image_crc32: u32,
     pub bytes_sent: usize,
-    /// Page 30 as it was before (keep it with the backup: dongle_sbl.py saves its JSON as nv.json).
+    /// Page 30 as it was before (keep it with the backup: ows-flash saves its JSON as nv.json).
     pub nv_before: Vec<u8>,
     /// The NV document carried over (migrate, JSON), with what was dropped and why.
     pub nv_doc: Option<NvDoc>,

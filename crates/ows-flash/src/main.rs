@@ -1,5 +1,5 @@
 //! ows-flash: back up, flash and restore a Wyze USB dongle, and convert NV pages, with the ows-host crate (#42): the
-//! same steps and checks as tools/dongle_sbl.py and tools/nv_json.py, in one binary.
+//! same steps and checks as the Python dongle_sbl.py (replaced, #44) and tools/nv_json.py, in one binary.
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;

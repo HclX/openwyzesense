@@ -1,5 +1,5 @@
-//! The dongle's update mode and TI's ROM serial bootloader (SBL) over its USB HID, as `tools/dongle_sbl.py` (and
-//! WyzeSenseUpdater before it) does: host command 0x4312 puts the dongle in update mode; from then on each HID report
+//! The dongle's update mode and TI's ROM serial bootloader (SBL) over its USB HID, as the Python `dongle_sbl.py` it replaced (#44)
+//! (and WyzeSenseUpdater before it) did: host command 0x4312 puts the dongle in update mode; from then on each HID report
 //! is one SBL packet (size, checksum, command, data), which the dongle's CH554 relays to the CC1310's UART.
 //!
 //! Only reading commands are public. Erase and download exist only inside the crate, and every one is checked here,
@@ -39,7 +39,7 @@ pub const FLASH_SIZE: u32 = 0x20000;
 pub const COMMAND_RET_SUCCESS: u8 = 0x40;
 const RSP_ACK: u16 = 0x00CC;
 
-/// How long one HID read may take (dongle_sbl.py: 5 s).
+/// How long one HID read may take (as the Python tool: 5 s).
 pub const READ_TIMEOUT: Duration = Duration::from_secs(5);
 
 fn checksum(cmd: u8, data: &[u8]) -> u8 {

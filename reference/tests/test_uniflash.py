@@ -1,4 +1,4 @@
-# Safety and UX tests for tools/uniflash.py, tools/usb_dev.py, tools/dongle_sbl.py, tools/host_link.py, and udev rules
+# Safety and UX tests for tools/uniflash.py, tools/usb_dev.py, tools/host_link.py, and udev rules
 # (TASK-18): simulated 128 KB CC1310 flash behind DSLite (no hardware touched).
 import pathlib
 import struct
@@ -8,7 +8,6 @@ import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
-import dongle_sbl  # noqa: E402
 import host_link  # noqa: E402
 import slot_image  # noqa: E402
 import stock_like  # noqa: E402
@@ -162,7 +161,6 @@ def test_vid_pid_sysfs_filtering_and_udev_rule(tmp_path, monkeypatch):
         (tty_sys / name / 'device').symlink_to(iface)
 
     assert usb_dev.find_hidraw(sysfs=hid_sys, dev_root=dev_root) == str(dev_root / 'hidraw2')
-    assert dongle_sbl.find_dongle(sysfs=hid_sys, dev_root=dev_root) == str(dev_root / 'hidraw2')
     assert usb_dev.find_tty(sysfs=tty_sys, dev_root=dev_root) == str(dev_root / 'ttyACM2')
     assert host_link.resolve_port('dongle', hidraw_sysfs=hid_sys, tty_sysfs=tty_sys, dev_root=dev_root) == str(
         dev_root / 'hidraw2'
@@ -177,10 +175,6 @@ def test_vid_pid_sysfs_filtering_and_udev_rule(tmp_path, monkeypatch):
     assert host_link.resolve_port(None, hidraw_sysfs=hid_sys, tty_sysfs=tmp_path / 'empty', dev_root=dev_root) == str(
         dev_root / 'hidraw2'
     )
-
-    # Verify dongle_sbl.finish() prints immediate replug instructions instead of blocking 2 minutes
-    monkeypatch.setattr(dongle_sbl, 'back_to_normal', lambda *a, **kw: False)
-    dongle_sbl.finish('/dev/null', wait=False)
 
     udev = (ROOT / 'tools' / 'udev' / '99-wyze-dongle.rules').read_text()
     assert '1a86' in udev and 'e024' in udev and 'uaccess' in udev

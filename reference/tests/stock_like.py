@@ -36,7 +36,7 @@ def dongle_flash():
 
 
 def dongle_backup(d):
-    """A backup folder as tools/dongle_sbl.py backup writes it (info.json + flash.bin), of dongle_flash()."""
+    """A backup folder as ows-flash backup writes it (info.json + flash.bin), of dongle_flash()."""
     import hashlib
     import json
 
