@@ -1,4 +1,4 @@
-//! OpenWyzeSense host tools in Rust (#42): what `tools/dongle_sbl.py` and `tools/nv_json.py` do, for programs such as
+//! OpenWyzeSense host tools in Rust (#42): what the Python `dongle_sbl.py` (replaced by this, #44) and `tools/nv_json.py` do, for programs such as
 //! wyzesense2mqtt-rs that install, update and restore OpenWyzeSense firmware on a Wyze USB dongle.
 //!
 //! - [`HidTransport`]: the caller owns the device; the crate sends and receives HID reports through it

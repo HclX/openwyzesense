@@ -139,21 +139,24 @@ It shows up with its original MAC, as a contact sensor.
 
 ### On a Wyze Sense USB dongle
 
-Back up the dongle first; the backup is the only way back to stock (`dongle_sbl.py` auto-detects the Wyze USB dongle by
-VID:PID `1a86:e024`, or pass `--device /dev/hidrawN` if you have more than one):
+`ows-flash` does it: one binary in each release (`ows-flash-linux-x86_64-<version>`), or `cargo build --release -p
+ows-flash` in the repository (`target/release/ows-flash`). Back up the dongle first; the backup is the only way back to
+stock (`ows-flash` finds the Wyze USB dongle by VID:PID `1a86:e024`, or pass `--device /dev/hidrawN` if you have more
+than one):
 
 ```
-uv run python tools/dongle_sbl.py backup backups/dongle-1
-uv run python tools/dongle_sbl.py flash build/fw/firmware/gateway-dongle-app.bin --backup backups/dongle-1 --yes --fast
+ows-flash backup backups/dongle-1
+ows-flash flash ows-gateway-dongle-<version>.bin --backup backups/dongle-1 --yes
 ```
 
-When `dongle_sbl.py` finishes, unplug the dongle and plug it back in right away as prompted (pass `--wait` if you want
-the script to wait until it sees the replugged dongle answer `Inquiry`). It keeps its MAC, and its sensor list is
+(`--fast` halves the time, verifying by the chip's CRC32 alone instead of also reading everything back.) When it
+finishes, the dongle is usually back in normal mode by itself; if `ows-flash` says so, unplug it and plug it back in.
+It keeps its MAC, and its sensor list is
 carried over into our firmware's format (`--nv migrate`, the default): sensors already paired with it stay paired. The
 tool lists what it carried over and what it dropped as invalid (a sensor without a proper MAC, two sensors on one
 address), and saves it all as `nv.json` in the backup directory. `--nv wipe` starts with an empty list instead;
-`--nv my.json` imports a list you edited (`tools/nv_json.py export` / `import`).
-To put stock firmware back: `tools/dongle_sbl.py restore --backup backups/dongle-1 --yes`. Its sensor list comes back
+`--nv my.json` imports a list you edited (`ows-flash nv export` / `nv import`).
+To put stock firmware back: `ows-flash restore --backup backups/dongle-1 --yes`. Its sensor list comes back
 as it was when you made the backup: sensors paired with our firmware since then need pairing again.
 
 ### With wyzesense2mqtt-rs
@@ -191,8 +194,8 @@ An ESP32 (ESP32-S3, classic ESP32) or ESP8266 wired to the contact board (`+`, `
 - **mDNS discovery**: reach its setup & diagnostics web UI at `http://ows-relay-<mac4>.local/`.
 - **Web UI maintenance**: reset the CC1310 radio, pause startup auto-sync (`skip_gwsync`), flash a custom radio image,
   view per-sensor RSSI / battery / last-seen diagnostics, and update the ESP itself over HTTP.
-- **Zero-ladder dongle-to-ESP migration**: export `nv.json` from your existing USB dongle (`dongle_sbl.py backup` or
-  `host_link.py --nv-export nv.json`) and upload it via **Import `nv.json`** in the ESP web UI (`POST /contact/nv` or
+- **Zero-ladder dongle-to-ESP migration**: export `nv.json` from your existing USB dongle (`ows-flash nv export` of the
+  backup's `flash.bin`, or `host_link.py --nv-export nv.json`) and upload it via **Import `nv.json`** in the ESP web UI (`POST /contact/nv` or
   `host_link.py --nv-import nv.json`) — all paired sensors move over in seconds without re-pairing on ladders.
 
 ## 6. Updating sensors over the air
@@ -286,7 +289,7 @@ You can also tune individual fields (`type <contact|motion|leak|climate|contact2
 | The sensor does not pair | Gateway scanning on? Hold the button until the LED blinks 3 times (`3 seconds`, while still holding). Try again close to the gateway. |
 | No reports from far away | Check the RSSI in wyzesense2mqtt-rs; below about -85 dBm reports get lost. Move the gateway or add one. |
 | The update does not start | Short press the sensor's button after the tool offers the update; the battery must be above 2.5 V; it must be our gateway. |
-| I want stock firmware back on a dongle | `tools/dongle_sbl.py restore --backup <its backup> --yes`. |
+| I want stock firmware back on a dongle | `ows-flash restore --backup <its backup> --yes`. |
 | I want stock firmware back on a v1 contact | Not supported yet: the backup has it, but the tools never write the part of the chip that holds the MAC. The stock firmware also has the bug that killed these sensors. |
 
 Bugs and questions: open an issue at https://github.com/HclX/openwyzesense/issues.

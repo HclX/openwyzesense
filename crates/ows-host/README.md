@@ -1,7 +1,7 @@
 # ows-host
 
 The OpenWyzeSense host tools in Rust (#42), for programs that install, update and restore our firmware on a Wyze USB
-dongle (wyzesense2mqtt-rs's dashboard). A port of `tools/dongle_sbl.py` and `tools/nv_json.py`, with the same steps and
+dongle (wyzesense2mqtt-rs's dashboard). A port of the Python `dongle_sbl.py` (replaced by this, #44) and `tools/nv_json.py`, with the same steps and
 safety checks; `ows-flash` (crates/ows-flash) is its command line.
 
 ```toml
@@ -17,7 +17,7 @@ The tag `vX.Y.Z` is the crate's version, and its GitHub release holds the firmwa
   `hidraw::Hidraw` and `hidraw::find_dongle()` (feature `hidraw`, default, Linux) do this for `/dev/hidrawN`.
 - `dongle::backup(&mut t, &mut progress) -> Backup`: the whole chip (flash, CCFG, FCFG1), each read twice and checked
   with the chip's CRC32; then a reset. Nothing written. `Backup::save(dir)` / `Backup::load(dir)`: the directory
-  `dongle_sbl.py backup` writes (`info.json`, `flash.bin`, `ccfg.bin`, `fcfg1.bin`); either reads the other's.
+  the Python `dongle_sbl.py backup` wrote (`info.json`, `flash.bin`, `ccfg.bin`, `fcfg1.bin`); either reads the other's.
 - `dongle::flash(&mut t, image, &backup, &FlashOptions { fast, nv }, &mut progress) -> FlashReport`: our image
   (`gateway-dongle-app.bin`, checked by its build info) to pages 0-29, then page 30 as `nv` says:
   `NvChoice::Migrate` (the default: the current page exported, validated, imported in our format), `Wipe`, `Keep`,
@@ -51,5 +51,5 @@ The tag `vX.Y.Z` is the crate's version, and its GitHub release holds the firmwa
 ## Tests
 
 `cargo test`: `tests/dongle.rs` runs backup, flash and restore against a simulated dongle (as
-`reference/tests/test_dongle_sbl.py` does). `tests/golden.rs` holds export and import to
+`reference/tests/test_sbl_common.py` does). `tests/golden.rs` holds export and import to
 `reference/tests/vectors/nv/golden`, which `tools/nv_golden.py` writes from the Python reference.

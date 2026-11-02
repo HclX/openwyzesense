@@ -1,6 +1,6 @@
 // TI's CC13x0 ROM serial bootloader over a UART, in portable C (issue #22): how the ESP32 reflashes the v1 contact
 // board it relays for (W held low at a reset puts it in the bootloader, #14). The C counterpart of tools/uart_sbl.py
-// and of tools/dongle_sbl.py's write path, with the same rules: pages 0-29 are written, page 30 (the NV page) only
+// and of tools/sbl_common.py's write path, with the same rules: pages 0-29 are written, page 30 (the NV page) only
 // through sbl_write_nv(), page 31 (stock code and the CCFG with the unit's MAC) never; before writing, the CCFG must
 // hold a MAC (and the expected one, if given) and the bootloader enabled; after, the chip's CRC32 of what was
 // written and of page 31 is checked. The chip is not reset here: the bootloader's own reset leaves it running

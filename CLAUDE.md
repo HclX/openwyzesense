@@ -55,19 +55,19 @@ decisions so far.
   that keep each unit's MAC in the CCFG (`BOARD_MAC_IN_CCFG`) build without one and are flashed with `<product>-app.bin`
   (or dual-slot `.img`) only, so the unit keeps its CCFG and MAC; `-DOWS_SENSOR_MAC=...` builds one in, for provisioning
   a unit that lost it.
-- The Wyze dongle: `tools/dongle_sbl.py` (backup / flash / restore) through its ROM bootloader, entered as
+- The Wyze dongle: `ows-flash` (`crates/ows-flash` on `crates/ows-host`, #42/#44; backup / flash / restore / nv) through its ROM bootloader, entered as
   WyzeSenseUpdater does (host command 0x4312, then the CH554 relays bootloader packets). It writes flash pages
-  0-29, and page 30 (the NV page) only through `write_nv()` as `--nv` says (#61: `migrate`, the default, carries
+  0-29, and page 30 (the NV page) only through the NV write as `--nv` says (#61: `migrate`, the default, carries
   the stock table into our format via JSON, saved as `nv.json` in the backup; `wipe`; `keep`; or an NV.json;
   `restore` writes the backup's page 30 back), never page 31 (code + CCFG with the bootloader config): do not
   erase or write page 31 on a dongle, ever (the user: a wrong bootloader pin there makes it unflashable).
   `uniflash.py` and `uart_sbl.py` take the same `--nv` (default `keep`). Back up first; the spare
   dongle's backup is `ground_truth/firmware/dongle_77A85A36_2026-10-23_before_ours`. Our gateway answers 0x4312
   as stock does, and can put its built-in CCFG back (`0x53F0` sub-ID `0x03` `OWS_SUB_CCFG`, `test_hw_ccfg.py` on the LaunchPad).
-  `--fast` (GET_STATUS once per stretch, all-FF stretches skipped, CRC-only verify): 7.1 s instead of 14.8 s for
-  our 31 KB image on the dongle; the floor is ~12 ms per 58-byte packet (one HID round trip through the CH554).
+  `--fast` (GET_STATUS once per stretch, all-FF stretches skipped, CRC-only verify): 9.4 s instead of 18.9 s for
+  our 38 KB image on the dongle (restore: 28 s / 59 s); the floor is ~12 ms per 58-byte packet (one HID round trip through the CH554).
   Since 2026-10-23 the spare dongle 77A85A36 runs our gateway (`fw` gateway-dongle-app.bin on pages 0-7; its
-  stock page 30 table and page 31 kept); `dongle_sbl.py restore` puts stock back. `test_hw_sensor.py` therefore now
+  stock page 30 table and page 31 kept); `ows-flash restore` puts stock back (from a copy of that backup: `flash` writes `nv.json` into the directory). `test_hw_sensor.py` therefore now
   checks our sensor against our gateway on the dongle (all six types pass); the stock-dongle runs are in ground truth. The CH554 answers the sync
   host commands (Inquiry, Get ENR, Get MAC) itself, so the dongle keeps its stock identity with our firmware.
 - **v1 contact sensors** (the user's many zero-MAC units, the DIY version's main hardware): `docs/v1-contact.md`
@@ -125,7 +125,7 @@ decisions so far.
   - `test_hw_sensor.py` (`fw`): pairs the sensor app with the spare dongle 77A85A36 on `/dev/hidraw6` (`OWS_HW_DONGLE`)
     as all six types, the last by its pairing button, then BTN-1 as its switch (~2 min; deletes itself afterwards).
   - `test_hw_ota.py` (`fw`, test PAN): an OTA update over the air, the LaunchPad sensor updated by our gateway on the
-    spare dongle (`GW_FLAG_OTA`; flash with `tools/dongle_sbl.py flash ... --fast`). ~5 minutes.
+    spare dongle (`GW_FLAG_OTA`; flash with `ows-flash flash ... --fast`). ~5 minutes.
   - `test_hw_tx.py`: gateway built with `cmake --preset fw -B build/fw-tx-test -DOWS_DEBUG=ON -DOWS_PAN=0x65FE
     -DOWS_SHORT=0x0F0F && cmake --build build/fw-tx-test`, made to answer frames injected over debug host command
     `0x43F0` (checked with the SDR at gain 0) and its flash table across a reset. Two layers keep TX off the house PAN:

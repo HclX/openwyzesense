@@ -1,4 +1,4 @@
-//! Firmware image checks: what `tools/dongle_sbl.py` check_image() does (fits below page 30, a vector table), plus
+//! Firmware image checks: what the Python `dongle_sbl.py` (replaced by this, #44) check_image() does (fits below page 30, a vector table), plus
 //! the build info block every image of ours carries (`firmware/common/build_info.h`, #76): which board and app it
 //! was built for.
 

@@ -27,7 +27,7 @@ FIRMWARE = [
         'ows-gateway-dongle-{v}.bin',
         'Wyze USB dongle',
         'gateway',
-        '`tools/dongle_sbl.py flash FILE --backup <stock backup> --fast`',
+        '`ows-flash backup DIR` (once: the stock image), then `ows-flash flash FILE --backup DIR --yes`',
     ),
     (
         'gateway-contact-v1-app.bin',
