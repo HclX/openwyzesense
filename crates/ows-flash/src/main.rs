@@ -9,6 +9,7 @@ use ows_host::hidraw::{self, Hidraw, HidrawHost, Serial};
 use ows_host::host::{ByteLink, Link};
 use ows_host::nv::{self, NvChoice};
 use ows_host::ota::{self, Targets};
+use ows_host::uniflash::{self, Dslite, Probe, Provision};
 use ows_host::{image, Error};
 
 const USAGE: &str = "ows-flash (OpenWyzeSense) -- the Wyze USB dongle through its bootloader
@@ -27,6 +28,22 @@ const USAGE: &str = "ows-flash (OpenWyzeSense) -- the Wyze USB dongle through it
   ows-flash nv export PAGE_OR_FLASH.bin [-o NV.json]   a page (4 KB, or page 30 of a 128 KB dump) to JSON
   ows-flash nv import NV.json -o PAGE.bin              JSON to a page in our format
 
+v1 contact / motion units, on a LaunchPad's XDS110 over 2-pin cJTAG (docs/v1-contact.md), with TI UniFlash:
+
+  ows-flash fetch-uniflash [DIR]                       TI UniFlash from TI (pinned version, SHA-256 checked; ~380 MB;
+                                                       TI's license), into DIR or ~/.local/share/openwyzesense/uniflash
+  ows-flash v1 provision --sensor --boot BOOT.bin --slot-a SLOT_A.img [--board wyze_motion_v1]
+  ows-flash v1 provision --gateway --app gateway-contact-v1-app.bin
+                                                       one step: back up (backups/<board>/<MAC>, or check the one
+                                                       there), flash, enable the bootloader's backdoor (contact: W;
+                                                       --bootloader w|button|keep), reset
+  ows-flash v1 backup DIR                              flash (read twice), CCFG, FCFG1: read only
+  ows-flash v1 flash APP.bin --backup DIR              an app image to pages 0-29
+  ows-flash v1 slots BOOT.bin SLOT_A.img --backup DIR  the boot selector and slot A
+  ows-flash v1 enable-bootloader w|button --yes        the one CCFG write: BL_CONFIG only
+  ows-flash v1 reset | ows-flash v1 read ADDR WORDS OUT
+  (--nv keep|wipe|migrate|NV.json: page 30, default keep; --uniflash DIR: where UniFlash is)
+
   --device PATH            the dongle's /dev/hidrawN (default: the first USB 1a86:e024); ota: also a serial port
                            running our gateway (a LaunchPad's /dev/ttyACMn, a pty)
   --fast                   status per stretch, all-FF skipped, CRC-only verify (no read-back)
@@ -43,6 +60,7 @@ struct Args {
     yes: bool,
     fast: bool,
     seconds: u64,
+    flags: std::collections::BTreeMap<String, String>,
 }
 
 fn parse() -> Result<Args, String> {
@@ -55,14 +73,19 @@ fn parse() -> Result<Args, String> {
         yes: false,
         fast: false,
         seconds: 360,
+        flags: Default::default(),
     };
+    let mut nv_given = false;
     let mut it = std::env::args().skip(1);
     while let Some(x) = it.next() {
         let mut val = |name: &str| it.next().ok_or(format!("{name} needs a value"));
         match x.as_str() {
             "--backup" => a.backup = Some(val("--backup")?.into()),
             "--device" => a.device = Some(val("--device")?.into()),
-            "--nv" => a.nv = val("--nv")?,
+            "--nv" => {
+                a.nv = val("--nv")?;
+                nv_given = true;
+            }
             "-o" | "--out" => a.out = Some(val("-o")?.into()),
             "--yes" => a.yes = true,
             "--fast" => a.fast = true,
@@ -72,9 +95,19 @@ fn parse() -> Result<Args, String> {
                 println!("ows-flash {}", ows_host::VERSION);
                 std::process::exit(0)
             }
+            "--sensor" | "--gateway" => {
+                a.flags.insert(x.clone(), String::new());
+            }
+            "--boot" | "--slot-a" | "--app" | "--board" | "--bootloader" | "--backup-root" | "--uniflash" => {
+                let v = val(&x)?;
+                a.flags.insert(x.clone(), v);
+            }
             s if s.starts_with('-') => return Err(format!("unknown option {s}")),
             _ => a.pos.push(x),
         }
+    }
+    if !nv_given && a.pos.first().map(String::as_str) == Some("v1") {
+        a.nv = "keep".into(); // as uniflash.py: page 30 left alone unless asked
     }
     Ok(a)
 }
@@ -126,6 +159,130 @@ fn page_of(path: &Path) -> Result<Vec<u8>, String> {
         0x1000 => Ok(d),
         n => Err(format!("{}: {n} bytes: a 4 KB page or a 128 KB flash dump expected", path.display())),
     }
+}
+
+fn nv_choice(s: &str) -> Result<NvChoice, String> {
+    Ok(match s {
+        "migrate" => NvChoice::Migrate,
+        "wipe" => NvChoice::Wipe,
+        "keep" => NvChoice::Keep,
+        f => NvChoice::Json(Box::new(
+            nv::NvDoc::from_json(&std::fs::read_to_string(f).map_err(|x| format!("{f}: {x}"))?)
+                .map_err(|x| x.to_string())?,
+        )),
+    })
+}
+
+fn show_nv(doc: &Option<nv::NvDoc>) {
+    if let Some(doc) = doc {
+        println!("NV (page 30): {}", doc.summary());
+        for d in &doc.dropped {
+            println!("  dropped {}: {}", d.what, d.why);
+        }
+    }
+}
+
+fn probe(a: &Args) -> Result<Probe<Dslite>, String> {
+    let dir = a.flags.get("--uniflash").map(PathBuf::from);
+    let exe = uniflash::find_dslite(dir.as_deref())
+        .ok_or("TI UniFlash not found: run `ows-flash fetch-uniflash` (or pass --uniflash DIR)")?;
+    Probe::new(Dslite { exe }).map_err(|x| x.to_string())
+}
+
+fn v1(a: &Args, pos: &[&str]) -> Result<(), String> {
+    let e = |e: Error| e.to_string();
+    let read = |f: &str| std::fs::read(f).map_err(|x| format!("{f}: {x}"));
+    let flag = |k: &str| a.flags.get(k).map(String::as_str);
+    let nv = nv_choice(&a.nv)?;
+    match pos {
+        ["backup", dir] => {
+            let info = probe(a)?.backup(Path::new(dir)).map_err(e)?;
+            println!("backed up {} (BL_CONFIG {:08x}) to {dir}; reset", info.mac, info.bl_config);
+        }
+        ["flash", app] => {
+            let b = a.backup.as_ref().ok_or("--backup DIR (this unit's) is required")?;
+            let img = read(app)?;
+            show_nv(&probe(a)?.flash(&img, &nv, Some(b)).map_err(e)?);
+            println!("flashed, verified, reset");
+        }
+        ["slots", boot, slot_a] => {
+            let b = a.backup.as_ref().ok_or("--backup DIR (this unit's) is required")?;
+            let (bo, sa) = (read(boot)?, read(slot_a)?);
+            show_nv(&probe(a)?.slots(&bo, &sa, &nv, Some(b)).map_err(e)?);
+            println!("boot selector + slot A installed, verified, reset");
+        }
+        ["provision"] => {
+            let board = flag("--board").unwrap_or("wyze_contact_v1");
+            if board != "wyze_contact_v1" && board != "wyze_motion_v1" {
+                return Err(format!("--board {board}: wyze_contact_v1 or wyze_motion_v1"));
+            }
+            let bl = flag("--bootloader").unwrap_or(if board == "wyze_motion_v1" { "keep" } else { "w" });
+            let bootloader = match bl {
+                "keep" => None,
+                b => Some(uniflash::backdoor_pin(b).ok_or(format!("--bootloader {b}: w, button or keep"))?),
+            };
+            let p = if a.flags.contains_key("--gateway") {
+                Provision {
+                    app: Some(read(flag("--app").ok_or("--gateway needs --app FILE")?)?),
+                    boot: None,
+                    slot_a: None,
+                    backup_root: PathBuf::new(),
+                    bootloader,
+                    nv,
+                }
+            } else if a.flags.contains_key("--sensor") {
+                let boot = read(flag("--boot").ok_or("--sensor needs --boot FILE")?)?;
+                let slot_a = read(flag("--slot-a").ok_or("--sensor needs --slot-a FILE")?)?;
+                Provision {
+                    app: None,
+                    boot: Some(boot),
+                    slot_a: Some(slot_a),
+                    backup_root: PathBuf::new(),
+                    bootloader,
+                    nv,
+                }
+            } else {
+                return Err("provision: --sensor or --gateway".into());
+            };
+            let root = flag("--backup-root").map(PathBuf::from).unwrap_or_else(|| {
+                PathBuf::from("backups").join(if board == "wyze_motion_v1" { "motion_v1" } else { "contact_v1" })
+            });
+            let r = probe(a)?.provision(&Provision { backup_root: root, ..p }).map_err(e)?;
+            show_nv(&r.nv_doc);
+            println!(
+                "provisioned {} ({}); backup {} ({}); bootloader {bl}",
+                r.mac,
+                if a.flags.contains_key("--gateway") { "gateway" } else { "sensor" },
+                r.backup_dir.display(),
+                if r.backed_up_now { "made now" } else { "checked" }
+            );
+        }
+        ["enable-bootloader", which] => {
+            let pin = uniflash::backdoor_pin(which).ok_or("w or button")?;
+            if !a.yes {
+                return Err("writes the CCFG (page 31, BL_CONFIG only): add --yes".into());
+            }
+            let changed = probe(a)?.enable_bootloader(pin).map_err(e)?;
+            println!(
+                "bootloader {}: backdoor {which} (DIO{pin}) active low; reset",
+                if changed { "enabled" } else { "already enabled" }
+            );
+        }
+        ["reset"] => {
+            probe(a)?.reset().map_err(e)?;
+            println!("reset");
+        }
+        ["read", addr, words, out] => {
+            let addr = u32::from_str_radix(addr.trim_start_matches("0x"), if addr.starts_with("0x") { 16 } else { 10 })
+                .map_err(|_| "ADDR: a number (0x.. for hex)")?;
+            let words: usize = words.parse().map_err(|_| "WORDS: a number")?;
+            let d = probe(a)?.read(addr, words).map_err(e)?;
+            std::fs::write(out, d).map_err(|x| x.to_string())?;
+            println!("{out}");
+        }
+        _ => return Err(String::new()),
+    }
+    Ok(())
 }
 
 fn run(a: Args) -> Result<(), String> {
@@ -229,6 +386,12 @@ fn run(a: Args) -> Result<(), String> {
             for r in &doc.unrecognised {
                 eprintln!("  not imported: item {}/{} {}", r.item, r.sub, r.data);
             }
+        }
+        ["v1", rest @ ..] => v1(&a, rest)?,
+        ["fetch-uniflash", rest @ ..] if rest.len() <= 1 => {
+            let dir = rest.first().map(PathBuf::from).unwrap_or_else(uniflash::default_dir);
+            let exe = uniflash::fetch(&dir, &mut |m| println!("{m}")).map_err(e)?;
+            println!("DSLite: {}", exe.display());
         }
         ["ota", targets, slot_a, slot_b] => {
             let read = |f: &str| std::fs::read(f).map_err(|x| format!("{f}: {x}"));

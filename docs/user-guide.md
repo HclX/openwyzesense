@@ -83,11 +83,19 @@ a photo is in `docs/v1-contact.md`.
 until it is reset: `provision` then stops half-way. If that happens, touch the `S` pad to `-` (GND) for a moment, or
 take all wires off for a few seconds, and run the command again; it carries on from the backup it already took.
 
-Connect the pads (either soldered thin wires or pogo pins held steady for ~25 seconds) and run:
+It needs TI UniFlash (TI's own tool, not redistributed with this project): `ows-flash fetch-uniflash` downloads it
+from TI once (~380 MB; the version and its SHA-256 pinned) into `~/.local/share/openwyzesense/uniflash`.
+
+Connect the pads (either soldered thin wires or pogo pins held steady for ~25 seconds) and run, with the release's
+files:
 
 ```
-uv run python tools/uniflash.py provision --sensor
+ows-flash v1 provision --sensor --boot ows-sensor-contact-v1-boot-<version>.bin \
+                                --slot-a ows-sensor-contact-v1-slot-a-<version>.img
 ```
+
+(`--board wyze_motion_v1` and the motion files for a v1 motion sensor. In the repository, `uv run python
+tools/uniflash.py provision --sensor` does the same with the build's files.)
 
 `provision --sensor` runs every safety and install step in one command:
 
@@ -177,8 +185,10 @@ A spare v1 contact board can be a gateway (build `gateway-contact-v1`). It runs 
 battery, because its receiver is always on. Its gateway MAC is the board's own MAC. Provision it in one command:
 
 ```
-uv run python tools/uniflash.py provision --gateway
+ows-flash v1 provision --gateway --app ows-gateway-contact-v1-<version>.bin
 ```
+
+(In the repository: `uv run python tools/uniflash.py provision --gateway`.)
 
 (This backs up into `backups/contact_v1/<MAC>/`, flashes `gateway-contact-v1-app.bin`, enables the `W` bootloader
 backdoor for future UART updates, and resets.) Its host link is on the `RX` / `TX` pads (115200), so connect it either
