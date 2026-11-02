@@ -45,7 +45,7 @@ step shfmt uv run shfmt -i 4 -ci -sr -d "${sh_files[@]}"
 step shellcheck uv run shellcheck -x "${sh_files[@]}"
 if command -v cargo > /dev/null; then
     step cargo-fmt cargo fmt --check
-    step clippy cargo clippy --quiet --all-targets -- -D warnings
+    step clippy cargo clippy --quiet --all-targets --all-features -- -D warnings
 fi
 
 if ((${#failed[@]})); then

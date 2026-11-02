@@ -11,6 +11,8 @@ rust-version.workspace = true
 default = ["hidraw"]
 # a HidTransport over Linux /dev/hidrawN, and finding the dongle (USB 1a86:e024) in sysfs
 hidraw = ["dep:libc"]
+# a simulated dongle (sim::SimDongle) and image builders, for tests of programs that use this crate
+sim = []
 
 [dependencies]
 crc32fast = "1"
@@ -20,3 +22,7 @@ serde_json = "1"
 sha2 = "0.10"
 thiserror = "1"
 libc = { version = "0.2", optional = true }
+
+[[test]]
+name = "dongle"
+required-features = ["sim"]

@@ -25,6 +25,8 @@ pub mod manifest;
 pub mod nv;
 pub mod ota;
 pub mod sbl;
+#[cfg(feature = "sim")]
+pub mod sim;
 pub mod uniflash;
 
 use std::time::Duration;

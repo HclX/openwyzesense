@@ -7,167 +7,22 @@ use std::io;
 use std::path::PathBuf;
 use std::time::Duration;
 
+use ows_host::sim::{self, SimDongle};
+
 use ows_host::dongle::{self, Backup, FlashOptions, Phase};
 use ows_host::nv::{self, NvChoice};
 use ows_host::{sbl, Error, HidTransport};
 
-struct Fake {
-    flash: Vec<u8>,
-    out: VecDeque<Vec<u8>>,
-    update_mode: bool,
-    status: u8,
-    download: (usize, usize),
-    erased: Vec<usize>,
-    resets: usize,
-    log: Vec<u8>,
-    corrupt_at: Option<usize>,
-    chip_id: [u8; 4],
-}
-
-impl Fake {
-    fn new(flash: &[u8]) -> Fake {
-        Fake {
-            flash: flash.to_vec(),
-            out: VecDeque::new(),
-            update_mode: false,
-            status: 0x40,
-            download: (0, 0),
-            erased: vec![],
-            resets: 0,
-            log: vec![],
-            corrupt_at: None,
-            chip_id: [0x20, 0x01, 0x80, 0x00],
-        }
-    }
-
-    fn report(&mut self, data: &[u8]) {
-        for c in data.chunks(62) {
-            let mut r = vec![c.len() as u8];
-            r.extend_from_slice(c);
-            r.resize(0x3F, 0);
-            self.out.push_back(r);
-        }
-    }
-
-    fn command(&mut self, cmd: u8, p: &[u8]) -> Option<Vec<u8>> {
-        let u32be = |b: &[u8]| u32::from_be_bytes(b[..4].try_into().unwrap()) as usize;
-        match cmd {
-            sbl::CMD_AUTO_BAUD | sbl::CMD_PING => Some(vec![]),
-            sbl::CMD_GET_CHIP_ID => Some(self.chip_id.to_vec()),
-            sbl::CMD_GET_STATUS => Some(vec![self.status]),
-            sbl::CMD_RESET => {
-                self.resets += 1;
-                Some(vec![])
-            }
-            sbl::CMD_CRC32 => {
-                let (a, n) = (u32be(p), u32be(&p[4..]));
-                // outside the flash (CCFG, FCFG1 at 0x5000xxxx): no CRC here, as some chips do not give one
-                self.flash.get(a..a + n).map(|d| crc32fast::hash(d).to_be_bytes().to_vec())
-            }
-            sbl::CMD_MEMORY_READ => {
-                let (a, n) = (u32be(p), 4 * p[5] as usize);
-                Some(if a + n <= self.flash.len() { self.flash[a..a + n].to_vec() } else { vec![0; n] })
-            }
-            sbl::CMD_SECTOR_ERASE => {
-                let a = u32be(p);
-                self.erased.push(a / 0x1000);
-                self.flash[a..a + 0x1000].fill(0xFF);
-                Some(vec![])
-            }
-            sbl::CMD_DOWNLOAD => {
-                self.download = (u32be(p), u32be(&p[4..]));
-                Some(vec![])
-            }
-            sbl::CMD_SEND_DATA => {
-                let (a, left) = self.download;
-                for (i, &b) in p.iter().enumerate() {
-                    let b = if self.corrupt_at == Some(a + i) { b ^ 0x10 } else { b };
-                    self.flash[a + i] &= b;
-                }
-                self.download = (a + p.len(), left - p.len());
-                Some(vec![])
-            }
-            c => panic!("the crate sent command {c:#x}"),
-        }
-    }
-}
-
-impl HidTransport for Fake {
-    fn write(&mut self, data: &[u8]) -> io::Result<()> {
-        if !self.update_mode {
-            assert_eq!(data, sbl::UPDATE_MODE_REQUEST);
-            self.update_mode = true;
-            self.report(&[0x55, 0xAA, 0x43, 0x03, 0x13, 0x01, 0x58]);
-            return Ok(());
-        }
-        if data.len() == 2 && data[0] == 0 {
-            return Ok(()); // the host's ACK of a response
-        }
-        let (size, cks, cmd) = (data[0] as usize, data[1], data[2]);
-        let payload = &data[3..size];
-        assert_eq!(size, data.len());
-        assert_eq!(cks, payload.iter().fold(cmd, |a, &b| a.wrapping_add(b)));
-        self.log.push(cmd);
-        match self.command(cmd, payload) {
-            None => self.report(&[0x00, 0x33]),
-            Some(r) if r.is_empty() => self.report(&[0x00, 0xCC]),
-            Some(r) => {
-                let mut v = vec![0x00, 0xCC, r.len() as u8 + 2, r.iter().fold(0u8, |a, &b| a.wrapping_add(b))];
-                v.extend_from_slice(&r);
-                self.report(&v);
-            }
-        }
-        Ok(())
-    }
-
-    fn read(&mut self, buf: &mut [u8], _: Duration) -> io::Result<usize> {
-        let r = self.out.pop_front().ok_or_else(|| io::Error::new(io::ErrorKind::TimedOut, "nothing to read"))?;
-        buf[..r.len()].copy_from_slice(&r);
-        Ok(r.len())
-    }
-}
-
-fn vectors() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../reference/tests/vectors/nv")
-}
-
-/// A stand-in for a stock dongle (reference/tests/stock_like.py): code with a vector table, the spare dongle's stock
-/// sensor table on page 30, page 31 with the stock BL_CONFIG.
 fn stock_flash() -> Vec<u8> {
-    let mut f: Vec<u8> = (0..0x20000u32).map(|i| (i.wrapping_mul(2_654_435_761) >> 24) as u8).collect();
-    f[0..4].copy_from_slice(&0x2000_5000u32.to_le_bytes());
-    f[4..8].copy_from_slice(&0x101u32.to_le_bytes());
-    let nv = std::fs::read(vectors().join("dongle_77A85A36_2026-10-23_before_ours.page30.bin")).unwrap();
-    f[0x1E000..0x1F000].copy_from_slice(&nv);
-    f[0x1FFD8..0x1FFDC].copy_from_slice(&dongle::STOCK_BL_CONFIG);
-    f
+    sim::stock_flash()
 }
 
-fn take_backup(f: &mut Fake) -> Backup {
-    let b = dongle::backup(f, &mut |_| {}).unwrap();
-    f.update_mode = false;
-    b
+fn take_backup(f: &mut SimDongle) -> Backup {
+    dongle::backup(f, &mut |_| {}).unwrap()
 }
 
-/// An image of ours: a vector table, then the build info block (common/build_info.h).
 fn image(product: &str) -> Vec<u8> {
-    let mut img: Vec<u8> = (0..20000u32).map(|i| (i * 7 + 3) as u8).collect();
-    img[0..4].copy_from_slice(&0x2000_5000u32.to_le_bytes());
-    img[4..8].copy_from_slice(&0x0101u32.to_le_bytes());
-    let mut bi = vec![0u8; 116];
-    bi[0..4].copy_from_slice(b"OWSB");
-    bi[4] = 1;
-    bi[5] = 1;
-    let put = |bi: &mut Vec<u8>, at: usize, s: &str| bi[at..at + s.len()].copy_from_slice(s.as_bytes());
-    put(&mut bi, 16, product);
-    put(&mut bi, 40, "Wyze Sense dongle");
-    put(&mut bi, 64, "gateway");
-    put(&mut bi, 76, "v0.1.0-test");
-    img[0xC0..0xC0 + 116].copy_from_slice(&bi);
-    img[1000..1100].fill(0xFF);
-    img.extend(std::iter::repeat(0xFF).take(2000)); // an FF tail, skipped by fast
-    img.extend_from_slice(&[1, 2, 3]); // not whole words
-    img
+    sim::product_image(product, "v0.1.0-test")
 }
 
 fn our_image() -> Vec<u8> {
@@ -178,7 +33,7 @@ fn our_image() -> Vec<u8> {
 #[test]
 fn backup_reads_everything_and_resets() {
     let stock = stock_flash();
-    let mut f = Fake::new(&stock);
+    let mut f = SimDongle::with_flash(stock.clone());
     let mut phases = vec![];
     let b = dongle::backup(&mut f, &mut |p| phases.push(p.phase)).unwrap();
     assert_eq!(b.flash, stock);
@@ -200,7 +55,7 @@ fn backup_reads_everything_and_resets() {
 fn flash_writes_only_pages_below_30_verifies_then_migrates() {
     let stock = stock_flash();
     for fast in [false, true] {
-        let mut f = Fake::new(&stock);
+        let mut f = SimDongle::with_flash(stock.clone());
         let b = take_backup(&mut f);
         let img = our_image();
         let mut last = None;
@@ -234,7 +89,7 @@ fn flash_writes_only_pages_below_30_verifies_then_migrates() {
 fn nv_wipe_and_keep() {
     let stock = stock_flash();
     for (choice, want) in [(NvChoice::Wipe, vec![0xFF; 4096]), (NvChoice::Keep, stock[0x1E000..0x1F000].to_vec())] {
-        let mut f = Fake::new(&stock);
+        let mut f = SimDongle::with_flash(stock.clone());
         let b = take_backup(&mut f);
         dongle::flash(&mut f, &our_image(), &b, &FlashOptions { fast: true, nv: choice }, &mut |_| {}).unwrap();
         assert_eq!(&f.flash[0x1E000..0x1F000], &want[..]);
@@ -244,10 +99,10 @@ fn nv_wipe_and_keep() {
 #[test]
 fn restore_puts_stock_back() {
     let stock = stock_flash();
-    let mut f = Fake::new(&stock);
+    let mut f = SimDongle::with_flash(stock.clone());
     let b = take_backup(&mut f);
     dongle::flash(&mut f, &our_image(), &b, &FlashOptions::default(), &mut |_| {}).unwrap();
-    f.update_mode = false;
+    f.replug();
     dongle::restore(&mut f, &b, false, &mut |_| {}).unwrap();
     assert_eq!(f.flash, stock);
 }
@@ -255,14 +110,14 @@ fn restore_puts_stock_back() {
 #[test]
 fn refuses_another_chip_or_page_31() {
     let stock = stock_flash();
-    let mut f = Fake::new(&stock);
+    let mut f = SimDongle::with_flash(stock.clone());
     let b = take_backup(&mut f);
     f.chip_id = [0x20, 0x01, 0x80, 0x01];
     assert!(matches!(
         dongle::flash(&mut f, &our_image(), &b, &FlashOptions::default(), &mut |_| {}),
         Err(Error::Refused(_))
     ));
-    let mut f = Fake::new(&stock);
+    let mut f = SimDongle::with_flash(stock.clone());
     f.flash[0x1F100] ^= 1;
     assert!(matches!(
         dongle::flash(&mut f, &our_image(), &b, &FlashOptions::default(), &mut |_| {}),
@@ -275,7 +130,7 @@ fn refuses_another_chip_or_page_31() {
 fn a_bad_write_is_not_reset() {
     let stock = stock_flash();
     for fast in [false, true] {
-        let mut f = Fake::new(&stock);
+        let mut f = SimDongle::with_flash(stock.clone());
         let b = take_backup(&mut f);
         f.corrupt_at = Some(0x200);
         let e = dongle::flash(&mut f, &our_image(), &b, &FlashOptions { fast, nv: NvChoice::Migrate }, &mut |_| {});
@@ -288,7 +143,7 @@ fn a_bad_write_is_not_reset() {
 #[test]
 fn refuses_images_not_for_the_dongle() {
     let stock = stock_flash();
-    let mut f = Fake::new(&stock);
+    let mut f = SimDongle::with_flash(stock.clone());
     let b = take_backup(&mut f);
     let opts = FlashOptions::default();
     for img in [
@@ -307,7 +162,7 @@ fn refuses_images_not_for_the_dongle() {
 #[test]
 fn a_backup_must_be_whole_and_stock() {
     let stock = stock_flash();
-    let mut f = Fake::new(&stock);
+    let mut f = SimDongle::with_flash(stock.clone());
     let mut b = take_backup(&mut f);
     b.flash[0x1FFD8] = 0xFF;
     assert!(matches!(b.check(), Err(Error::Backup(_))));
@@ -340,4 +195,33 @@ fn fast_skips_ff_stretches() {
     for (a, d) in runs {
         assert_eq!(d, &img[a..a + d.len()]);
     }
+}
+
+#[test]
+fn sim_ends_in_normal_mode_or_needs_a_replug() {
+    let mut d = SimDongle::stock();
+    assert!(!d.runs_ows());
+    let b = take_backup(&mut d);
+    assert!(dongle::inquiry(&mut d).unwrap(), "normal mode after the backup's reset");
+    dongle::flash(&mut d, &sim::gateway_image("v0.1.0"), &b, &FlashOptions::default(), &mut |_| {}).unwrap();
+    assert_eq!(d.ows_version().as_deref(), Some("v0.1.0"));
+    assert!(nv::is_ows(d.nv_page()));
+    d.needs_replug = true;
+    dongle::restore(&mut d, &b, true, &mut |_| {}).unwrap();
+    assert!(!dongle::inquiry(&mut d).unwrap(), "stuck until replugged");
+    d.replug();
+    assert!(dongle::inquiry(&mut d).unwrap() && !d.runs_ows());
+    assert_eq!(d.flash, sim::stock_flash());
+}
+
+#[test]
+fn sim_ows_is_what_a_flash_leaves() {
+    let mut a = SimDongle::stock();
+    let b = take_backup(&mut a);
+    dongle::flash(&mut a, &sim::gateway_image("v9"), &b, &FlashOptions::default(), &mut |_| {}).unwrap();
+    assert_eq!(&a.flash[..0x1E000], &SimDongle::ows("v9").flash[..0x1E000]);
+    assert_eq!(a.nv_page(), SimDongle::ows("v9").nv_page());
+    let mut gone = SimDongle::stock();
+    gone.fail_io = Some(io::ErrorKind::NotFound);
+    assert!(matches!(dongle::backup(&mut gone, &mut |_| {}), Err(Error::Io(_))));
 }
