@@ -1,41 +1,19 @@
 #!/usr/bin/env python3
-"""The Wyze dongle's CC1310 through TI's ROM serial bootloader (SBL), over the dongle's USB HID, the way the user's
-WyzeSenseUpdater (https://github.com/HclX/WyzeSenseUpdater, ws_updater.py) does it: host command 0x4312 puts the
-dongle in its update mode; from then on each HID report is one SBL packet (size, checksum, command, data), the
-dongle's CH554 relaying it to the CC1310's UART. The framing below is that tool's, unchanged.
+"""TI's CC13x0 ROM serial bootloader (SBL): the packet framing WyzeSenseUpdater uses through the Wyze dongle's USB HID
+(https://github.com/HclX/WyzeSenseUpdater, ws_updater.py), and the guarded write path tools/uart_sbl.py uses on a v1
+contact's UART. The dongle itself is flashed with ows-flash (crates/ows-flash, crates/ows-host; #44 retired the Python
+dongle tool this came from); the same checks are in crates/ows-host's sbl.rs and dongle.rs.
 
-    uv run python tools/dongle_sbl.py backup OUTDIR [--device /dev/hidrawN]
-    uv run python tools/dongle_sbl.py flash IMAGE.bin --backup DIR --yes
-    uv run python tools/dongle_sbl.py restore --backup DIR --yes        # the backup's pages 0-29: stock again
-    uv run python tools/dongle_sbl.py bench IMAGE.bin --backup DIR --yes  # time --fast against the default
-
-`backup` reads, each twice and CRC-checked by the chip where it can: flash (128 KiB), CCFG, FCFG1, and the
-reset-source register (how the chip came to be in the bootloader); then resets the CC1310 as ws_updater.py does.
-
-`flash` writes an image to flash pages 0-29, then page 30 (the NV page) as --nv says (#61): migrate (the default: the
-current page exported to JSON, saved as nv.json in the backup directory, validated and imported into our format),
-wipe, keep, or an NV.json; `restore` writes the backup's page 30 back. Page 31 (code and the CCFG, whose BL_CONFIG
-keeps the bootloader reachable) is never erased or written: every erase and download is checked against APP_END
-twice (page 30 only inside write_nv()), and bank erase, set-CCFG and memory-write are not in this file. Unlike
-ws_updater.py `flash`, which erases all 32 pages first and writes the CCFG back last, nothing here leaves the chip
-without its CCFG. It needs the backup of this chip (same chip ID, same page 31), checks the image (size, vector
-table), verifies what it wrote (the chip's CRC32 and a read-back) and that pages 30-31 did not change, and only
-then resets the chip. The dongle stays in update mode until it is unplugged (the user: "you will have to
-physically unplug the dongle to re-enable it").
+Pages 0-29 only, and page 30 inside write_nv(): every erase and download is checked against APP_END at the last step
+before the chip; bank erase, set-CCFG and memory-write are not in this file. write_pages() checks the image (size,
+vector table), that page 31 is the expected one, verifies what it wrote (the chip's CRC32 and a read-back unless
+fast) and that pages 30-31 did not change, and only then resets the chip.
 """
 
-import argparse
 import binascii
-import hashlib
-import json
 import logging
-import pathlib
 import signal
-import sys
 import time
-
-import nv_json  # tools/: the NV page choices (#61)
-import usb_dev  # tools/: sysfs VID:PID discovery (1a86:e024)
 
 # --- WyzeSenseUpdater's framing (ws_updater.py, unchanged but for names) ---
 
@@ -167,59 +145,6 @@ def enter(fd):
     return rsp, sbl_cmd(fd, CMD_GET_CHIP_ID)
 
 
-# --- backup ---
-
-REGIONS = [('flash.bin', 0x00000000, 0x20000), ('ccfg.bin', 0x50003000, 0x1000), ('fcfg1.bin', 0x50001000, 0x3F0)]
-RESETCTL = 0x40090004
-RESET_SRC = {
-    0: 'power on',
-    1: 'pin reset',
-    2: 'VDDS loss',
-    3: 'VDD loss',
-    4: 'VDDR loss',
-    5: 'clock loss',
-    6: 'system reset (software)',
-    7: 'warm reset',
-}
-
-
-def backup(fd, out):
-    out.mkdir(parents=True, exist_ok=True)
-    info = {'time': time.strftime('%Y-%m-%d %H:%M:%S %z')}
-    rsp, chip_id = enter(fd)
-    info['update_mode_reply'] = rsp.hex()
-    print('update mode reply:', rsp.hex())
-    info['chip_id'] = chip_id.hex()
-    print('chip id:', chip_id.hex())
-    try:  # a peripheral register: may not be readable
-        rc = int.from_bytes(read_mem(fd, RESETCTL, 4), 'little')
-        info['resetctl'] = f'{rc:#010x}'
-        info['reset_source'] = RESET_SRC[(rc >> 1) & 7]
-        print(f'RESETCTL {rc:#010x}: last reset = {info["reset_source"]}')
-    except (RuntimeError, AssertionError, TimeoutError) as e:
-        info['resetctl'] = f'unreadable: {e}'
-        print('RESETCTL unreadable:', e)
-    for name, addr, size in REGIONS:
-        print(f'{name}: {addr:#010x} + {size:#x}')
-        a = read_mem(fd, addr, size)
-        b = read_mem(fd, addr, size)
-        assert a == b, f'{name}: two reads differ'
-        crc = chip_crc32(fd, addr, size)
-        if crc is not None:
-            assert crc == binascii.crc32(a), f'{name}: chip CRC {crc:#x} != {binascii.crc32(a):#x}'
-        (out / name).write_bytes(a)
-        info[name] = {
-            'address': f'{addr:#010x}',
-            'size': size,
-            'sha256': hashlib.sha256(a).hexdigest(),
-            'chip_crc32': None if crc is None else f'{crc:#010x}',
-            'reads': 2,
-        }
-    (out / 'info.json').write_text(json.dumps(info, indent=2) + '\n')
-    sbl_cmd(fd, CMD_RESET)
-    return info
-
-
 # --- flash ---
 
 
@@ -234,14 +159,6 @@ def check_image(image):
     if not (0x20000000 < sp <= 0x20005000) or not (reset & 1) or (reset & ~1) >= len(image):
         raise ValueError(f'no vector table: SP {sp:#x}, reset {reset:#x}')
     return image + b'\xff' * (-len(image) % 4)
-
-
-def check_backup(backup):
-    info = json.loads((backup / 'info.json').read_text())
-    flash = (backup / 'flash.bin').read_bytes()
-    assert len(flash) == 0x20000 and hashlib.sha256(flash).hexdigest() == info['flash.bin']['sha256'], 'bad backup'
-    assert flash[0x1FFD8:0x1FFDC] == bytes.fromhex('c501fec5'), "the backup's BL_CONFIG is not the stock one"
-    return info, flash
 
 
 def runs(image, skip_ff):
@@ -341,115 +258,3 @@ def write_pages(fd, image, info, flash_backup, fast=False, entered=False, reset=
     }
     print('  ' + ', '.join(f'{k} {v:.2f} s' if k != 'bytes_sent' else f'{v} bytes sent' for k, v in phases.items()))
     return phases
-
-
-INQUIRY = b'\x07\xaa\x55\x43\x03\x27\x01\x6c'  # host command 0x4327, HID length byte first
-
-
-def find_dongle(sysfs=pathlib.Path('/sys/class/hidraw'), dev_root=pathlib.Path('/dev')):
-    return usb_dev.find_hidraw(sysfs=sysfs, dev_root=dev_root)
-
-
-def back_to_normal(device, seconds=1.0, interval=0.3):
-    """After the bootloader's reset: whether the dongle answers the normal host protocol again (0x4327 -> 0x4328)."""
-    end = time.time() + seconds
-    while True:
-        dev = device or find_dongle()
-        if dev:
-            try:
-                with open(dev, 'wb+') as fd:
-                    rawhid_write(fd, INQUIRY)
-                    for _ in range(3):
-                        if b'\x55\xaa\x43\x04\x28' in rawhid_read(fd):
-                            return True
-            except (OSError, TimeoutError, IndexError):
-                pass
-        if time.time() >= end:
-            return False
-        time.sleep(interval)
-
-
-def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
-    ap.add_argument('action', choices=['backup', 'flash', 'restore', 'bench'])
-    ap.add_argument('path', type=pathlib.Path, nargs='?', help='backup: the output directory; flash: the image')
-    ap.add_argument('--backup', type=pathlib.Path, help='flash / restore: the backup of this chip')
-    ap.add_argument('--yes', action='store_true', help='flash / restore / bench: really write')
-    ap.add_argument('--fast', action='store_true', help='flash / restore: status per stretch, skip FF, CRC-only verify')
-    ap.add_argument(
-        '--nv',
-        default='migrate',
-        help='flash: page 30 (#61): migrate (default: the page carried into our format, its JSON saved in '
-        "the backup directory), wipe, keep, or an NV.json to import; restore always writes the backup's",
-    )
-    ap.add_argument('--device', default=None, help='dongle /dev/hidrawN (default: auto-detect USB 1a86:e024)')
-    ap.add_argument('--wait', action='store_true', help='wait up to 60 s for replug after reset')
-    ap.add_argument('-v', '--verbose', action='store_true')
-    args = ap.parse_args(argv)
-    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
-    device = args.device or find_dongle()
-    if not device:
-        sys.exit(
-            'no Wyze USB dongle (1a86:e024) found on /dev/hidraw*: plug it in, install '
-            'tools/udev/99-wyze-dongle.rules, or pass --device /dev/hidrawN'
-        )
-    if args.action == 'backup':
-        if not args.path:
-            ap.error('backup requires an output directory PATH')
-        with open(device, 'wb+') as fd:  # as ws_updater.py opens it
-            print(json.dumps(backup(fd, args.path), indent=2))
-        finish(device, wait=args.wait)
-        return 0
-    if not args.backup:
-        ap.error('--backup DIR is required')
-    info, flash = check_backup(args.backup)
-    if args.action != 'restore' and not args.path:
-        ap.error(f'{args.action} requires an IMAGE.bin path')
-    image = check_image(flash[:APP_END] if args.action == 'restore' else args.path.read_bytes())
-    print(f'{args.action}: {len(image)} bytes to pages 0-{(len(image) - 1) // PAGE}, CRC {binascii.crc32(image):#010x}')
-    if not args.yes:
-        print('not written: add --yes')
-        return 1
-    with open(device, 'wb+') as fd:
-        if args.action == 'bench':  # both ways in one session: one replug
-            _, chip_id = enter(fd)
-            assert chip_id.hex() == info['chip_id'], "not the backup's chip"
-            print('== as before (status after every packet, read-back)')
-            slow = write_pages(fd, image, info, flash, fast=False, entered=True, reset=False)
-            print('== --fast')
-            quick = write_pages(fd, image, info, flash, fast=True, entered=True, reset=True)
-            print(
-                f'total: {slow["total"]:.2f} s -> {quick["total"]:.2f} s; '
-                f'write {slow["write"]:.2f} s -> {quick["write"]:.2f} s'
-            )
-        elif args.action == 'restore':  # the backup's page 30 too: stock again, as backed up (pairings since are lost)
-            write_pages(fd, image, info, flash, fast=args.fast, nv=lambda _: flash[NV_PAGE : NV_PAGE + PAGE])
-        else:
-            nv_json_path = args.backup / 'nv.json'
-            write_pages(
-                fd,
-                image,
-                info,
-                flash,
-                fast=args.fast,
-                nv=lambda current: nv_json.nv_page_for(args.nv, current, nv_json_path),
-            )
-    finish(device, wait=args.wait)
-    return 0
-
-
-def finish(device, wait=False):
-    if back_to_normal(device, seconds=1.0, interval=0.3):
-        print('done: the dongle is back in normal mode (no unplug needed)', flush=True)
-        return
-    print('done: unplug and replug the dongle now to return it to normal mode', flush=True)
-    if wait:
-        print('waiting up to 60 s for replug...', flush=True)
-        if back_to_normal(None, seconds=60.0, interval=1.0):
-            print('replugged: the dongle is back in normal mode', flush=True)
-        else:
-            print('still not answering Inquiry after 60 s: check USB connection', flush=True)
-
-
-if __name__ == '__main__':
-    sys.exit(main())

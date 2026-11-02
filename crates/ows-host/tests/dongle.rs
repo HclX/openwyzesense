@@ -1,4 +1,4 @@
-// backup / flash / restore against a simulated dongle (as reference/tests/test_dongle_sbl.py's FakeDongle): the CH554's
+// backup / flash / restore against a simulated dongle (as reference/tests/test_sbl_common.py's FakeDongle): the CH554's
 // HID framing and TI's ROM bootloader over a 128 KB flash (erase -> FF, programming only clears bits). The point: pages
 // 30-31 are never touched but by the NV write (page 30), the chip is reset only after everything checked out, and the
 // commands the crate does not use are never sent.

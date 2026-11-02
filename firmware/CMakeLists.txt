@@ -247,7 +247,7 @@ function(ows_product name app board)
         COMMAND "${Python3_EXECUTABLE}" "${OWS_ROOT}/tools/image_id.py" stamp ${name}.elf --objcopy "${CMAKE_OBJCOPY}"
         COMMAND "${CMAKE_OBJCOPY}" -O ihex ${name}.elf ${name}.hex
         COMMAND "${CMAKE_OBJCOPY}" -O binary ${name}.elf ${name}.bin
-        # without the CCFG (flash 0x1FFA8): what tools/dongle_sbl.py writes, to pages 0-29 only
+        # without the CCFG (flash 0x1FFA8): what ows-flash writes on the dongle, to pages 0-29 only
         COMMAND "${CMAKE_OBJCOPY}" -O binary -R .ccfg ${name}.elf ${name}-app.bin
         BYPRODUCTS ${name}.hex ${name}.bin ${name}-app.bin)
     if(P_SLOTS)

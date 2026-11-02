@@ -1,4 +1,4 @@
-//! OpenWyzeSense host tools in Rust (#42): what `tools/dongle_sbl.py` and `tools/nv_json.py` do, for programs such as
+//! OpenWyzeSense host tools in Rust (#42): what the Python `dongle_sbl.py` (replaced by this, #44) and `tools/nv_json.py` do, for programs such as
 //! wyzesense2mqtt-rs that install, update and restore OpenWyzeSense firmware on a Wyze USB dongle.
 //!
 //! - [`HidTransport`]: the caller owns the device; the crate sends and receives HID reports through it
@@ -6,6 +6,10 @@
 //! - [`dongle`]: [`dongle::backup`], [`dongle::flash`], [`dongle::restore`], with progress callbacks.
 //! - [`nv`]: page 30 (stock or ours) to the JSON model and back (#61).
 //! - [`image`]: image checks and the build info block. [`manifest`]: the release manifest.
+//! - [`ota`]: sensor OTA updates through our gateway (a state machine, and [`ota::run`] over a [`host::Link`]).
+//! - [`host`]: the host protocol to the gateway (packets, framing, a blocking link).
+//! - [`uniflash`]: v1 contact / motion units over a LaunchPad's 2-pin cJTAG with TI's DSLite (backup, flash,
+//!   provision), and fetching TI UniFlash from TI.
 //! - [`sbl`]: the dongle's update mode and TI's ROM bootloader (reading commands public; writing only through
 //!   [`dongle`]).
 //!
@@ -15,12 +19,15 @@
 pub mod dongle;
 #[cfg(all(feature = "hidraw", target_os = "linux"))]
 pub mod hidraw;
+pub mod host;
 pub mod image;
 pub mod manifest;
 pub mod nv;
+pub mod ota;
 pub mod sbl;
 #[cfg(feature = "sim")]
 pub mod sim;
+pub mod uniflash;
 
 use std::time::Duration;
 
@@ -63,6 +70,14 @@ pub enum Error {
     Nv(String),
     #[error("manifest: {0}")]
     Manifest(String),
+    /// The gateway's host protocol.
+    #[error("host link: {0}")]
+    Host(String),
+    #[error("OTA: {0}")]
+    Ota(String),
+    /// TI UniFlash (DSLite) on the v1 sensor bench.
+    #[error("UniFlash: {0}")]
+    Uniflash(String),
 }
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

@@ -27,56 +27,56 @@ FIRMWARE = [
         'ows-gateway-dongle-{v}.bin',
         'Wyze USB dongle',
         'gateway',
-        '`tools/dongle_sbl.py flash FILE --backup <stock backup> --fast`',
+        '`ows-flash backup DIR` (once: the stock image), then `ows-flash flash FILE --backup DIR --yes`',
     ),
     (
         'gateway-contact-v1-app.bin',
         'ows-gateway-contact-v1-{v}.bin',
         'Wyze v1 contact',
         'gateway (for an ESP relay)',
-        'carried by the ESP relay images below; or `tools/uniflash.py provision --gateway --app FILE`',
+        'carried by the ESP relay images below; or `ows-flash v1 provision --gateway --app FILE`',
     ),
     (
         'boot-wyze_contact_v1.bin',
         'ows-sensor-contact-v1-boot-{v}.bin',
         'Wyze v1 contact',
         'sensor: boot selector',
-        '`tools/uniflash.py provision --sensor --boot FILE --slot-a <slot A>`',
+        '`ows-flash v1 provision --sensor --boot FILE --slot-a <slot A>`',
     ),
     (
         'sensor-contact-v1-slot-a.img',
         'ows-sensor-contact-v1-slot-a-{v}.img',
         'Wyze v1 contact',
         'sensor: slot A',
-        'provision (above); OTA: `tools/host_link.py PORT --ota MAC SLOT_A SLOT_B`',
+        'provision (above); OTA: `ows-flash ota MAC SLOT_A SLOT_B` (or wyzesense2mqtt-rs)',
     ),
     (
         'sensor-contact-v1-slot-b.img',
         'ows-sensor-contact-v1-slot-b-{v}.img',
         'Wyze v1 contact',
         'sensor: slot B',
-        'OTA only (`tools/host_link.py --ota`)',
+        'OTA only (`ows-flash ota`, with slot A)',
     ),
     (
         'boot-wyze_motion_v1.bin',
         'ows-sensor-motion-v1-boot-{v}.bin',
         'Wyze v1 motion',
         'sensor: boot selector',
-        '`tools/uniflash.py provision --sensor --board wyze_motion_v1 --boot FILE --slot-a <slot A>`',
+        '`ows-flash v1 provision --sensor --board wyze_motion_v1 --boot FILE --slot-a <slot A>`',
     ),
     (
         'sensor-motion-v1-slot-a.img',
         'ows-sensor-motion-v1-slot-a-{v}.img',
         'Wyze v1 motion',
         'sensor: slot A',
-        'provision (above); OTA: `tools/host_link.py PORT --ota MAC SLOT_A SLOT_B`',
+        'provision (above); OTA: `ows-flash ota MAC SLOT_A SLOT_B` (or wyzesense2mqtt-rs)',
     ),
     (
         'sensor-motion-v1-slot-b.img',
         'ows-sensor-motion-v1-slot-b-{v}.img',
         'Wyze v1 motion',
         'sensor: slot B',
-        'OTA only (`tools/host_link.py --ota`)',
+        'OTA only (`ows-flash ota`, with slot A)',
     ),
 ]
 ESP32 = [  # (build directory under --esp32, chip name)
@@ -94,6 +94,39 @@ PRODUCT_BOARD = {
     'sensor-motion-v1-slot-a.img': ('sensor-motion-v1', 'wyze_motion_v1'),
     'sensor-motion-v1-slot-b.img': ('sensor-motion-v1', 'wyze_motion_v1'),
 }
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+# The README's section for users without a clone of the repository (#46)
+QUICK_START = [
+    '## Without the repository: a Wyze USB dongle',
+    '',
+    'Everything for moving a dongle system over is in this release (Linux x86-64):',
+    '',
+    '1. `chmod +x ows-flash-linux-x86_64-*`, and install `99-wyze-dongle.rules` (command in the table above; or run',
+    '   `ows-flash` with `sudo`).',
+    '2. Back up the dongle (its stock firmware and sensor list; keep this directory, it is the way back):',
+    '   `ows-flash backup backups/dongle-1`',
+    '3. Flash our gateway; the paired sensors are carried over (`--nv migrate`; it lists any it has to drop, and',
+    '   saves the list as `nv.json` in the backup): `ows-flash flash ows-gateway-dongle-<version>.bin --backup',
+    '   backups/dongle-1 --yes`. If it says so, unplug the dongle and plug it back in.',
+    '4. Back to stock at any time: `ows-flash restore --backup backups/dongle-1 --yes`.',
+    '',
+    'Moving the sensors to an ESP relay instead: `ows-flash nv export backups/dongle-1/flash.bin -o nv.json`, then',
+    "Import `nv.json` on the relay's page.",
+    '',
+    '## Without the repository: v1 sensors and the contact-board gateway',
+    '',
+    'Prepared once on the bench, wired to a LaunchPad (docs/user-guide.md §3): `ows-flash fetch-uniflash` (TI UniFlash',
+    "from TI, ~380 MB, once; TI's own tool, not redistributed here), install `71-ti-xds110.rules`, then",
+    '`ows-flash v1 provision --sensor --boot <boot>.bin --slot-a <slot A>.img` (a sensor) or `ows-flash v1 provision',
+    "--gateway --app ows-gateway-contact-v1-<version>.bin` (the relay's contact board). It backs the unit up first",
+    '(`backups/<board>/<MAC>`). Later updates go over the air: `ows-flash ota MAC <slot A> <slot B>`.',
+    '',
+]
+UDEV = [
+    ('99-wyze-dongle.rules', 'Wyze USB dongle'),
+    ('72-esp-usb-serial.rules', 'ESP32 / ESP8266 USB serial'),
+    ('71-ti-xds110.rules', 'LaunchPad XDS110 (v1 sensor bench)'),
+]
 MANIFEST_FORMAT = 'openwyzesense-release'
 NO_VERSION = {'boot-wyze_contact_v1.bin', 'boot-wyze_motion_v1.bin'}  # boot selectors carry no version string
 
@@ -174,6 +207,17 @@ def bundle(version, firmware, out, esp32=None, esp8266=None, ows_flash=None):
             versioned=False,
             product='ows-flash',
         )
+    # the udev rules (#46): the dongle, ESP serial chips and the LaunchPad's probe without root
+    for rule, device in UDEV:
+        add(
+            ROOT / 'tools' / 'udev' / rule,
+            rule,
+            device,
+            'Linux udev rule: access without root',
+            f'`sudo cp {rule} /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger`',
+            versioned=False,
+            product='udev',
+        )
     if errors:
         raise SystemExit('release bundle not made:\n  ' + '\n  '.join(errors))
 
@@ -195,6 +239,7 @@ def bundle(version, firmware, out, esp32=None, esp8266=None, ows_flash=None):
         '|---|---|---|---|',
         *(f'| `{n}` | {dev} | {what} | {how} |' for n, dev, what, how in rows),
         '',
+        *QUICK_START,
     ]
     (out / 'README.md').write_text('\n'.join(lines))
     return [r[0] for r in rows]

@@ -14,7 +14,7 @@ the chip in the ROM, running nothing, on 777B42DF (2026-10-24), as a software sy
 (docs/FACTS.md §5). Connecting again to a bootloader already synced works (the sync's first byte is then taken as a
 packet size: zeros fill that packet up, then a ping).
 
-`flash` writes pages 0-29 only, through tools/dongle_sbl.py's write path (the one used on the dongle: every erase and
+`flash` writes pages 0-29 only, through tools/sbl_common.py's write path (as ows-flash on the dongle: every erase and
 download checked against page 30 twice, the chip's CRC32 of what was written, pages 30-31 checked unchanged), over the
 UART instead of the dongle's HID: the packets are the same, the dongle's CH554 only wraps them in HID reports. Before
 writing it reads page 31 and checks that the CCFG there holds a MAC (the --mac one, if given) and the bootloader
@@ -32,8 +32,8 @@ import time
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'tools'))
-import dongle_sbl as sbl  # noqa: E402
 import nv_json  # noqa: E402
+import sbl_common as sbl  # noqa: E402
 import uniflash  # noqa: E402
 
 GAP = float(os.environ.get('OWS_UART_GAP', 0.02))  # a reply is complete once the line has been quiet this long
@@ -41,8 +41,8 @@ GAP = float(os.environ.get('OWS_UART_GAP', 0.02))  # a reply is complete once th
 
 
 class UartAsHid:
-    """The file object dongle_sbl expects (read(size) -> one HID report: a length byte, then what the chip sent;
-    write(packet)), over a UART. A read waits up to 5 s for the first byte (dongle_sbl's own timeout), then takes what
+    """The file object sbl_common expects (read(size) -> one HID report: a length byte, then what the chip sent;
+    write(packet)), over a UART. A read waits up to 5 s for the first byte (sbl_common's own timeout), then takes what
     follows until the line is quiet."""
 
     def __init__(self, port):
@@ -165,7 +165,9 @@ def main():
     f.add_argument('files', nargs='+', type=pathlib.Path, help='BOOT.bin SLOT_A.img, or APP.bin')
     f.add_argument('--yes', action='store_true')
     f.add_argument('--mac', help='write only if the CCFG holds this MAC')
-    f.add_argument('--slow', action='store_true', help='status after every packet and a read-back (dongle_sbl default)')
+    f.add_argument(
+        '--slow', action='store_true', help='status after every packet and a read-back (as ows-flash does by default)'
+    )
     f.add_argument('--nv', default='keep', help='page 30 (#61): keep (default), wipe, migrate, or an NV.json to import')
     a = ap.parse_args()
     u = UartAsHid(a.port or hw.uart())

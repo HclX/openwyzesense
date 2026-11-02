@@ -122,6 +122,9 @@ jobs:
       - name: Firmware (fw)
         run: cmake --preset fw && cmake --build --preset fw
 
+      - name: ows-flash (for test_ows_flash_ota.py)
+        run: cargo build -q -p ows-flash
+
       - name: Reference and firmware-image tests (hardware tests skip)
         run: uv run pytest -q
 

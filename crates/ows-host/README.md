@@ -1,7 +1,7 @@
 # ows-host
 
 The OpenWyzeSense host tools in Rust (#42), for programs that install, update and restore our firmware on a Wyze USB
-dongle (wyzesense2mqtt-rs's dashboard). A port of `tools/dongle_sbl.py` and `tools/nv_json.py`, with the same steps and
+dongle (wyzesense2mqtt-rs's dashboard). A port of the Python `dongle_sbl.py` (replaced by this, #44) and `tools/nv_json.py`, with the same steps and
 safety checks; `ows-flash` (crates/ows-flash) is its command line.
 
 ```toml
@@ -17,7 +17,7 @@ The tag `vX.Y.Z` is the crate's version, and its GitHub release holds the firmwa
   `hidraw::Hidraw` and `hidraw::find_dongle()` (feature `hidraw`, default, Linux) do this for `/dev/hidrawN`.
 - `dongle::backup(&mut t, &mut progress) -> Backup`: the whole chip (flash, CCFG, FCFG1), each read twice and checked
   with the chip's CRC32; then a reset. Nothing written. `Backup::save(dir)` / `Backup::load(dir)`: the directory
-  `dongle_sbl.py backup` writes (`info.json`, `flash.bin`, `ccfg.bin`, `fcfg1.bin`); either reads the other's.
+  the Python `dongle_sbl.py backup` wrote (`info.json`, `flash.bin`, `ccfg.bin`, `fcfg1.bin`); either reads the other's.
 - `dongle::flash(&mut t, image, &backup, &FlashOptions { fast, nv }, &mut progress) -> FlashReport`: our image
   (`gateway-dongle-app.bin`, checked by its build info) to pages 0-29, then page 30 as `nv` says:
   `NvChoice::Migrate` (the default: the current page exported, validated, imported in our format), `Wipe`, `Keep`,
@@ -32,6 +32,19 @@ The tag `vX.Y.Z` is the crate's version, and its GitHub release holds the firmwa
   ours) and the JSON model (`docs/nv-format.md`).
 - `image::check_product(image, "gateway-dongle")`, `image::build_info(image)`: the build info block (product, app,
   board, version, image ID).
+- `ota::Ota`: a sensor OTA update through our gateway (#47), as a state machine with no I/O, for a program with its
+  own read loop: `Ota::new(builds, Targets::Macs(..) | Targets::Any { known }, timeout, now)`, `start()` -> packets
+  to send, then `handle(&packet, now)` for each packet from the gateway -> `Step { send, events }` (`Staged`: press
+  the sensor's button briefly now; `Progress`; `Done`), until `finished(now)`; `results()`; send `Ota::cancel()` at
+  the end. GW_FLAG_OTA must be on (`host::FLAG_OTA`). `ota::run(&mut Link, ...)` does all of it, flags included,
+  over a blocking `host::Link` (on a `host::ByteLink`: `hidraw::HidrawHost`, `hidraw::Serial`).
+- `host`: the host protocol (`build`, `parse`, `Framer`, `Packet`, `Link` with `call` / `ows_call` / `flags` /
+  `sensors`).
+- `uniflash` (#50): a v1 contact / motion unit on a LaunchPad's XDS110 over 2-pin cJTAG, with TI's DSLite:
+  `Probe::new(Dslite { exe: find_dslite(None)? })`, then `backup(dir)`, `flash(app, &nv, Some(backup))`,
+  `slots(boot, slot_a, ..)`, `enable_bootloader(pin)` (BL_CONFIG only), `provision(&Provision { .. })`, `reset()`,
+  `read(addr, words)`; the 2-pin ccxml is built in. `fetch(dir, ..)` downloads TI UniFlash from TI (pinned version
+  and SHA-256, as tools/toolchain.lock) and installs it; it is never redistributed.
 - `manifest::Manifest::from_json(text)`, `.product("gateway-dongle")`, `ManifestFile::verify(bytes)`: a release's
   `manifest.json` and the SHA-256 of a downloaded file.
 - `Error`: `Io`, `Sbl`, `Refused` (a safety rule), `Verify` (the chip was not reset), `Backup`, `Image`, `Nv`,
@@ -68,5 +81,5 @@ ows-host = { git = "https://github.com/HclX/openwyzesense", tag = "...", feature
 ## Tests
 
 `cargo test`: `tests/dongle.rs` runs backup, flash and restore against a simulated dongle (as
-`reference/tests/test_dongle_sbl.py` does). `tests/golden.rs` holds export and import to
+`reference/tests/test_sbl_common.py` does). `tests/golden.rs` holds export and import to
 `reference/tests/vectors/nv/golden`, which `tools/nv_golden.py` writes from the Python reference.
