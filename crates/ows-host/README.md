@@ -37,6 +37,23 @@ The tag `vX.Y.Z` is the crate's version, and its GitHub release holds the firmwa
 - `Error`: `Io`, `Sbl`, `Refused` (a safety rule), `Verify` (the chip was not reset), `Backup`, `Image`, `Nv`,
   `Manifest`.
 
+## Tests of programs that use it: feature `sim`
+
+```toml
+[dev-dependencies]
+ows-host = { git = "https://github.com/HclX/openwyzesense", tag = "...", features = ["sim"] }
+```
+
+- `sim::SimDongle`: a `HidTransport` that behaves as a Wyze dongle: update mode (0x4312), TI's ROM bootloader over a
+  128 KB flash, Inquiry (0x4327 -> 0x4328) in normal mode, back in normal mode after the bootloader's reset.
+  `SimDongle::stock()` (stock code, the spare dongle's stock table on page 30), `SimDongle::ows(version)` (as a flash
+  leaves it), `SimDongle::with_flash(bytes)`. Failures on demand: `needs_replug` (silent after the reset until
+  `replug()`), `corrupt_at` (a write that does not verify), `fail_io` (the device gone), `chip_id` (another chip).
+  Inspect `flash`, `erased`, `resets`, `log`, `nv_page()`, `runs_ows()`, `ows_version()`. It panics on a command the
+  crate must never send.
+- `sim::gateway_image(version)`: an image `image::check_product(_, "gateway-dongle")` accepts (not a firmware that
+  runs); `sim::product_image(product, version)` for others; `sim::stock_flash()`.
+
 ## Safety
 
 - Page 31 (code and the CCFG, whose `BL_CONFIG` keeps the bootloader reachable) is never erased or written. Page 30 is

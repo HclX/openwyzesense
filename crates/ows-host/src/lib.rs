@@ -19,6 +19,8 @@ pub mod image;
 pub mod manifest;
 pub mod nv;
 pub mod sbl;
+#[cfg(feature = "sim")]
+pub mod sim;
 
 use std::time::Duration;
 

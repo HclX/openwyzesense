@@ -81,3 +81,10 @@ fn page_for_choices() {
     assert!(nv::is_ows(&page.unwrap()));
     assert_eq!(d.unwrap().source.unwrap().layout, "stock");
 }
+
+#[cfg(feature = "sim")]
+#[test]
+fn the_sims_stock_page_is_the_vector() {
+    let v = std::fs::read(vectors().join("dongle_77A85A36_2026-10-23_before_ours.page30.bin")).unwrap();
+    assert_eq!(&v[..], &ows_host::sim::STOCK_PAGE30[..]);
+}
