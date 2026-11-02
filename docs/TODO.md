@@ -75,6 +75,10 @@ is the stock Factory UART Test & Provisioning Mode strap pin in `main()` at `0x0
 
 ## Next (Bench & Research)
 
+- **Rust host crate (#42)**: `crates/ows-host` + `ows-flash` (backup / flash / restore, NV JSON, manifest), tested
+  against a simulated dongle and the golden NV vectors. Left: the first hardware run on the spare dongle 77A85A36
+  (stock -> ours -> stock -> ours, from wyzesense2mqtt-rs or `ows-flash`), then the v0.1.0 tag (the user acks).
+
 - **Under-load coin-cell low-battery detection & zero-extra-hardware ESP32 HIL rig (`TASK-25`, [`docs/low-battery.md`](low-battery.md))**:
   done (#75): BATMON sampled during each frame (its lowest reading), reports carry it, the low-battery flag with
   hysteresis (3 below 2.625 V sets, 2.80 V clears), `bat` console command; our gateway no longer drops low-battery

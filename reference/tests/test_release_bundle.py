@@ -1,5 +1,6 @@
 # tools/release_bundle.py (#89): the release bundle from CI's build outputs, with fake inputs.
 import hashlib
+import json
 import pathlib
 import sys
 
@@ -37,6 +38,12 @@ def test_bundle_renames_per_device_with_sums_and_readme(tmp_path):
     assert set(sums) == set(names)
     for n, h in sums.items():
         assert hashlib.sha256((out / n).read_bytes()).hexdigest() == h
+    manifest = json.loads((out / 'manifest.json').read_text())
+    assert manifest['format'] == 'openwyzesense-release' and manifest['version'] == 'v0.1.0'
+    assert {f['file']: f['sha256'] for f in manifest['files']} == sums
+    dongle = next(f for f in manifest['files'] if f['product'] == 'gateway-dongle')
+    assert dongle['board'] == 'wyze_dongle' and dongle['file'] == 'ows-gateway-dongle-v0.1.0.bin'
+    assert dongle['size'] == (out / dongle['file']).stat().st_size
     readme = (out / 'README.md').read_text()
     assert readme.startswith('# OpenWyzeSense v0.1.0') and all(f'`{n}`' in readme for n in names)
 
@@ -55,3 +62,21 @@ def test_partial_bundle_without_the_relays(tmp_path):
     fw, _, _ = fake_build(tmp_path, 'abc1234')
     names = release_bundle.bundle('abc1234', fw, tmp_path / 'dist')
     assert len(names) == len(release_bundle.FIRMWARE)
+
+
+def test_every_firmware_file_names_its_product_and_board(tmp_path):
+    assert set(release_bundle.PRODUCT_BOARD) == {src for src, *_ in release_bundle.FIRMWARE}
+    fw, _, _ = fake_build(tmp_path, 'v0.2.0')
+    tool = tmp_path / 'ows-flash'
+    tool.write_bytes(b'ELF ows-flash 0.2.0')
+    names = release_bundle.bundle('v0.2.0', fw, tmp_path / 'dist', ows_flash=tool)
+    assert 'ows-flash-linux-x86_64-v0.2.0' in names
+    files = json.loads((tmp_path / 'dist' / 'manifest.json').read_text())['files']
+    assert all(f['product'] for f in files)
+
+
+def test_the_crate_version_is_one_a_tag_can_carry():
+    # the release job checks the tag vX.Y.Z against this (#42): w2m pins the crate by tag and downloads that release
+    text = (ROOT / 'Cargo.toml').read_text()
+    version = text.split('[workspace.package]', 1)[1].split('version = "', 1)[1].split('"', 1)[0]
+    assert all(p.isdigit() for p in version.split('.')) and version.count('.') == 2

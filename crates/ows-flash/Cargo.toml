@@ -1,0 +1,12 @@
+[package]
+name = "ows-flash"
+description = "OpenWyzeSense: back up, flash and restore a Wyze USB dongle (one binary instead of the Python tools)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+ows-host = { path = "../ows-host" }
+serde_json = "1"

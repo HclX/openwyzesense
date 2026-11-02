@@ -1,0 +1,13 @@
+# The Rust host tools (#42): crates/ows-host (the library wyzesense2mqtt-rs depends on, by git tag) and
+# crates/ows-flash (its command line). The version follows the release tag (vX.Y.Z), checked in CI's release job.
+[workspace]
+resolver = "2"
+members = ["crates/ows-host", "crates/ows-flash"]
+exclude = ["w2m"]  # CI checks wyzesense2mqtt-rs out here (e2e-host): its own workspace
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/HclX/openwyzesense"
+rust-version = "1.75"

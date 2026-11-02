@@ -1,0 +1,18 @@
+{
+  "format": "openwyzesense-nv-json",
+  "version": 1,
+  "source": {
+    "layout": "stock"
+  },
+  "network": null,
+  "sensors": [],
+  "join": null,
+  "cfg": null,
+  "dropped": [
+    {
+      "what": "network",
+      "why": "PAN FFFF / coordinator D425 not usable"
+    }
+  ],
+  "unrecognised": []
+}

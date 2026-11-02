@@ -139,6 +139,35 @@ jobs:
             build/fw/firmware/*.bin
             build/fw/firmware/*.img
 
+  rust:
+    # the Rust host tools (#42): crates/ows-host (wyzesense2mqtt-rs depends on it by tag) and crates/ows-flash;
+    # tests/golden.rs reads the NV vectors tools/nv_golden.py writes from the Python reference
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: rustup toolchain install stable --profile minimal -c rustfmt,clippy && rustup default stable
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            target
+          key: rust-${{ hashFiles('Cargo.lock') }}
+
+      - name: Format, lint, test
+        run: |
+          cargo fmt --check
+          cargo clippy --all-targets --locked -- -D warnings
+          cargo test --locked
+          cargo build --release --locked -p ows-flash
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ows-flash
+          path: target/release/ows-flash
+
   # wyzesense2mqtt-rs over IP driving our gateway and sensor firmware as host programs (no hardware):
   # reference/tests/test_host_e2e.py
   e2e-host:
@@ -180,7 +209,7 @@ jobs:
     # the release bundle (#89, tools/release_bundle.py): every run assembles it as an artifact; a v* tag publishes it
     # as a GitHub Release (a tag with a '-', e.g. v0.2.0-rc1, as a pre-release). Only when every other job passed.
     runs-on: ubuntu-24.04
-    needs: [lint, build-and-test, esp32, esp8266, e2e-host]
+    needs: [lint, build-and-test, esp32, esp8266, e2e-host, rust]
     permissions:
       contents: write
     steps:
@@ -205,10 +234,23 @@ jobs:
           name: esp8266-relay
           path: in/esp8266
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: ows-flash
+          path: in/tools
+
+      - name: The tag vX.Y.Z is the crate version (w2m pins ows-host by tag, #42)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          crate="$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)"
+          tag="${GITHUB_REF_NAME#v}"
+          [ "$crate" = "${tag%%-*}" ] || { echo "tag $GITHUB_REF_NAME, Cargo.toml version $crate"; exit 1; }
+
       - name: Assemble the bundle
         run: |
+          chmod +x in/tools/ows-flash
           uv run tools/release_bundle.py --version "$(git describe --always --dirty --tags)" --firmware in/firmware \
-            --esp32 in/esp32 --esp8266 in/esp8266/firmware.bin --out dist
+            --esp32 in/esp32 --esp8266 in/esp8266/firmware.bin --ows-flash in/tools/ows-flash --out dist
           ls -l dist
 
       - uses: actions/upload-artifact@v4

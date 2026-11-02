@@ -297,3 +297,11 @@ def test_c_sensor_and_python_nv_cfg_interop(tmp_path):
 
     exported = nvows.export(nv_path.read_bytes())
     assert exported['cfg'] == {'type': '02', 'invert': False, 'pull': 'none', 'debounce_ms': 40}
+
+
+def test_golden_vectors_are_current():
+    # tools/nv_golden.py: what the Rust crate (crates/ows-host, tests/golden.rs) is held to, byte for byte (#42)
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / 'tools'))
+    import nv_golden
+
+    assert nv_golden.main(['--check']) == 0, 'run: uv run tools/nv_golden.py'

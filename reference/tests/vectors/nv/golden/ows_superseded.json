@@ -1,0 +1,23 @@
+{
+  "format": "openwyzesense-nv-json",
+  "version": 1,
+  "source": {
+    "layout": "ows"
+  },
+  "network": {
+    "pan": "65FE",
+    "short": "D425",
+    "ext": "00124B0012345678"
+  },
+  "sensors": [
+    {
+      "sub": 1,
+      "mac": "77A8C793",
+      "short": "0004"
+    }
+  ],
+  "join": null,
+  "cfg": null,
+  "dropped": [],
+  "unrecognised": []
+}
