@@ -6,6 +6,8 @@
 //! - [`dongle`]: [`dongle::backup`], [`dongle::flash`], [`dongle::restore`], with progress callbacks.
 //! - [`nv`]: page 30 (stock or ours) to the JSON model and back (#61).
 //! - [`image`]: image checks and the build info block. [`manifest`]: the release manifest.
+//! - [`ota`]: sensor OTA updates through our gateway (a state machine, and [`ota::run`] over a [`host::Link`]).
+//! - [`host`]: the host protocol to the gateway (packets, framing, a blocking link).
 //! - [`sbl`]: the dongle's update mode and TI's ROM bootloader (reading commands public; writing only through
 //!   [`dongle`]).
 //!
@@ -15,9 +17,11 @@
 pub mod dongle;
 #[cfg(all(feature = "hidraw", target_os = "linux"))]
 pub mod hidraw;
+pub mod host;
 pub mod image;
 pub mod manifest;
 pub mod nv;
+pub mod ota;
 pub mod sbl;
 
 use std::time::Duration;
@@ -61,6 +65,11 @@ pub enum Error {
     Nv(String),
     #[error("manifest: {0}")]
     Manifest(String),
+    /// The gateway's host protocol.
+    #[error("host link: {0}")]
+    Host(String),
+    #[error("OTA: {0}")]
+    Ota(String),
 }
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
