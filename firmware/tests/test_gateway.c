@@ -901,8 +901,8 @@ static void test_network_and_nv_import(void)
     CHECK(h.len == 14 && h.payload[0] == OWS_SUB_NETWORK && h.payload[1] == 0x00 && h.payload[2] == 0x11 &&
           h.payload[3] == 0x11 && h.payload[4] == 0x22 && h.payload[5] == 0x22);
 
-    // 2. Rejects house PAN 0x845B, 0x0000, 0xFFFF, and reserved coordinator short >= 0xFFFE.
-    static const uint16_t bad_pans[] = {0x845B, 0x0000, 0xFFFF};
+    // 2. Rejects PAN 0x0000 and 0xFFFF, and reserved coordinator short >= 0xFFFE (any other PAN is fine, #70).
+    static const uint16_t bad_pans[] = {0x0000, 0xFFFF};
     for (size_t i = 0; i < sizeof bad_pans / sizeof bad_pans[0]; i++) {
         uint8_t bad[13] = {OWS_SUB_NETWORK, (uint8_t)bad_pans[i], (uint8_t)(bad_pans[i] >> 8), 0x34, 0x12};
         call_ows(&gw, bad, sizeof bad, &h);

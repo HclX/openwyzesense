@@ -1329,7 +1329,7 @@ static void sort_sensors(gateway_t *gw)
 
 static uint8_t apply_network(gateway_t *gw, uint16_t pan, uint16_t short_addr, uint64_t ext)
 {
-    if (pan == 0x0000 || pan == 0xFFFF || pan == 0x845B || short_addr >= 0xFFFE) {
+    if (pan == 0x0000 || pan == 0xFFFF || short_addr >= 0xFFFE) {
         return GW_CCFG_REFUSED;
     }
     for (size_t i = 0; i < gw->n_sensors; i++) {

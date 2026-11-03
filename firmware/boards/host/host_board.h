@@ -76,7 +76,7 @@ typedef struct {
     uint64_t rx_since_us, rx_on_us;  // receiver: on since, total on-time
     uint64_t tx_free_us;             // its transmitter is busy until then
     uint64_t last_start_us;          // start of its previous frame (radio_tx's gap_us)
-    unsigned tx_frames, tx_refused;
+    unsigned tx_frames;
     radio_frame_t rxq[16];
     unsigned rx_head, rx_tail;
     uint32_t overruns;

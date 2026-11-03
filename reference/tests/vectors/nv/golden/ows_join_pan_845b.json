@@ -6,13 +6,15 @@
   },
   "network": null,
   "sensors": [],
-  "join": null,
+  "join": {
+    "type": "01",
+    "gw_ours": false,
+    "pan": "845B",
+    "coord": "3366",
+    "short": "0005",
+    "gw_features": "0000"
+  },
   "cfg": null,
-  "dropped": [
-    {
-      "what": "join",
-      "why": "PAN 845B / short address 0005 not usable"
-    }
-  ],
+  "dropped": [],
   "unrecognised": []
 }

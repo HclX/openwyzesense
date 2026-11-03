@@ -214,6 +214,16 @@ fn sim_ends_in_normal_mode_or_needs_a_replug() {
     assert_eq!(d.flash, sim::stock_flash());
 }
 
+// #70: the CH554 answers Inquiry whatever the CC1310 does; Get Version tells whether the radio chip runs
+#[test]
+fn radio_answers_only_when_the_cc1310_does() {
+    let mut d = SimDongle::ows("v0.1.0");
+    assert!(dongle::inquiry(&mut d).unwrap() && dongle::radio_answers(&mut d).unwrap());
+    d.radio_silent = true;
+    assert!(dongle::inquiry(&mut d).unwrap(), "the CH554 still answers Inquiry");
+    assert!(!dongle::radio_answers(&mut d).unwrap(), "but the CC1310 does not answer Get Version");
+}
+
 #[test]
 fn sim_ows_is_what_a_flash_leaves() {
     let mut a = SimDongle::stock();

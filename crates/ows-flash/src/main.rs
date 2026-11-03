@@ -142,13 +142,30 @@ fn open(device: &Option<PathBuf>) -> Result<(PathBuf, Hidraw), String> {
     Ok((path, dev))
 }
 
+/// After a flash or restore: the dongle back in normal mode (its CH554 answers Inquiry), and its radio chip running
+/// (the CC1310 answers Get Version, #70: Inquiry alone said "back" over a CC1310 that answered nothing).
 fn finish(path: &Path) {
     std::thread::sleep(std::time::Duration::from_millis(500));
     let back = Hidraw::open(path).ok().and_then(|mut d| dongle::inquiry(&mut d).ok()).unwrap_or(false);
-    if back {
-        println!("done: the dongle is back in normal mode (no unplug needed)");
-    } else {
+    if !back {
         println!("done: unplug and replug the dongle now to return it to normal mode");
+        return;
+    }
+    let mut radio = false;
+    for _ in 0..3 {
+        radio = Hidraw::open(path).ok().and_then(|mut d| dongle::radio_answers(&mut d).ok()).unwrap_or(false);
+        if radio {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(500));
+    }
+    if radio {
+        println!("done: the dongle is back in normal mode and its radio chip answers (no unplug needed)");
+    } else {
+        println!(
+            "written and verified, but the dongle's radio chip (CC1310) does not answer: unplug and replug the dongle; \
+             if it still does not answer, put the backup back with `ows-flash restore`"
+        );
     }
 }
 

@@ -12,7 +12,6 @@ MARKER, LIVE, DELETED = 0xA5, 0xFF, 0x00
 REC = 12  # record header
 MAX_DATA = 64
 ITEM_NETWORK, ITEM_COUNT, ITEM_SENSOR, ITEM_JOIN, ITEM_CFG = 1, 4, 5, 0x20, 0x21
-HOUSE_PAN = 0x845B
 JSON_FORMAT = 'openwyzesense-nv-json'
 PULL_TO_U8 = {'up': 0, 'none': 1, 'down': 2, 'default': 0xFF}
 U8_TO_PULL = {v: k for k, v in PULL_TO_U8.items()}
@@ -201,7 +200,7 @@ def export(page):
     j = items.get((ITEM_JOIN, 0)) if layout == 'ows' else None
     if j is not None:
         p, c, s = (int.from_bytes(j[k : k + 2], 'little') for k in (2, 4, 6))
-        if len(j) != 12 or p in (0x0000, 0xFFFF, HOUSE_PAN) or not 0x0001 <= s <= 0xFFFD:
+        if len(j) != 12 or p in (0x0000, 0xFFFF) or not 0x0001 <= s <= 0xFFFD:
             drop('join', f'PAN {h16(p)} / short address {h16(s)} not usable')
         else:
             out['join'] = {
@@ -278,8 +277,6 @@ def import_(doc):
         j_short = int(j['short'], 16)
         j_type = int(j['type'], 16)
         j_feat = int(j['gw_features'], 16)
-        if j_pan == HOUSE_PAN:
-            raise ValueError('a join to the house network (PAN 845B): never')
         if j_pan in (0x0000, 0xFFFF) or not 0 <= j_pan <= 0xFFFF:
             raise ValueError(f'join PAN {j["pan"]} not usable')
         if not 0x0000 <= j_coord <= 0xFFFD or not 0x0001 <= j_short <= 0xFFFD:

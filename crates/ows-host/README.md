@@ -26,6 +26,8 @@ The tag `vX.Y.Z` is the crate's version, and its GitHub release holds the firmwa
 - `dongle::restore(&mut t, &backup, fast, &mut progress)`: the backup's pages 0-30 back (stock again).
 - `dongle::inquiry(&mut t) -> bool`: on a freshly opened device after the reset, whether the dongle answers in normal
   mode; if not, it needs a replug.
+- `dongle::radio_answers(&mut t) -> bool`: whether the dongle's CC1310 answers (Get Version 0x5316 -> 0x5317). Check it
+  after `inquiry`: the CH554 answers Inquiry itself, so only this tells a running radio chip from a silent one (#70).
 - `Progress { phase, done, total }`: `Enter`, `Backup`, `Check`, `Erase` (pages), `Write`, `Verify`, `Nv` (bytes),
   `Reset`, `Done`.
 - `nv::export(page) -> NvDoc`, `nv::import(&doc) -> page`, `NvDoc::{to_json, from_json, summary}`: page 30 (stock or
@@ -58,7 +60,8 @@ ows-host = { git = "https://github.com/HclX/openwyzesense", tag = "...", feature
 ```
 
 - `sim::SimDongle`: a `HidTransport` that behaves as a Wyze dongle: update mode (0x4312), TI's ROM bootloader over a
-  128 KB flash, Inquiry (0x4327 -> 0x4328) in normal mode, back in normal mode after the bootloader's reset.
+  128 KB flash, Inquiry (0x4327 -> 0x4328) and Get Version (0x5316 -> 0x5317; `radio_silent` stops it) in normal
+  mode, back in normal mode after the bootloader's reset.
   `SimDongle::stock()` (stock code, the spare dongle's stock table on page 30), `SimDongle::ows(version)` (as a flash
   leaves it), `SimDongle::with_flash(bytes)`. Failures on demand: `needs_replug` (silent after the reset until
   `replug()`), `corrupt_at` (a write that does not verify), `fail_io` (the device gone), `chip_id` (another chip).

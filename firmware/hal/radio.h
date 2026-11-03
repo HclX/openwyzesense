@@ -1,4 +1,4 @@
-// The radio: 906.8 MHz receive and transmit (refusing the house network PAN 0x845B).
+// The radio: 906.8 MHz receive and transmit.
 #pragma once
 
 #include <stdbool.h>

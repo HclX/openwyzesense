@@ -31,7 +31,9 @@ decisions so far.
 - The user's house runs a stock dongle on PAN 0x845B (coordinator 0x3366, ~17 sensors), reported by a bridge
   whose URL stays out of the repository (`OWS_BRIDGE`). Use it read-only (`GET /api/dongles`, SSE `/api/events`); ask before
   any POST (scan/pair, raw commands).
-- Do not transmit on 906.8 MHz without the user's OK, and never on the house PAN 0x845B. Receiving is fine.
+- Do not transmit on 906.8 MHz without the user's OK. The firmware no longer refuses the house PAN 0x845B (#70, the
+  user 2026-11-03: the development-time ban is lifted), but transmitting on it still needs the user's explicit OK each
+  time: the house dongle is in service. Receiving is fine.
   The user's second dongle (PAN 0x65FE, coordinator 0xD425) is the intended test network; a second test PAN, 0x65FD,
   is for our gateway on a v1 contact (the user's OK, 2026-10-24).
 - Before flashing any stock device, dump and back up its whole flash, including CCFG. Never erase flash page
@@ -128,8 +130,8 @@ decisions so far.
     spare dongle (`GW_FLAG_OTA`; flash with `ows-flash flash ... --fast`). ~5 minutes.
   - `test_hw_tx.py`: gateway built with `cmake --preset fw -B build/fw-tx-test -DOWS_DEBUG=ON -DOWS_PAN=0x65FE
     -DOWS_SHORT=0x0F0F && cmake --build build/fw-tx-test`, made to answer frames injected over debug host command
-    `0x43F0` (checked with the SDR at gain 0) and its flash table across a reset. Two layers keep TX off the house PAN:
-    compile-time checks on `OWS_PAN`, and `radio_tx()` refusing frames on `0x845B`.
+    `0x43F0` (checked with the SDR at gain 0) and its flash table across a reset. Its PAN is a test PAN by build
+    flag; the firmware itself refuses no PAN since #70.
 - External v1 contact tests on the LaunchPad's 2-pin cJTAG (jumpers pulled; mutually exclusive with onboard LaunchPad
   tests): `OWS_HW=1 OWS_HW_CONTACT=1` for passive `test_hw_contact_gateway.py`; add `OWS_HW_TX=1` for
   `test_hw_contact_v1.py`, `test_hw_contact_battery.py`, and `test_hw_contact_ota.py`.

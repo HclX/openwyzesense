@@ -463,7 +463,6 @@ static void test_heartbeat(void)
     // its receiver was on only around its own frames: well under 0.1 % of the time
     CHECK((host_rx_on_us(sn) - on0) * 1000 < host_now_us() - t0);
     CHECK(gw->nv_bad_writes == 0 && sn->nv_bad_writes == 0);
-    CHECK(gw->tx_refused == 0 && sn->tx_refused == 0);
 }
 
 static int event_alarms(size_t from, int state)
@@ -676,12 +675,14 @@ static void test_pair_again_as_another_type(void)
     }
 }
 
-// A TX build that finds the house network (PAN 0x845B) in its NV page stops before sending anything
-static void test_never_on_the_house_network(void)
+// Any PAN is a network like any other (#70: the house-network ban is lifted): a gateway with 0x845B in its NV page
+// answers the host and the air
+static void test_gateway_on_any_pan(void)
 {
     static const gw_io_t io = {NULL, NULL, NULL, NULL, NULL};
     gateway_t house;
     nvstore_t nv;
+    const pkt_t *r;
 
     host_reset();
     gw = host_add("gateway", &gw_app, HOST_APP(gateway));
@@ -693,11 +694,31 @@ static void test_never_on_the_house_network(void)
     host_boot(gw);
     host_rx_init(&host_rx);
     n_got = 0;
-    host_write(HOST_INQUIRY, NULL, 0);
-    host_run(5000);
-    pump_host();
-    CHECK(gw_app.halted && gw->led[BOARD_LED_ERROR] && !gw->led[BOARD_LED_OK]);
-    CHECK(gw->tx_frames == 0 && n_got == 0);
+    r = call(HOST_GET_VERSION, NULL, 0);
+    CHECK(r && r->n == 26);
+    CHECK(gw_app.radio_ok && gw_app.gw.pan == 0x845B && gw->led[BOARD_LED_OK] && !gw->led[BOARD_LED_ERROR]);
+}
+
+// A gateway whose radio does not start still answers the host (#70: never a silent dongle), shows the error LED,
+// and brings the radio up once it starts
+static void test_gateway_without_radio(void)
+{
+    const pkt_t *r;
+
+    host_reset();
+    gw = host_add("gateway", &gw_app, HOST_APP(gateway));
+    gw->radio_broken = true;
+    host_boot(gw);
+    host_rx_init(&host_rx);
+    n_got = 0;
+    r = call(HOST_GET_VERSION, NULL, 0);
+    CHECK(r && r->n == 26);
+    r = ows_call(OWS_SUB_FLAGS, NULL, 0);
+    CHECK(r && r->p[0] == OWS_SUB_FLAGS);
+    CHECK(!gw_app.radio_ok && !gw_app.in_sbl && gw->led[BOARD_LED_ERROR] && !gw->led[BOARD_LED_OK]);
+    gw->radio_broken = false;
+    host_run(1500);  // the next retry
+    CHECK(gw_app.radio_ok && gw->led[BOARD_LED_OK] && !gw->led[BOARD_LED_ERROR]);
 }
 
 static void test_sensor_without_radio(void)
@@ -913,7 +934,7 @@ static void test_ota_update(void)
     CHECK(host_ota.needs == (host_ota.len[0] + OTA_BLOCK - 1) / OTA_BLOCK);
     CHECK(sn->resets == 2 && sn->slot == 0 && running_version() == 12 && slot_holds(0, img_new[0], host_ota.len[0]));
     CHECK(header_of(sn->flash + SLOT_B_BASE)->version == 11 && header_of(sn->flash + SLOT_B_BASE)->confirmed == 0);
-    CHECK(gw->tx_refused == 0 && sn->tx_refused == 0 && gw->nv_bad_writes == 0 && sn->nv_bad_writes == 0);
+    CHECK(gw->nv_bad_writes == 0 && sn->nv_bad_writes == 0);
     trace();
 }
 
@@ -1938,7 +1959,8 @@ int main(void)
     test_pair_again_as_another_type();
     test_ccfg_is_safe();
     test_ccfg_restore();
-    test_never_on_the_house_network();
+    test_gateway_on_any_pan();
+    test_gateway_without_radio();
     test_sensor_without_radio();
     test_gateway_announces_itself();
     test_gateway_skips_stray_bytes();

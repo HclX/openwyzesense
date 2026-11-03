@@ -116,9 +116,3 @@ size_t mac_build_ack(uint8_t *out, uint8_t seq, bool pending)
     out[2] = seq;
     return 3;
 }
-
-bool mac_on_pan(const uint8_t *frame, size_t n, uint16_t pan)
-{
-    mac_frame_t m;
-    return mac_parse(frame, n, &m) && ((m.dst_mode && m.dst_pan == pan) || (m.src_mode && m.src_pan == pan));
-}

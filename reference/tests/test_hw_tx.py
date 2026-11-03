@@ -2,7 +2,7 @@
 # is made
 # to answer injected frames (a beacon request, a sensor report, a data request), and the RTL-SDR checks what
 # it sent: beacons, ACKs (with and without frame-pending) and a B0 time sync. It TRANSMITS: opt in with
-# OWS_HW=1 and OWS_HW_TX=1, only with the user's permission, and never on the house network.
+# OWS_HW=1 and OWS_HW_TX=1, only with the user's permission (on the house network only with an explicit OK for it).
 import os
 import pathlib
 import subprocess

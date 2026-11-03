@@ -22,8 +22,6 @@ pub const ITEM_COUNT: u16 = 4;
 pub const ITEM_SENSOR: u16 = 5;
 pub const ITEM_JOIN: u16 = 0x20;
 pub const ITEM_CFG: u16 = 0x21;
-/// The user's house network: a sensor is never made to join it.
-pub const HOUSE_PAN: u16 = 0x845B;
 pub const JSON_FORMAT: &str = "openwyzesense-nv-json";
 pub const MAX_DEBOUNCE_MS: u32 = 5000;
 
@@ -400,7 +398,7 @@ pub fn export(page: &[u8]) -> NvDoc {
         if let Some(j) = items.get(&(ITEM_JOIN, 0)) {
             let f = |k: usize| if j.len() >= k + 2 { u16le(&j[k..]) } else { 0 };
             let (p, c, s) = (f(2), f(4), f(6));
-            if j.len() != 12 || p == 0 || p == 0xFFFF || p == HOUSE_PAN || !(0x0001..=0xFFFD).contains(&s) {
+            if j.len() != 12 || p == 0 || p == 0xFFFF || !(0x0001..=0xFFFD).contains(&s) {
                 drop(&mut out, "join".into(), format!("PAN {} / short address {} not usable", h16(p), h16(s)));
             } else {
                 out.join = Some(Join {
@@ -441,7 +439,7 @@ fn bad(msg: String) -> Error {
     Error::Nv(msg)
 }
 
-/// The JSON model -> a page in our format, every value checked (a join to the house PAN: never).
+/// The JSON model -> a page in our format, every value checked.
 pub fn import(doc: &NvDoc) -> Result<Vec<u8>, Error> {
     if doc.format != JSON_FORMAT || doc.version != 1 {
         return Err(bad("not an openwyzesense-nv-json version 1 document".into()));
@@ -485,9 +483,6 @@ pub fn import(doc: &NvDoc) -> Result<Vec<u8>, Error> {
     if let Some(j) = &doc.join {
         let (pan, coord, short) = (parse_hex(&j.pan)?, parse_hex(&j.coord)?, parse_hex(&j.short)?);
         let (kind, feat) = (parse_hex(&j.kind)?, parse_hex(&j.gw_features)?);
-        if pan == HOUSE_PAN as u64 {
-            return Err(bad("a join to the house network (PAN 845B): never".into()));
-        }
         if pan == 0 || pan >= 0xFFFF {
             return Err(bad(format!("join PAN {} not usable", j.pan)));
         }

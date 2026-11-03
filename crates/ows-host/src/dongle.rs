@@ -368,6 +368,29 @@ pub fn inquiry<T: HidTransport + ?Sized>(t: &mut T) -> Result<bool, Error> {
     Ok(false)
 }
 
+/// Get Version (0x5316) as one HID report: an async command, which the CC1310 answers itself (0x5317), unlike the
+/// sync ones (Inquiry 0x4327 included) that the dongle's CH554 answers on its own (FACTS.md §9).
+pub const GET_VERSION: [u8; 8] = [0x07, 0xAA, 0x55, 0x53, 0x03, 0x16, 0x01, 0x6B];
+
+/// Whether the dongle's radio chip (the CC1310) runs firmware that answers the host: Get Version gets its 0x5317.
+/// [`inquiry`] alone cannot tell, since the CH554 answers that one even when the CC1310 is silent (#70). Stock
+/// firmware answers too, so this holds after a restore as well.
+pub fn radio_answers<T: HidTransport + ?Sized>(t: &mut T) -> Result<bool, Error> {
+    t.write(&GET_VERSION)?;
+    let mut buf = [0u8; 64];
+    for _ in 0..4 {
+        let n = match t.read(&mut buf, std::time::Duration::from_millis(500)) {
+            Ok(n) => n,
+            Err(e) if e.kind() == std::io::ErrorKind::TimedOut => return Ok(false),
+            Err(e) => return Err(e.into()),
+        };
+        if buf[..n].windows(5).any(|w| w[..3] == [0x55, 0xAA, 0x53] && w[4] == 0x17) {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
 /// "YYYY-MM-DD HH:MM:SS +0000" without a date crate.
 fn utc_now() -> String {
     let secs = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs()) as i64;

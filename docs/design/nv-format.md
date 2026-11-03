@@ -85,4 +85,4 @@ unrecognised: its units are wiped when flashed (the user's decision 4 on #61). V
 - sensors: an ASCII MAC of 8 hex digits (not all zeros), a short address 0001-FFFD, the network's PAN; one per MAC
   and one per short address (the lowest sub-ID kept; a stock table can hold two on one address, #12, and the other
   is listed under `dropped` with its `mac`, to be re-paired after the migration: the user's decision, #90);
-- join: PAN not 0000 / FFFF / 845B (the house network: never), addresses as above.
+- join: PAN not 0000 / FFFF, addresses as above (any other PAN, 845B included: #70).

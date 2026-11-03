@@ -112,7 +112,7 @@ keep reporting meanwhile; the gateway serves them between blocks.
 - Nothing over the air writes page 0 (boot selector), 30 (NV) or 31 (CCFG and the sensor's MAC).
 - No erase or write when the battery is weak under load (the zero-MAC failure mode is a flash write at low battery).
 - The new image runs only after its CRC32 checks out; it stays on probation until it confirms itself.
-- Off unless the host enables it; never on the house network during development (test PAN only).
+- Off unless the host enables it; tested on test PANs only.
 
 ## Steps
 
