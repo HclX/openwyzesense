@@ -1,4 +1,4 @@
-// The app's side of the two-slot boot (docs/ota.md, common/boot_slot.h): which slot it runs from, using up an
+// The app's side of the two-slot boot (docs/design/ota.md, common/boot_slot.h): which slot it runs from, using up an
 // attempt while on probation, and confirming itself once it has run well.
 #pragma once
 
@@ -18,7 +18,7 @@ bool boot_running_confirmed(void);
 // The running image works: no more attempts counted (a no-op if confirmed already, or not a slot image).
 bool boot_running_confirm(void);
 
-// --- an OTA update (docs/ota.md): into the slot not running ---
+// --- an OTA update (docs/design/ota.md): into the slot not running ---
 
 // The running image's version (its slot header); 0 if not a slot image
 uint32_t boot_running_version(void);

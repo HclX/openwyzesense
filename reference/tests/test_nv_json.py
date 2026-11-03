@@ -1,5 +1,5 @@
-# Our NV page format and the JSON the flashing tools carry data in (docs/nv-format.md, issue #61): encode / decode,
-# a write cut at every byte is ignored rather than misread, every stock page in ground_truth exports as FACTS.md
+# Our NV page format and the JSON the flashing tools carry data in (docs/design/nv-format.md, issue #61): encode /
+# decode, a write cut at every byte is ignored rather than misread, every stock page in ground_truth exports as FACTS.md
 # describes it (the v1.4 dongle's two shared addresses and its zero MAC dropped), and import(export()) keeps it.
 import json
 import os

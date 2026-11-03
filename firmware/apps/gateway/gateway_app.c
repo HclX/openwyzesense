@@ -102,7 +102,7 @@ static void init_gateway(gateway_app_t *a)
     a->gw.usb_hid = board_usb_hid();
     a->gw.build_info = &build_info;  // what OWS_SUB_BUILD_INFO answers (#76)
     a->gw.build_info_len = sizeof build_info;
-    // the network and sensor table from the NV page (our format: docs/nv-format.md; a stock dongle's is carried over
+    // the network and sensor table from the NV page (our format: docs/design/nv-format.md; a stock dongle's is carried over
     // by tools/nv_json.py or tools/gwsync.py); else ours, saved there.
     // A build-time identity (OWS_PAN) wins over the page.
     bool have = nv_page_open(&a->nv) && gw_load(&a->gw, &a->nv);

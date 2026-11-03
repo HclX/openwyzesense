@@ -1,4 +1,4 @@
-// The battery rig (#95, docs/low-battery.md §3, Option B): an ESP32 GPIO is the contact board's only supply, with the
+// The battery rig (#95, docs/design/low-battery.md §3, Option B): an ESP32 GPIO is the contact board's only supply, with the
 // board's own decoupling capacitance (C) as the battery. The rig reads the supply voltage; when it falls to v_low it
 // gives short pulses until v_high, and lets it fall again. While the sensor sleeps, the fall between two refills is
 // slow and clean: sleep current = C × fall / time, from voltage readings alone (each end the mean of RIG_AVG readings,

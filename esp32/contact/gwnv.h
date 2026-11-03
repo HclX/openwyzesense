@@ -1,5 +1,5 @@
 // Runtime gateway network & sensor-table migration over the host UART link (OWS_SUB_NETWORK + OWS_SUB_NV_IMPORT,
-// docs/DESIGN.md §5.2.2, TASK-14). Portable C99 (zero OS/HW headers), shared across ESP-IDF, ESP8266, and host tests.
+// docs/design/DESIGN.md §5.2.2, TASK-14). Portable C99 (zero OS/HW headers), shared across ESP-IDF, ESP8266, and host tests.
 #pragma once
 
 #include <stdbool.h>

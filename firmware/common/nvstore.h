@@ -1,4 +1,4 @@
-// Records in one flash page, in our own format (docs/nv-format.md, issue #61; reference/wyzesense_ref/nvows.py):
+// Records in one flash page, in our own format (docs/design/nv-format.md, issue #61; reference/wyzesense_ref/nvows.py):
 // the page starts with "OWNV" and the format version; each record is a 12-byte header {A5, state (FF live, 00
 // deleted), item, sub-ID, length, CRC-32 of item..data} then its data, read forward. A record is replaced by
 // appending the new one and clearing the old one's state (flash clears bits without an erase); a full page is

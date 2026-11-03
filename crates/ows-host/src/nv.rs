@@ -1,4 +1,4 @@
-//! The NV page (flash page 30) in JSON (#61, docs/nv-format.md): a stock dongle's page or one of ours exported to
+//! The NV page (flash page 30) in JSON (#61, docs/design/nv-format.md): a stock dongle's page or one of ours exported to
 //! the validated JSON model, and that model imported into our format. A port of `reference/wyzesense_ref/nvows.py`
 //! and `nvpage.py` (and `tools/nv_json.py`'s choices); the golden vectors in `reference/tests/vectors/nv/golden`
 //! hold both to the same output, byte for byte.

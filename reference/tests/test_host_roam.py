@@ -1,4 +1,4 @@
-# Roaming (#90, GW_FLAG_ROAM, docs/roaming.md) with the real binaries: two ows-host-gateway processes that share
+# Roaming (#90, GW_FLAG_ROAM, docs/design/roaming.md) with the real binaries: two ows-host-gateway processes that share
 # one network identity, and an ows-host-sensor, on one air (local UDP). A small host here plays what
 # wyzesense2mqtt-rs will do (#96): pairs the sensor on one gateway, sees the other one overhear it, then hands it
 # over (drop at the old owner, add at the new one) and checks that the new owner reports it and the old one only

@@ -4,7 +4,7 @@
     uv run tools/wiring_svg.py [--out docs/img]
 
 The pads sit where they are in docs/img/contact_v1.jpg (pixel positions below, scaled down), in the photo's colours,
-so a diagram and the photo read the same way. Pin assignments: docs/v1-contact.md (LaunchPad) and esp32/README.md
+so a diagram and the photo read the same way. Pin assignments: docs/design/v1-contact.md (LaunchPad) and esp32/README.md
 (relays). Each SVG has its own light background, so it reads on GitHub's light and dark themes alike.
 """
 

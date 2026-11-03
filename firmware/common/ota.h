@@ -1,4 +1,4 @@
-// OTA updates between our gateway and our sensors (docs/ota.md): the messages, ours only. They travel as all
+// OTA updates between our gateway and our sensors (docs/design/ota.md): the messages, ours only. They travel as all
 // application messages do (AES-128-ECB, the existing poll / pending-frame mechanism). Nothing changes in what a stock
 // peer sees: our sensor joins exactly as before, and our gateway offers an update only with GW_FLAG_OTA on and only
 // to the sensor(s) its host stages (up to GW_MAX_OTA_TARGETS MACs or wildcard "********"). A sensor takes an offer

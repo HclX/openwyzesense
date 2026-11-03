@@ -1,7 +1,8 @@
-# The two-slot boot (docs/ota.md) on the LaunchPad: the boot selector in page 0, the sensor app in slot A (version N)
-# and slot B (N + 1), unjoined images (preset fw: an unjoined sensor never transmits). The newer slot runs on probation
-# and uses up an attempt per boot; after three without confirming, the selector goes back to A; an image that runs 60 s
-# confirms itself; a slot with a bad byte is never chosen. Header words read over JTAG. Opt in with OWS_HW=1.
+# The two-slot boot (docs/design/ota.md) on the LaunchPad: the boot selector in page 0, the sensor app in slot A
+# (version N) and slot B (N + 1), unjoined images (preset fw: an unjoined sensor never transmits). The newer slot runs
+# on probation and uses up an attempt per boot; after three without confirming, the selector goes back to A; an image
+# that runs 60 s confirms itself; a slot with a bad byte is never chosen. Header words read over JTAG. Opt in with
+# OWS_HW=1.
 import contextlib
 import os
 import pathlib

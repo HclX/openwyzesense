@@ -255,7 +255,7 @@ function(ows_product name app board)
         COMMAND "${CMAKE_OBJCOPY}" -O binary -R .ccfg ${name}.elf ${name}-app.bin
         BYPRODUCTS ${name}.hex ${name}.bin ${name}-app.bin)
     if(P_SLOTS)
-        # OTA slot images (docs/ota.md): the same app linked for slot A and slot B, no CCFG, header filled in after
+        # OTA slot images (docs/design/ota.md): the same app linked for slot A and slot B, no CCFG, header filled in after
         ows_board_name(${board} board_name)
         foreach(slot a b)
             set(sname ${name}-slot-${slot})

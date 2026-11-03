@@ -1,4 +1,4 @@
-/* CC1310F128, an image for OTA slot A (docs/ota.md, common/boot_slot.h): flash 0x01000 + 56 KB, its header
+/* CC1310F128, an image for OTA slot A (docs/design/ota.md, common/boot_slot.h): flash 0x01000 + 56 KB, its header
    first, the vector table 0x100 in; no CCFG (the chip's stays). The boot selector in page 0 starts it. */
 
 STACK_SIZE = 0x1800;

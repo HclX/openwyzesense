@@ -1,4 +1,4 @@
-# An OTA update over the air (docs/ota.md): our sensor on the LaunchPad (preset fw: the boot selector in page 0,
+# An OTA update over the air (docs/design/ota.md): our sensor on the LaunchPad (preset fw: the boot selector in page 0,
 # sensor-launchpad in slot A as built, version N) is paired with our gateway on the spare dongle (77A85A36,
 # /dev/hidraw6, PAN 0x65FE); the host stages version N + 1 (both builds, as tools/slot_image.py makes them) for the
 # sensor's MAC, and a short press of its button (its OTA window, a check-in) gets it going; the sensor takes the

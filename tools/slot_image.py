@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Fill in the header of an OTA slot image (docs/ota.md, firmware/common/boot_slot.h): the raw binary of a slot build
-(starting at the slot base: 256 bytes of 0xFF, then the vector table) -> the image a slot holds.
+"""Fill in the header of an OTA slot image (docs/design/ota.md, firmware/common/boot_slot.h): the raw binary of a slot
+build (starting at the slot base: 256 bytes of 0xFF, then the vector table) -> the image a slot holds.
 
     slot_image.py RAW.bin OUT.img --board-name "LAUNCHXL-CC1310" --version 123
 """

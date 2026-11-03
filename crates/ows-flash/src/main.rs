@@ -28,7 +28,7 @@ const USAGE: &str = "ows-flash (OpenWyzeSense) -- the Wyze USB dongle through it
   ows-flash nv export PAGE_OR_FLASH.bin [-o NV.json]   a page (4 KB, or page 30 of a 128 KB dump) to JSON
   ows-flash nv import NV.json -o PAGE.bin              JSON to a page in our format
 
-v1 contact / motion units, on a LaunchPad's XDS110 over 2-pin cJTAG (docs/v1-contact.md), with TI UniFlash:
+v1 contact / motion units, on a LaunchPad's XDS110 over 2-pin cJTAG (docs/design/v1-contact.md), with TI UniFlash:
 
   ows-flash fetch-uniflash [DIR]                       TI UniFlash from TI (pinned version, SHA-256 checked; ~380 MB;
                                                        TI's license), into DIR or ~/.local/share/openwyzesense/uniflash

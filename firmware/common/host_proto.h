@@ -35,7 +35,7 @@ enum {
     HOST_DELETE_ALL = 0x533F,
     HOST_PLAY_CHIME = 0x5370,
     HOST_ACK = 0x53FF,
-    // OpenWyzeSense extensions (docs/DESIGN.md §5.2.2): multiplexed under 0x53F0 (host -> gw) / 0x53F1 (gw -> host)
+    // OpenWyzeSense extensions (docs/design/DESIGN.md §5.2.2): multiplexed under 0x53F0 (host -> gw) / 0x53F1 (gw -> host)
     // with payload[0] = OWS_SUB_*, every packet <= 56 B payload (<= 63 B frame) for the dongle's CH554 USB-HID.
     HOST_OWS_CMD = 0x53F0,
     HOST_OWS_RSP = 0x53F1,

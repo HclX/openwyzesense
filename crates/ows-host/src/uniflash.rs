@@ -1,5 +1,5 @@
 //! A CC1310 on 2-pin cJTAG (TMS, TCK and RESET_N from a LaunchPad's XDS110: a Wyze v1 contact or motion sensor,
-//! docs/v1-contact.md) through TI UniFlash's DSLite, which OpenOCD cannot replace there. A port of
+//! docs/design/v1-contact.md) through TI UniFlash's DSLite, which OpenOCD cannot replace there. A port of
 //! `tools/uniflash.py` (#50) with its guards:
 //!
 //! - flashing needs the unit's backup, checked against the chip: the same CCFG MAC, the CCFG the same but BL_CONFIG;

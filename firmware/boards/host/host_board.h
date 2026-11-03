@@ -95,7 +95,7 @@ typedef struct {
     unsigned ccfg_rewrites;             // ccfg_restore() erases of page 31
     bool ccfg_fail;                     // the next rewrite fails (verify)
 
-    // The two-slot boot (hal/boot.h, docs/ota.md): flash pages 0-28. With slots set (before host_boot), the device
+    // The two-slot boot (hal/boot.h, docs/design/ota.md): flash pages 0-28. With slots set (before host_boot), the device
     // boots as the boot selector decides (common/boot_slot.c), and does not run at all if no slot is usable; else
     // it is an image at 0 (boot_running_slot() -1), as a device without the selector.
     bool slots;

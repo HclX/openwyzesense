@@ -29,7 +29,7 @@ The tag `vX.Y.Z` is the crate's version, and its GitHub release holds the firmwa
 - `Progress { phase, done, total }`: `Enter`, `Backup`, `Check`, `Erase` (pages), `Write`, `Verify`, `Nv` (bytes),
   `Reset`, `Done`.
 - `nv::export(page) -> NvDoc`, `nv::import(&doc) -> page`, `NvDoc::{to_json, from_json, summary}`: page 30 (stock or
-  ours) and the JSON model (`docs/nv-format.md`).
+  ours) and the JSON model (`docs/design/nv-format.md`).
 - `image::check_product(image, "gateway-dongle")`, `image::build_info(image)`: the build info block (product, app,
   board, version, image ID).
 - `ota::Ota`: a sensor OTA update through our gateway (#47), as a state machine with no I/O, for a program with its

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """A CC1310 on 2-pin cJTAG (TMS, TCK and RESET_N from a LaunchPad's XDS110: a Wyze v1 contact or motion sensor,
-docs/v1-contact.md) through TI UniFlash's DSLite, which OpenOCD cannot replace there (its XDS110 driver does 4-pin
-JTAG only).
+docs/design/v1-contact.md) through TI UniFlash's DSLite, which OpenOCD cannot replace there (its XDS110 driver does
+4-pin JTAG only).
 
     uv run python tools/uniflash.py provision --sensor [--board wyze_contact_v1|wyze_motion_v1] [--nv CHOICE]
     uv run python tools/uniflash.py provision --gateway [--nv CHOICE]   # backup -> gateway-contact-v1-app.bin -> SBL w
@@ -39,7 +39,7 @@ CLEAN_RESET = ['-s', 'KeepDebugPoweredAtDisconnect=false', '-r', '2']
 
 def dslite(*args, timeout=300):
     if not DSLITE.exists():
-        sys.exit(f'{DSLITE} missing: install TI UniFlash into .toolchain/uniflash (docs/v1-contact.md)')
+        sys.exit(f'{DSLITE} missing: install TI UniFlash into .toolchain/uniflash (docs/design/v1-contact.md)')
     r = subprocess.run([str(DSLITE), *args], capture_output=True, text=True, timeout=timeout)
     out = r.stdout + r.stderr
     if r.returncode or 'Failed' in out or 'fatal' in out:

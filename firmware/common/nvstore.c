@@ -4,7 +4,7 @@
 
 #include "mac154.h"
 
-// docs/nv-format.md
+// docs/design/nv-format.md
 #define PAGE_HDR 8
 #define REC      12
 #define MARKER   0xA5

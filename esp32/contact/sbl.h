@@ -70,6 +70,6 @@ uint32_t sbl_crc32_update(uint32_t c, const uint8_t *p, size_t n);
 // Page 30 <- page (4096 bytes: our NV format, or all FF), verified; page 31 checked unchanged.
 bool sbl_write_nv(sbl_t *s, const uint8_t *page);
 
-// The OTA layout (docs/ota.md) in out (SBL_SLOTS_LEN bytes): the boot selector at 0, slot A at 0x1000, the rest FF.
+// The OTA layout (docs/design/ota.md) in out (SBL_SLOTS_LEN bytes): the boot selector at 0, slot A at 0x1000, the rest FF.
 // False if the selector is over a page or the slot image is not one (magic OWSI) or too long.
 bool sbl_slots_image(uint8_t *out, const uint8_t *boot, size_t boot_len, const uint8_t *slot, size_t slot_len);

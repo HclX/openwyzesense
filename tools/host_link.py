@@ -11,10 +11,11 @@ time sync, prints the sensor list, then every packet the gateway sends, as it co
 on for up to N seconds, pairing the first sensor that shows up as wyzesense2mqtt does (R1 with its token, scanning off,
 verify).
 --log: every byte both ways, as {ts_ms, dir, proto_hex} lines (the ground_truth/host/ format).
---ota: an OTA update for our sensor MAC (docs/ota.md) through our gateway: turns GW_FLAG_OTA on, offers the two builds
-(tools/slot_image.py images, linked for slot A and slot B), serves the blocks the sensor asks for, prints its result,
-for up to --seconds (default 360, extended while blocks advance). The sensor must be paired already (a 3 s press; or
---pair N first), and takes the update within 5 minutes of a short press of its button: press it once this says so.
+--ota: an OTA update for our sensor MAC (docs/design/ota.md) through our gateway: turns GW_FLAG_OTA on, offers the two
+builds (tools/slot_image.py images, linked for slot A and slot B), serves the blocks the sensor asks for, prints its
+result, for up to --seconds (default 360, extended while blocks advance). The sensor must be paired already (a 3 s
+press; or --pair N first), and takes the update within 5 minutes of a short press of its button: press it once this
+says so.
 As a library: HostLink(port).handshake(), .call(cmd, payload), .packets(seconds).
 """
 

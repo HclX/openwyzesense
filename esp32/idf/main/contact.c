@@ -47,7 +47,7 @@ void contact_init(void)
     // leaves it floating, and noise came in as bytes (00 ff 00 fe ..., 2026-10-25)
     gpio_pullup_en(CONFIG_OWS_CONTACT_UART_RX);
     if (settings.rig) {
-        // the battery rig (#95, docs/low-battery.md §3.1): the contact's supply sits below 3.3 V and is measured, so
+        // the battery rig (#95, docs/design/low-battery.md §3.1): the contact's supply sits below 3.3 V and is measured, so
         // nothing may feed it through its pins: no pull-up on the line from T, and the line to R open-drain (the
         // contact pulls its R pin up itself, to its own supply)
         gpio_pullup_dis(CONFIG_OWS_CONTACT_UART_RX);

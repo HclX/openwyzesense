@@ -38,7 +38,7 @@ uniflash() { # TI's installer, unattended, into $DEST/uniflash; marked with its 
         echo "uniflash: $dir"
         return
     fi
-    # an install made by hand (docs/v1-contact.md) of the same version: keep it, mark it
+    # an install made by hand (docs/design/v1-contact.md) of the same version: keep it, mark it
     if [[ -f $dir/uniflash_install.log ]] && grep -q "BuildID: ${UNIFLASH_VERSION%.*} ${UNIFLASH_VERSION##*.}" "$dir/uniflash_install.log"; then
         echo "$UNIFLASH_VERSION" > "$stamp"
     else

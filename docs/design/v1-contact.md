@@ -7,9 +7,9 @@ we fell into with the first. Facts here come from FACTS.md (§5) with their evid
 
 ## The board
 
-![The v1 contact board, pad side, each pad circled in its signal's colour](img/contact_v1.jpg)
+![The v1 contact board, pad side, each pad circled in its signal's colour](../../img/contact_v1.jpg)
 
-(The user's photo, 2026-11-03; the pad table with its colours: [guide/pads.md](guide/pads.md).)
+(The user's photo, 2026-11-03; the pad table with its colours: [guide/pads.md](../../guide/pads.md).)
 
 - MCU: **CC1310F128, 5x5 package (RHB, 32 pins)**. Its CCFG keeps the sensor's MAC as ASCII at 0x1FFCC; the ROM
   bootloader is **disabled** in it (BL_CONFIG 0x00FE0100), so JTAG is the only way in.
@@ -149,7 +149,7 @@ Pull TDO and TDI too (2-pin JTAG does not use them; the LaunchPad's chip would s
 11. **Standby was not the problem** (we thought so for a while): a CC1310 in standby still answers the debugger
     (tested on the LaunchPad, FACTS §5). Our battery builds still stay awake for 10 s after power-up (cheap insurance).
 12. **The LED stayed on** with our firmware (the "OK" LED): fine on the bench, a drain on a coin cell. Since #4 and
-    `TASK-12` (`docs/DESIGN.md` §9.1), a battery board (`board_battery()`, from `BOARD_LOW_POWER`) follows stock LED
+    `TASK-12` (`docs/design/DESIGN.md` §9.1), a battery board (`board_battery()`, from `BOARD_LOW_POWER`) follows stock LED
     patterns (`1 × 250 ms` normal boot, `3 × 250 ms` probation boot, `3 × 400 ms` at `3.04 s` while held and on join,
     `3 × 100 ms` join fail, `1 × 100 ms` short press, and **LED OFF** on normal reed/heartbeat events).
 13. **Its first console line is garbage** (the line idles while the chip starts): send a newline first.
@@ -196,7 +196,7 @@ then reset it with S or the power (or the `~15 s` hardware `WDT` after software 
 
 - A dead unit's **CCFG MAC is intact**; it sends MAC 0 because its NV page (30, `0x1E000`) lost its records—including
   `NVOCTP` item `(6, 8, 0)`—when unconditional boot-counter flash writes during ~250 dying-CR2032 brownout loops
-  triggered a Page 30 compaction erase mid-brownout (root cause solved in [`docs/DESIGN.md` §3.4](DESIGN.md#34-definitive-root-cause-of-the-stock-v1-zero-mac-bug) and [`docs/known-issues.md` §1](known-issues.md); our firmware reads CCFG `0x1FFCC` directly and never writes flash during normal operation).
+  triggered a Page 30 compaction erase mid-brownout (root cause solved in [`docs/design/DESIGN.md` §3.4](DESIGN.md#34-definitive-root-cause-of-the-stock-v1-zero-mac-bug) and [`docs/known-issues.md` §1](../../known-issues.md); our firmware reads CCFG `0x1FFCC` directly and never writes flash during normal operation).
 - Stock radio settings as the dongle's (txPower 0xA73F), but the CCFG does not force VDDR HH; the DC/DC is on.
 
 ## Units

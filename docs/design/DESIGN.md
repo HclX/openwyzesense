@@ -3,13 +3,13 @@
 **Status:** Authoritative Design Specification  
 **Scope:** Sensor Firmware, Gateway Firmware, RF & Host Protocols, Flash/NV/OTA Architecture, ESP32 IP Relay, and Tooling  
 **Related Documents:**
-- [`tasks.md`](../tasks.md) — Actionable engineering backlog (verified defects, design-implementation alignment tickets, feature requests, and hardware research tasks with dependencies)
-- [`docs/FACTS.md`](FACTS.md) — Protocol reference tables and hardware facts with primary evidence
-- [`docs/stock-re/`](stock-re/README.md) — Reconstructed C source code of stock sensor (`contact_v1`, `motion_v1`) and gateway (`gateway_v1.8`) firmware with flash/SRAM addresses
-- [`docs/known-issues.md`](known-issues.md) — Root-cause analysis of stock firmware bugs
-- [`docs/project-review-issues.md`](project-review-issues.md) — Tracked implementation bugs and UX/DX gaps in the current codebase
-- [`docs/guide/`](guide/README.md) — End-user guide by level, from release files only (dongle, v1 contact revive / flash, Wi-Fi gateway, wyzesense2mqtt-rs)
-- [`docs/development.md`](development.md) — Development environment: toolchain, builds, tests, HIL matrix, repository tools
+- [`docs/TODO.md`](../../TODO.md) — The one task list: what is open, including the bench checklist
+- [`docs/FACTS.md`](../../FACTS.md) — Protocol reference tables and hardware facts with primary evidence
+- [`docs/known-issues.md`](../../known-issues.md) — Root-cause analysis of stock firmware bugs
+- [`docs/stock-re/`](../../stock-re/README.md) — Reconstructed C source code of stock sensor (`contact_v1`, `motion_v1`) and gateway (`gateway_v1.8`) firmware with flash/SRAM addresses
+- In this folder: [`requirements.md`](requirements.md) (requirements and the user's decisions), [`nv-format.md`](nv-format.md) (flash page 30), [`ota.md`](ota.md) (sensor updates), [`roaming.md`](roaming.md) (several gateways, one network), [`low-battery.md`](low-battery.md) (battery reports), [`v1-contact.md`](v1-contact.md) (the v1 contact board on the bench)
+- [`docs/guide/`](../../guide/README.md) — End-user guide by level, from release files only
+- [`docs/development.md`](../../development.md) — Development environment: toolchain, builds, tests, HIL matrix, bench hardware, repository tools
 
 ---
 
@@ -17,8 +17,8 @@
 
 ### 1.1 Problem Statement
 Wyze discontinued the Wyze Sense v1 and v2 product lines, leaving existing hardware unsupported and vulnerable to critical stock firmware bugs:
-1. **The Stock v1 "Zero-MAC" Brick Bug ([`docs/known-issues.md` §1](known-issues.md), [`docs/FACTS.md` §5](FACTS.md))**: Stock v1 sensors store their runtime identity—the 16-byte XXTEA key and 8-byte ASCII MAC—in TI `NVOCTP` item `(sys=6, item=8, sub=0)` on **Flash Page 30 (`0x1E000–0x1EFFF`)**; the duplicate 8-byte ASCII MAC in CCFG (`0x1FFCC`, Page 31) is written once on the factory line and **never read back** during normal boot (`Ssf_readMacAndKey()` reads only NV item `8`). Worse, `Sensor_init()` unconditionally increments and writes NV item `(6, 6, 0)` (boot counter) and `(6, 4, 0)` (`seq + 25`) to Page 30 *before* `Ssf_checkBootBattery()` checks the unloaded coin-cell voltage (`bat_v32 <= 0x53`, i.e., `2.59 V`). As a CR2032 ages, ~250 brownout boot loops fill the 4 KB Page 30 log until `NVOCTP_compactPage()` erases `0x1E000` (`FlashSectorErase`) and browns out mid-erase—permanently wiping NV item `8` (and network item `1`) so the sensor forgets its pairing and transmits an all-zero MAC (`00:00:00:00:00:00:00:00`) forever, even with a fresh battery.
-2. **Stock USB Dongle Limitations ([`docs/known-issues.md` §2–§4](known-issues.md))**:
+1. **The Stock v1 "Zero-MAC" Brick Bug ([`docs/known-issues.md` §1](../../known-issues.md), [`docs/FACTS.md` §5](../../FACTS.md))**: Stock v1 sensors store their runtime identity—the 16-byte XXTEA key and 8-byte ASCII MAC—in TI `NVOCTP` item `(sys=6, item=8, sub=0)` on **Flash Page 30 (`0x1E000–0x1EFFF`)**; the duplicate 8-byte ASCII MAC in CCFG (`0x1FFCC`, Page 31) is written once on the factory line and **never read back** during normal boot (`Ssf_readMacAndKey()` reads only NV item `8`). Worse, `Sensor_init()` unconditionally increments and writes NV item `(6, 6, 0)` (boot counter) and `(6, 4, 0)` (`seq + 25`) to Page 30 *before* `Ssf_checkBootBattery()` checks the unloaded coin-cell voltage (`bat_v32 <= 0x53`, i.e., `2.59 V`). As a CR2032 ages, ~250 brownout boot loops fill the 4 KB Page 30 log until `NVOCTP_compactPage()` erases `0x1E000` (`FlashSectorErase`) and browns out mid-erase—permanently wiping NV item `8` (and network item `1`) so the sensor forgets its pairing and transmits an all-zero MAC (`00:00:00:00:00:00:00:00`) forever, even with a fresh battery.
+2. **Stock USB Dongle Limitations ([`docs/known-issues.md` §2–§4](../../known-issues.md))**:
    - **Single-point USB placement**: The stock dongle must plug directly into a host USB port (originally the back of a Wyze Cam), limiting RF coverage across larger homes.
    - **NV Sensor Table Defects**: Deleting sensors via `0x5325` (`DeleteSensor`) scans only the first `num_devices` contiguous NV `subID`s (`0 .. count-1`), orphaning higher slots when earlier slots are deleted (`known-issues.md` §2).
    - **Fixed 8-Second Downlink Window & Broken >32 B AES**: Stock gateways expire buffered indirect downlink frames (`ApiMac_sec_t` / MAC indirect queue) after ~`8 s` and contain a broken `> 32 B` branch in `AES_decryptBuffer` (`known-issues.md` §3).
@@ -132,7 +132,7 @@ The C/C++ build system is organized around **three** clean CMake presets—one f
 ## 3. Hardware Platform & Lessons from Stock Firmware Reverse Engineering
 
 ### 3.1 Board Pinout & Signal Map
-Reverse-engineering of the stock firmware dumps (`contact_v1`, `motion_v1`, `gateway_v1.8` in [`docs/stock-re/`](stock-re/README.md) and [`docs/FACTS.md` §5](FACTS.md))—including `BoardGpioInitTable` in `.rodata` and the LZSS-compressed `.data` initializer tables unpacked by `__TI_decompress_lzss` at startup—established the complete hardware pin mapping across all devices:
+Reverse-engineering of the stock firmware dumps (`contact_v1`, `motion_v1`, `gateway_v1.8` in [`docs/stock-re/`](../../stock-re/README.md) and [`docs/FACTS.md` §5](../../FACTS.md))—including `BoardGpioInitTable` in `.rodata` and the LZSS-compressed `.data` initializer tables unpacked by `__TI_decompress_lzss` at startup—established the complete hardware pin mapping across all devices:
 
 | Function | `wyze_contact_v1` (5×5 RHB) | `wyze_motion_v1` (5×5 RHB) | `wyze_dongle` (5×5 RHB) | `launchxl_cc1310` (7×7 RGZ) | Notes |
 |---|---|---|---|---|---|
@@ -166,7 +166,7 @@ In stock sensor firmware (`contact_v1` `BoardGpioInitTable` at `0x1532C`, `motio
 | **Firmware Upgradability** | Sensor: None (`BL_CONFIG` disabled, no OTA). Gateway: USB HID `0x4312` enters CH554/ROM SBL | Sensor: Dual-slot A/B OTA (`0xC0–0xC3`) with CRC-32 + 3-boot probation rollback, plus ROM SBL on `W` pad. Gateway: SBL + `OWSB` auto-update |
 
 ### 3.4 Definitive Root Cause of the Stock v1 "Zero-MAC" Bug
-Disassembly of `contact_v1` and `motion_v1` ([`docs/stock-re/stock_sensor.c`](stock-re/stock_sensor.c), [`docs/known-issues.md` §1](known-issues.md)) proved how the infamous v1 bricking bug actually works:
+Disassembly of `contact_v1` and `motion_v1` ([`docs/stock-re/stock_sensor.c`](../../stock-re/stock_sensor.c), [`docs/known-issues.md` §1](../../known-issues.md)) proved how the infamous v1 bricking bug actually works:
 1. **CCFG (`0x1FFCC`, Page 31) is write-only in stock firmware and never erased**: During factory provisioning (`W` held low), command `0x08` writes the 8-byte ASCII MAC to CCFG `0x1FFCC` (note: `0x1FFD8` in CCFG is `CCFG_O_BL_CONFIG`, *not* an XXTEA key), while command `0x0A` writes `{xxtea_key[16], mac[8], valid=1}` into **Page 30 (`0x1E000`) `NVOCTP` item `(6, 8, 0)`**. During normal operation, `Ssf_readMacAndKey()` (`0x11C50` / `0x11EC8`) reads the MAC and XXTEA key **exclusively from Page 30 NV item `8`** and has no fallback to CCFG `0x1FFCC`. Every "dead" Zero-MAC unit inspected (`777B42DF`, etc.) still has its original ASCII MAC intact at `0x1FFCC` while its Page 30 (`0x1E000`) is blank or freshly re-initialized without item `8`.
 2. **Unconditional NV Flash Writes Before the Boot Battery Check**:
    - In `Sensor_init()`, the firmware calls `Ssf_incrementBootCounter()` (writing NV item `(6, 6, 0)`) and updates NV item `(6, 4, 0)` (`seq + 25`) **before** `Ssf_checkBootBattery()` checks whether `bat_v32 <= 0x53` (`2.59 V`).
@@ -181,7 +181,7 @@ Disassembly of `contact_v1` and `motion_v1` ([`docs/stock-re/stock_sensor.c`](st
 ## 4. RF Protocol & Cryptography Design (906.8 MHz)
 
 ### 4.1 Physical Layer (PHY) & Framing
-All devices communicate on a single sub-GHz channel using **TI SimpleLink Long Range Mode 2 (`SWRA642`)** on the CC1310's proprietary + 802.15.4g radio core (`CMD_PROP_RADIO_DIV_SETUP` + `rf_patch_mce_sl_longrange` + `rf_patch_rfe_sl_longrange`, [`docs/FACTS.md` §1–§2](FACTS.md), [`firmware/soc/cc13x0/radio.c`](../firmware/soc/cc13x0/radio.c)):
+All devices communicate on a single sub-GHz channel using **TI SimpleLink Long Range Mode 2 (`SWRA642`)** on the CC1310's proprietary + 802.15.4g radio core (`CMD_PROP_RADIO_DIV_SETUP` + `rf_patch_mce_sl_longrange` + `rf_patch_rfe_sl_longrange`, [`docs/FACTS.md` §1–§2](../../FACTS.md), [`firmware/soc/cc13x0/radio.c`](../../../firmware/soc/cc13x0/radio.c)):
 
 | Parameter | Value | Evidence / Detail |
 |---|---|---|
@@ -205,7 +205,7 @@ Inside the PHR and FCS sits a standard IEEE 802.15.4-2006 MAC frame:
 - **Addressing Modes**:
   - `0` (`MAC_ADDR_NONE`): No PAN ID or address (used in ACKs and Beacon SrcPAN-less frames).
   - `2` (`MAC_ADDR_SHORT`): 2-byte PAN ID + 2-byte short address (little-endian).
-  - `3` (`MAC_ADDR_EXT`): 2-byte PAN ID + 8-byte extended address. During association, a sensor sends its **8-byte ASCII MAC in forward order** (e.g., `"77BD514D"` = `37 37 42 44 35 31 34 44`, [`docs/FACTS.md` §3](FACTS.md)).
+  - `3` (`MAC_ADDR_EXT`): 2-byte PAN ID + 8-byte extended address. During association, a sensor sends its **8-byte ASCII MAC in forward order** (e.g., `"77BD514D"` = `37 37 42 44 35 31 34 44`, [`docs/FACTS.md` §3](../../FACTS.md)).
   - Mode `1` (`0b01`) is reserved in IEEE 802.15.4 and must be rejected on parse (`TASK-03`).
 - **ACK & Indirect Data Polling (`Frame Pending`)**:
   - Sensors are sleepy end-devices whose receivers are off by default.
@@ -216,7 +216,7 @@ Inside the PHR and FCS sits a standard IEEE 802.15.4-2006 MAC frame:
 ### 4.3 Cryptography & Authentication (`firmware/common/wyze_app.c`)
 
 #### 4.3.1 AES-128-ECB Transport Encryption
-All application data frames (`0xA1–0xE8`, `0xC0–0xC3`, except unencrypted `0xA0` Wake) are encrypted in 16-byte blocks using **AES-128-ECB** with a single static 128-bit key—the NIST FIPS-197 Appendix B example key from TI's `CryptoCC26XX.h` (`contact_v1` SRAM `0x20001944`, `motion_v1` `0x20001988`, `gateway_v1.8` `0x200014E0`, [`docs/FACTS.md` §4](FACTS.md)):
+All application data frames (`0xA1–0xE8`, `0xC0–0xC3`, except unencrypted `0xA0` Wake) are encrypted in 16-byte blocks using **AES-128-ECB** with a single static 128-bit key—the NIST FIPS-197 Appendix B example key from TI's `CryptoCC26XX.h` (`contact_v1` SRAM `0x20001944`, `motion_v1` `0x20001988`, `gateway_v1.8` `0x200014E0`, [`docs/FACTS.md` §4](../../FACTS.md)):
 
 ```text
 AES-128 Key: 2B 7E 15 16 28 AE D2 A6 AB F7 15 88 09 CF 4F 3C
@@ -334,7 +334,7 @@ All traffic between the host (`wyzesense2mqtt-rs`, `host_link.py`, or an ESP32/E
 ### 5.2 Stock vs. OpenWyzeSense Host Commands
 
 #### 5.2.1 Stock Host Commands (`0x43xx` / `0x53xx`)
-These commands match the stock `gateway_v1.8` UART protocol ([`docs/stock-re/stock_gateway.c`](stock-re/stock_gateway.c), [`firmware/common/host_proto.h`](../firmware/common/host_proto.h)):
+These commands match the stock `gateway_v1.8` UART protocol ([`docs/stock-re/stock_gateway.c`](../../stock-re/stock_gateway.c), [`firmware/common/host_proto.h`](../../../firmware/common/host_proto.h)):
 
 | Cmd (Req → Rsp) | Type | Name | Purpose & OWS Behavior |
 |---|---|---|---|
@@ -437,7 +437,7 @@ Every linked firmware binary places a 116-byte `build_info_t` structure in secti
    - Once the sensor has run for **`60 seconds`** (`CONFIRM_MS`) and (if joined to a network) received at least **one MAC ACK** from its gateway (`a->sensor.acks > 0`), it programs `confirmed = 0x00000000`.
 
 ### 6.4 Power-Fail-Safe `OWNV` Flash Store (`firmware/common/nvstore.c`)
-Flash Page 30 (`0x1E000–0x1EFFF`, 4096 bytes) uses the custom `OWNV` log-structured format (`docs/nv-format.md`):
+Flash Page 30 (`0x1E000–0x1EFFF`, 4096 bytes) uses the custom `OWNV` log-structured format (`docs/design/nv-format.md`):
 - **Page Header (8 bytes)**: `"OWNV"` (`4F 57 4E 56`) + `version (0x01)` + `FF FF FF`.
 - **Record Format (12 + $n$ bytes, 4-byte aligned)**:
   - `marker (0xA5)` + `state (0xFF = live, 0x00 = deleted)` + `item_le16` + `sub_id_le16` + `len_le16` ($0 \le n \le 64$, multiple of 4) + `crc32_le32` (covering `item`, `sub_id`, `len`, and `data[0..n-1]`, excluding `state`) + `data[n]`.
@@ -447,7 +447,7 @@ Flash Page 30 (`0x1E000–0x1EFFF`, 4096 bytes) uses the custom `OWNV` log-struc
   - **Compaction Integrity & Zero Permanent `.bss` Bloat (`TASK-07`)**: `compact()` must **refuse** to erase Page 30 if the live records cannot all fit into the staging buffer (preventing silent truncation of sensor records), and both `nvstore.c` compaction staging and `ccfg_flash.c` Page 31 restoration must use temporary stack/shared scratch memory rather than permanently occupying `6.5 KB` (`32%`) of the CC1310's `20 KB` SRAM in `.bss`.
   - If Page 30 has an unknown header (stock `NVOCTP`, blank, or corrupted page header), `nv_open()` erases and formats it with `"OWNV"` so boot **never** fails.
 
-### 6.5 Over-The-Air (OTA) Sensor Update Protocol (`docs/ota.md`, `firmware/common/ota.h`)
+### 6.5 Over-The-Air (OTA) Sensor Update Protocol (`docs/design/ota.md`, `firmware/common/ota.h`)
 - **Physical Presence Authorization**: No cryptographic code-signing keys are required on the sensor; instead, a sensor only accepts an `0xC0` OTA offer during a **5-minute window opened by a physical short press of its button** (or `ota` on the wired bench console).
 - **Slot Target Range Validation (`TASK-08`)**: Because Slot A (`0x01000`) and Slot B (`0x0F000`) are linked at fixed flash addresses, `boot_written_ok()` (and `slot_image.py`) verifies that the downloaded image's reset vector points inside `[slot_base + 0x100, slot_base + SLOT_SIZE)`, rejecting mismatched `slot-a.img`/`slot-b.img` arguments before confirming an update.
 - **Offer & Per-Page Battery Guard (`TASK-08`)**: The sensor measures battery voltage via `AONBatMon` under load both when evaluating `0xC0` and **before every 4 KB flash sector erase** during `0xC2` block streaming; if `V_bat < 2.50 V` (`2500 mV`), it refuses or cleanly aborts (`OTA_DONE_REFUSED` / `OTA_DONE_FLASH`) before brownout while the running slot remains intact.
@@ -638,7 +638,7 @@ flowchart TD
 
 ### 9.1 Physical Device UX Specification (Stock Behavior vs. OpenWyzeSense)
 
-OpenWyzeSense preserves the exact **stock sensor button and LED behaviors** ([`docs/stock-re/stock_sensor.c`](stock-re/stock_sensor.c)) so user muscle memory and visual diagnostics stay identical, and layers OWS-specific actions only on top of states that stock firmware leaves unused.
+OpenWyzeSense preserves the exact **stock sensor button and LED behaviors** ([`docs/stock-re/stock_sensor.c`](../../stock-re/stock_sensor.c)) so user muscle memory and visual diagnostics stay identical, and layers OWS-specific actions only on top of states that stock firmware leaves unused.
 
 #### Sensor Button Actions (`Ssf_buttonClockCb` at `0x080AC` vs. OWS `sensor_app.c`)
 | Action | Hold Duration | Stock Firmware Behavior | OpenWyzeSense Behavior (Follows Stock + Additions) |
@@ -718,46 +718,7 @@ Because OpenWyzeSense spans bare-metal 906.8 MHz sub-GHz RF firmware, ultra-low-
 
 ### 10.2 Physical Device Inventory & Bench Setup
 
-All hardware verification across the project uses seven specific device classes on the engineering bench:
-
-#### 1. Production House Wyze USB Dongle (`MAC 778B5F63`) — *Strictly Read-Only Oracle*
-- **Hardware & Firmware**: Unmodified stock Wyze Sense USB Dongle (`CH554` USB-HID `1a86:e024` + `CC1310F128` 5×5 QFN) running stock `0.0.0.47 V1.8 Gateway GW3U`.
-- **Network & Setup**: Operates the live home network on **`PAN 0x845B`** (coordinator short address `0x3366`) with ~17 active household sensors, connected to the production `wyzesense2mqtt-rs` host.
-- **Hard Safety Boundary**: **Never unplugged, never flashed, never sent `POST` requests, and no bench device may ever transmit on `PAN 0x845B`**. Used solely as a passive RF / `GET /api/dongles` ground-truth reference.
-
-#### 2. Spare Bench Wyze USB Dongle (`MAC 77A85F36` / `77A85A36` on `/dev/hidraw6`)
-- **Hardware & Backup**: Stock Wyze Sense USB Dongle (`CH554` USB-HID + `CC1310F128` 5×5, dual LEDs on `DIO10` and `DIO13`). Full verified stock flash + CCFG backup preserved in `ground_truth/firmware/dongle_77A85A36_2026-10-23_before_ours/`.
-- **Setup**: Plugged into host USB (`/dev/hidraw6`). Flashed via `ows-flash` (`0x4312` → CH554 SBL pass-through, Pages 0–29; Page 31 `CCFG` never written). Runs OWS `gateway-dongle-app.bin` (or restored stock firmware when testing OWS sensors against a stock coordinator) on isolated **Test `PAN 0x65FE`** (coordinator `0xD425`).
-
-#### 3. TI `LAUNCHXL-CC1310` LaunchPad (`MAC 77FED830` / IEEE-derived `7707D830`)
-- **Hardware**: `CC1310F128RGZ` (7×7, 30 DIOs) + integrated **XDS110** JTAG/cJTAG debug probe and USB-UART (`0451:bef3`, `/dev/serial/by-id/usb-Texas_Instruments_XDS110*-if00`, `/dev/ttyACM0`). Onboard `BTN-1` (`DIO13`), `BTN-2` (`DIO14`), Red LED (`DIO6`), Green LED (`DIO7`).
-- **Two Mutually Exclusive Bench Configurations** (cannot run simultaneously without physically moving the 7 isolation jumpers on header `P4`):
-  - **Config A — Onboard Target Mode (Jumpers Installed, `Env 4A`)**: `GND`, `3V3`, `RXD` (`DIO2`), `TXD` (`DIO3`), `RST`, `TMS`, `TCK`, `TDO`, `TDI` bridged across `P4`. Programmed via pinned `xpack-openocd` (`reference/tests/hw.py`). Runs `sniffer-launchpad`, `gateway-launchpad`, or `boot-launchxl_cc1310` + `sensor-launchpad`.
-  - **Config B — External 2-Pin cJTAG Probe Mode (Jumpers Pulled, `Env 4B`)**: Isolation jumpers removed so the onboard CC1310 is unpowered; female-to-male leads connect the **XDS110 (top) side** of `P4` (`TMS`, `TCK`, `RST`, `TXD`, `RXD`, `3V3`, `GND`) to soldered pads on an external Wyze v1 board, driven via TI UniFlash `DSLite` (`tools/uniflash.py`, `xds110_2pin.ccxml`).
-
-#### 4. Bench Wyze Sense v1 Contact Sensor (`MAC 777B42DF`, plus Zero-MAC Spares)
-- **Hardware**: `CC1310F128RHB` (5×5, 15 DIOs), reed switch on `DIO7`, tactile button on `DIO11`, red LED on `DIO9`. Exposes PCB test pads `+` (`VDDS`), `-` (`GND`), `T`/`TX` (`DIO0`), `R`/`RX` (`DIO1`), `S` (`RESET_N`), `W` (`DIO10`), `M` (`TMS`), and `C` (`TCK`) (`docs/v1-contact.md`).
-- **Backup & CCFG**: Full 128 KB stock dump archived prior to modification; CCFG `BL_CONFIG` (`0x1FFD8`) enabled once via `tools/uniflash.py enable-bootloader w` (`0xC5FE0AC5`, active-low `W` `DIO10` backdoor, preserving factory ASCII MAC `777B42DF` at `0x1FFCC`).
-- **Three Physical Sub-Setups**:
-  1. **cJTAG Bench Sub-Setup (`Env 4B`)**: `CR2450` coin cell **removed**; wired to LaunchPad XDS110 Config B (`M←TMS`, `C←TCK`, `S←RST`, `R←TXD`, `T→RXD`, `+←3V3`, `-←GND`).
-  2. **Standalone Coin-Cell / Bench-PSU Sensor Sub-Setup (`Env 5`)**: **All debug/UART wires detached** to prevent parasitic ESD-diode back-powering or `JTAG_PD` lockup; powered by `CR2450` (`3.0 V`) or programmable bench PSU (`2.35–3.10 V` via inline ammeter) running `boot-wyze_contact_v1` + `sensor-contact-v1-slot-{a,b}`.
-  3. **ESP-Attached Gateway Radio Sub-Setup (`Env 4C` / `Env 5`)**: `CR2450` **removed**; powered from ESP `3V3`/`GND` (`+`/`-`) and wired `T/R/S/W` (6-wire standard) or `T/R` only (4-wire software-SBL test), running `gateway-contact-v1-app.bin` on an isolated test PAN (`0x65FD` / `OWS_SUB_NETWORK`).
-
-#### 5. Unmodified Stock Reference Sensors (Sealed Factory Units, `Env 5`)
-- **Stock v2 Contact (`MAC 77BD514D`, type `0x0E`)**: AAA battery, physical door magnet + side pairing button.
-- **Stock v1 Motion (`MAC 77A8C793`, type `0x02`)**: `CR2450` cell, PIR Fresnel lens (`120 s` clear window + `0xAB` 12-bucket histogram) + side pinhole button. *(Supplemented by dead dumped unit `777A9A46` used for static Ghidra/disassembly ground truth).*
-- **Stock v2 Climate (`MAC 77C68193`, type `0x07`)**: `CR2032` cell, I²C temperature/humidity sensor (`0xE8` reports) + side pairing button.
-
-#### 6. RTL-SDR 906.8 MHz Capture Receiver (`RTL2838` + `R820T` Tuner)
-- **Setup**: USB SDR (`0bda:2838`) driven by `rtl_433` (`23.11`) recording raw `250 ksps` unsigned 8-bit IQ (`.cu8`) centered at **`906.7 MHz`** (`100 kHz` below the `906.8 MHz` carrier so the zero-IF DC spike stays out of the 5 kbps 2-GFSK passband), decoded by `reference/wyzesense_ref/iq.py`.
-- **Gain Staging**: `-g 35` for room/house captures (`test_hw.py`), `-g 10` for same-bench stock sensor captures, and **`-g 0`** when capturing a LaunchPad or dongle transmitting within `< 50 cm` (`test_hw_tx.py`) to avoid front-end saturation.
-
-#### 7. Wi-Fi IP Relay Microcontrollers (`esp32/`, `Env 4C` & `Env 5`)
-- **ESP32-S3 DevKit** (`esp32/idf/`, `IDF_TARGET=esp32s3`): `3V3→+`, `GND→-`, `GPIO17→R`, `GPIO18←T` (internal pull-up), `GPIO4→S` (open-drain), `GPIO5→W` (open-drain).
-- **Classic ESP32 LOLIN32** (`esp32/idf/`, `IDF_TARGET=esp32`): Same as ESP32-S3 except **`GPIO23→W`** (open-drain; avoids `GPIO5` boot-strap/LED and `GPIO6–11` SPI flash pins).
-- **ESP8266 Wemos D1 mini / NodeMCU** (`esp32/esp8266/`, PlatformIO `d1_mini`): Split-UART wiring (`3V3→+`, `GND→-`, `D7`/`GPIO13` swapped `UART0_RX` `←T`, `D4`/`GPIO2` `UART1_TX` `→R`, `D8`/`GPIO15` **unconnected** to preserve SPI flash boot, `D2`/`GPIO4` `→S` open-drain, `D1`/`GPIO5` `→W` open-drain).
-
----
+Moved to [`docs/development.md`](../../development.md#bench-hardware).
 
 ### 10.3 Scenarios Requiring Manual Physical Testing (Cannot Be Automated)
 
@@ -767,7 +728,7 @@ Even with full `Env 4A/4B/4C` HIL scripting, eight hardware scenarios **cannot b
    - *Why automation cannot cover it*: Keeping XDS110 cJTAG or UART wires connected (`Env 4B`) either holds `JTAG_PD` awake or back-powers `VDDS` at `3.3 V` through CC1310 ESD clamp diodes, masking real sleep/reset defects. Moreover, OpenOCD `hw.press()` only works over active 4-pin JTAG on the LaunchPad (`Env 4A`) and injects a clean register write rather than real `5–15 ms` mechanical reed-blade chatter as a door magnet creeps across the threshold.
    - *Manual test*: Detach all debug/UART wires, insert a `CR2450`, wait `> 15 s` past `DEBUG_WINDOW_MS`, and test fast magnet snaps, slow magnet grazing, rapid double-taps, and physical button wakes.
 2. **True Sleep Current (`~1–2 µA`) & Battery Brownout / Low-Battery Voltage Thresholds**:
-   - *Why automation cannot cover it*: USB/XDS110 supplies a stiff `3.30 V`, so `AON_BATMON` always reads `3.3 V` and leaked GPIO pull-up or `PRCM` domain currents (`50–500 µA`—fatal to a coin cell in weeks) are completely invisible to software tests. *(Note: `TASK-25` / [`docs/low-battery.md`](low-battery.md) proposes automating the `1.70–3.10 V` voltage-sag, ESR-droop, LED-blink, OTA-abort, and 500-cycle brownout torture checks using an ESP32 DAC / pulse-skipping LDO with open-drain UART TX; true `~1–2 µA` wire-free `STANDBY` current measurement still requires an inline µA meter.)*
+   - *Why automation cannot cover it*: USB/XDS110 supplies a stiff `3.30 V`, so `AON_BATMON` always reads `3.3 V` and leaked GPIO pull-up or `PRCM` domain currents (`50–500 µA`—fatal to a coin cell in weeks) are completely invisible to software tests. *(Note: `TASK-25` / [`docs/design/low-battery.md`](low-battery.md) proposes automating the `1.70–3.10 V` voltage-sag, ESR-droop, LED-blink, OTA-abort, and 500-cycle brownout torture checks using an ESP32 DAC / pulse-skipping LDO with open-drain UART TX; true `~1–2 µA` wire-free `STANDBY` current measurement still requires an inline µA meter.)*
    - *Manual test*: Power a wire-free `wyze_contact_v1` through an inline µA meter / Joulescope / Nordic PPK2 and variable bench PSU: verify `~1–2 µA` quiescent current in `STANDBY`, sweep voltage down to `<= 2.59 V` (`0x53`) to verify the `5 × 200 ms` boot warning blink, and set `2.45 V` (`< 2.50 V`) to verify OTA refusal / mid-transfer abort without flash corruption.
 3. **Human Tactile Button Timing & Visual LED Blink Verification**:
    - *Why automation cannot cover it*: Software timers and UART logs do not verify actual LED emission, active-low vs. active-high wiring (`DIO9` on `contact_v1`, `DIO12` on `motion_v1`, dual `DIO10`/`DIO13` on `wyze_dongle`), or tactile feedback when holding a recessed silicone button.
@@ -785,33 +746,9 @@ Even with full `Env 4A/4B/4C` HIL scripting, eight hardware scenarios **cannot b
 
 ---
 
-### 10.4 Pending Hardware & Manual Regression Checklist for P0 + P1 Changes (`TASK-01`–`TASK-12`, `TASK-14`)
+### 10.4 Pending Hardware & Manual Regression Checklist
 
-During the implementation of all **P0–P3 software tasks (`TASK-01` through `TASK-19` and `TASK-24`)**, all verification was executed strictly in **Headless Environments 1–3** (`ctest --preset host` 12/12 suites, `tools/coverage.sh`, Python unit/PTY suites, and cross-compile syntax/lint checks). **No physical HIL (`Env 4A/4B/4C`) or manual device tests (`Env 5`) were run during those commits.**
-
-Before deploying these builds to production devices or starting hardware-dependent P2/P3 research (`TASK-20`–`TASK-23`), the following omitted hardware and manual tests must be executed:
-
-#### HIL Test Script Alignment (`TASK-24` — Completed)
-1. [x] **`test_hw_gateway.py` & `test_hw_contact_gateway.py`**: Updated to build with `-DOWS_PASSIVE=ON -DOWS_PAN=0x845B -DOWS_SHORT=0x3366` (omitting `radio_tx` and `phy_cmd_tx` via `--gc-sections`, verified by ELF symbol assertion) so TX-capable gateway images are **never** pointed at house `PAN 0x845B`.
-2. [x] **`test_hw_inputs.py`**: Added `OWS_HW_TX=1` requirement (since `fw` `sensor-launchpad.elf` compiles in `phy_cmd_tx` and transmits a Beacon Request on `BTN-2` long press) and updated `5 s` comments to `3.04 s`.
-3. [x] **`test_hw_esp32.py`**: Added `OWS_HW_ESP32_AUTH` (`Authorization` header) support for provisioned ESP32 relays (`TASK-01`) and `GET/POST /contact/nv` round-trip assertions (`TASK-14`).
-
-#### Omitted HIL & Manual Verification Checklist by Task
-
-| Task(s) Changed | Target Bench Devices | Omitted HIL (`Env 4`) & Manual (`Env 5`) Tests to Execute |
-|---|---|---|
-| **`TASK-01`**<br>ESP SoftAP Teardown & HTTP Auth | `ESP32-S3`, `LOLIN32`, `ESP8266 D1 mini` + phone/laptop + test Wi-Fi AP | - [ ] **Manual**: Turn off test Wi-Fi AP until fallback `OWS-relay-XXXX` softAP appears; turn Wi-Fi AP back on and confirm via phone/laptop Wi-Fi scan that `OWS-relay-XXXX` **shuts off immediately** upon `GOT_IP`.<br>- [ ] **Manual / HIL**: Provision `token` / `admin_pass`; verify `GET /setup` hides secrets, unauthenticated `POST /setup`, `/ota`, `/contact/reset`, `/contact/flash`, `/contact/gwsync`, `/contact/nv`, and `/debug/uart` return `401` on both ESP-IDF and ESP8266, and authenticated calls succeed. |
-| **`TASK-02`**<br>Outage Buffer Strict FIFO & `1970` Timestamp Rebasing | `ESP32-S3` / `ESP8266` + `wyze_contact_v1` (`gateway-contact-v1`) + paired `wyze_contact_v1` sensor | - [ ] **Manual**: Stop `wyzesense2mqtt-rs`, trigger 5 physical magnet open/close transitions, restart `wyzesense2mqtt-rs`, and immediately trigger 2 more live magnet transitions **while the buffer is still replaying** (`3 s` settle + `200 ms`/pkt drain); verify all 7 alarms arrive in strict chronological order.<br>- [ ] **Manual**: Cold-boot ESP + attached contact while `wyzesense2mqtt-rs` is stopped, trigger a magnet event (`1970` CC1310 clock), then start `wyzesense2mqtt-rs`; verify `0x5333` (`TIME_SYNC`) rebases the replayed alarm timestamp to current wall-clock time. |
-| **`TASK-03`, `TASK-05`**<br>RF/MAC Bounds, `0x43`/`0x53` Framing & `64 B` Unacked Queue | `LAUNCHXL-CC1310` + RTL-SDR | - [ ] **HIL (`Env 4A`)**: Run `OWS_HW=1 uv run pytest reference/tests/test_hw.py` and `OWS_HW=1 OWS_HW_TX=1 uv run pytest reference/tests/test_hw_tx.py`. |
-| **`TASK-04`**<br>Sensor State Machine, In-Flight Rapid Toggle & Join Cleanup | Standalone `CR2450` `wyze_contact_v1` (`777B42DF`) + Spare Dongle (`77A85A36`, `PAN 0x65FE`) | - [ ] **HIL (`Env 4A`)**: Run `OWS_HW=1 OWS_HW_TX=1 uv run pytest reference/tests/test_hw_sensor.py`.<br>- [ ] **Manual (`Env 5`)**: On standalone `CR2450` power, rapidly open and close the physical magnet (`< 50 ms` pulse) while the gateway is briefly unplugged/attenuated (forcing RF retries); verify the final settled door state is never dropped or inverted. |
-| **`TASK-06`**<br>`gateway-contact-v1` CCFG `0xC5FE0AC5` & `sbl.c` `BL_CONFIG` Guard | `ESP32-S3` + wired `wyze_contact_v1` | - [ ] **HIL / Manual**: Flash `gateway-contact-v1` and confirm CCFG `BL_CONFIG` stays `0xC5FE0AC5` (`W` backdoor active); confirm `sbl_connect()` / `POST /contact/flash` refuses a test image with bad `BL_CONFIG` and succeeds with `gateway-contact-v1-app.bin`. |
-| **`TASK-07`**<br>`OWNV` Compaction, Power-Cut Safety & `NV_PAIR` Recovery | `LAUNCHXL-CC1310` + `wyze_contact_v1` | - [ ] **HIL (`Env 4A`)**: Run `test_hw_tx.py::test_gateway_keeps_its_table_in_flash` plus a 35-cycle sensor pair/delete loop on real CC1310 flash Page 30 to exercise hardware flash sector erase during compaction. |
-| **`TASK-08`**<br>OTA `< 2.50 V` Guard, ESP `WIFI_PS_NONE` + `TCP_NODELAY` + WS `PING`, Streaming `sbl_stream_*` | Bench PSU + `wyze_contact_v1` + `ESP32-S3` + `LOLIN32` + `ESP8266` + Spare Dongle | - [ ] **HIL (`Env 4A/4B`)**: Run `test_hw_boot.py`, `test_hw_ota.py`, and `test_hw_contact_ota.py`.<br>- [ ] **Manual / HIL (`Env 4C`)**: Run a full 906.8 MHz sensor OTA **through a live ESP32 and ESP8266 WebSocket relay** (`WIFI_PS_NONE` + `TCP_NODELAY`) to confirm `DATA_REQ` → `0x53F1 0x11` (`OWS_SUB_OTA_NEED`) → `0x53F0 0x12` (`OWS_SUB_OTA_DATA`) block delivery completes with zero poll timeouts.<br>- [ ] **Manual (`Env 5`)**: Power `wyze_contact_v1` from bench PSU at `2.45 V`; trigger OTA and confirm refusal (`OTA_LOW_BAT`) with `5 × 200 ms` LED blinks.<br>- [ ] **Manual (`Env 5`)**: `kill -STOP` `wyzesense2mqtt-rs` (or pull LAN cable on switch upstream of router) so TCP receives no `FIN`; verify ESP WebSocket `OP_PING` (`30 s` + `10 s` timeout) drops to `RELAY_DOWN` within `~40 s` and buffers alarms.<br>- [ ] **Manual (`Env 4C`)**: Verify `gwsync` and `/contact/flash` via `sbl_stream_*()` on all three MCUs (`ESP32-S3`, `LOLIN32`, and `ESP8266 D1 mini`). |
-| **`TASK-09`**<br>Unified `fw` Preset & Dynamic `10 s` → `5 min` Battery UART Window | `wyze_contact_v1` (`777B42DF`) + µA meter + `CR2450` | - [ ] **HIL (`Env 4B`)**: Run `OWS_HW=1 OWS_HW_TX=1 OWS_HW_CONTACT=1 uv run pytest reference/tests/test_hw_contact_battery.py`.<br>- [ ] **Manual (`Env 5`)**: Detach all wires and measure standalone `CR2450` sleep current after `10 s` (`~1–2 µA`) to verify `uart_sleep()` / `PowerCC26XX_PERIPH_UART0` shuts down cleanly in the unified `fw` image. |
-| **`TASK-10`**<br>`0x53F0`/`0x53F1` `<= 56 B` Sub-IDs Over CH554 USB-HID | Spare Wyze USB Dongle (`77A85A36`, `/dev/hidraw6`) + LaunchPad (`test_hw_ccfg.py`) | - [ ] **Manual + HIL**: Flash updated `gateway-dongle-app.bin` onto `77A85A36` via `ows-flash`, then exercise **every** `0x53F0` sub-ID (`0x01` Flags, `0x02` 3-page `OWSB` Build Info `part=0..2`, `0x03` CCFG, `0x04` Network, `0x05` `ENTER_SBL` `0xE0` refusal, `0x06` NV Import/Export, `0x10..0x13` OTA) over real CH554 `/dev/hidraw6` to verify zero 63-byte HID report truncation; also run `test_hw_ccfg.py` on LaunchPad. |
-| **`TASK-11`**<br>Pinless Software SBL Entry (`chip_enter_sbl()`) & `WDT` Recovery | `ESP32-S3` + `wyze_contact_v1` (`W` & `S` wires pulled) + `LAUNCHXL-CC1310` | - [ ] **Manual (`TASK-21`, `Env 5`)**: Physically disconnect `W` (`DIO10`) and `S` (`RESET_N`) between ESP32 and `wyze_contact_v1` (4-wire `+/-/T/R` only); verify `gwsync` / `uart_sbl.py` enters ROM SBL via `0x53F0 0x05 "OSBL"`, flashes Pages 0–29, and reboots back into the gateway app via the `~15 s` hardware `WDT`.<br>- [ ] **Manual (`Env 5`)**: Send `OWS_SUB_ENTER_SBL` with zero subsequent SBL bytes; confirm the `~15 s` `WDT` automatically recovers the CC1310 back into normal gateway mode.<br>- [ ] **Manual (`Env 5`)**: Send `sbl\n` on `sensor-contact-v1` UART console and verify `tools/uart_sbl.py info` connects without touching `W` or `S`. |
-| **`TASK-12`**<br>`3.04 s` While-Held Button & Stock/OWS LED Patterns | `wyze_contact_v1`, Spare Dongle, Stock Sensors (`77BD514D`, `77A8C793`, `77C68193`) | - [ ] **Manual (`Env 5`)**: Hold physical `DIO11` button on `wyze_contact_v1`: confirm `3 × 400 ms` blinks fire at `~3.04 s` **while finger is still holding the button**, `3 × 400 ms` on `0xA6` join, `3 × 100 ms` on scan timeout, `1 × 100 ms` on short press (`40..1000 ms`), `2 × 100 ms` / `3 × 250 ms` on OTA start/finish, and **LED OFF** on normal reed open/close.<br>- [ ] **Manual (`Env 5`)**: Toggle `0x431C 01` scan mode on `gateway-dongle` and `gateway-contact-v1`; confirm `300 ms` scan blink and `50 ms` RF RX pulse, and pair/report with physical stock sensors (`77BD514D`, `77A8C793`, `77C68193`). |
-| **`TASK-14`**<br>Runtime `OWS_SUB_NETWORK` & Zero-Ladder `nv.json` Migration | Spare Dongle (`77A85A36`) + `ESP32-S3` (`gateway-contact-v1`) + physical sensor | - [ ] **Manual (`Env 5`)**: Pair a physical sensor to Spare Dongle (`77A85A36`), export `nv.json` (`tools/nv_json.py`), unplug Spare Dongle, upload `nv.json` to ESP32 via `POST /contact/nv`, and actuate the physical sensor's magnet **without re-pairing**; confirm ESP32 gateway immediately ACKs and delivers `0x5319` alarms and retains `PAN` + sensor table across power-cycles. |
+The checks still to run on hardware are in the bench checklist of [`docs/TODO.md`](../../TODO.md#bench-checklist).
 
 ---
 
@@ -823,39 +760,6 @@ When deploying multiple gateways (e.g., a USB dongle plus two ESP32 IP relays ac
 > [!WARNING]
 > **Why Naive Shared-PAN Gateways Collide on 906.8 MHz**:
 > If two gateways are configured with the exact same `PAN` and coordinator `short_addr` without ACK-ownership gating, both gateways will simultaneously transmit an identical 9-byte 2-GFSK MAC `ACK` within ~`2 ms` of hearing a sensor's `0xA2` report or `DATA_REQ` (and both may transmit `0xB0` at `33.5 ms`). Because two independent 24 MHz crystals differ by `±10–40 ppm` (`±9–36 kHz` at 906.8 MHz vs. the `±5 kHz` GFSK deviation), equal-strength co-channel 2-GFSK transmissions create destructive carrier-beat nulls at the sensor receiver, causing un-ACKed retries and `DATA_REQ` failures. Therefore, any future **Shared-PAN Roaming** mode (`TASK-23`) **must** enforce **per-sensor single-ACK-owner gating** (only the highest-RSSI owner gateway transmits MAC ACKs and indirect downlinks for that `short_addr`; non-owner gateways listen passively and forward `0x5319` alarms to `wyzesense2mqtt-rs` for deduplication and RSSI handoff).
-
-### 11.2 Engineering Backlog Summary (`tasks.md`)
-All verified implementation defects, design-to-implementation alignment items, new feature requests, and hardware prototyping tasks—together with file-level evidence and explicit `Depends on` / `Blocks` relationships—are tracked in **[`tasks.md`](../tasks.md)**:
-
-- **Group A — Critical Security, Data & State-Machine Defects (`TASK-01` – `TASK-08`)**:
-  - `TASK-01`: ESP32/ESP8266 fallback softAP teardown on `GOT_IP` + HTTP auth on mutating endpoints.
-  - `TASK-02`: Outage buffer (`buffer.c`) strict FIFO ordering while `b->count > 0`, `acks_to_keep` timeout, and post-outage `1970` timestamp rebasing on `0x5333`.
-  - `TASK-03`: Encrypted RF payload bounds checks (`sensor.c`, `gateway.c`), 802.15.4 mode `1` rejection (`mac154.c`), `sniffer_app.c` `line[]` buffer overflow fix, and GCC 15 `nonstring` fix (`test_sensor.c`).
-  - `TASK-04`: Sensor handshake `0xB0` lockup fix, `queue_report()` in-flight eviction/state-byte fix, `sensor_join()` OTA reset, `awaiting_ack` disarm, `watch` sleep fix, `CONFIRM_MS` ordering, and `restore()` fixes.
-  - `TASK-05`: Gateway `gw->joining[]` slot leak/timeout fix, `associate()` short-address collision guard, ACK-paced `0x5330 -> 0x5331*` streaming, and `host_proto.c` bounds validation.
-  - `TASK-06`: `gateway-contact-v1` built-in CCFG bootloader enable (`0xC5FE0AC5` on `W` pad `DIO10`) *(note: `board_keep_awake()` in `gateway_app.c:99` is already implemented)*.
-  - `TASK-07`: `OWNV` (`nvstore.c`) compaction overflow guard, freeing `6.5 KB` permanent `.bss` SRAM (`nvstore.c` + `ccfg_flash.c`), partial-write `nv->end` update, and `OWNV` corruption test vectors.
-  - `TASK-08`: OTA slot target address-range check (`boot_slot.c`), mid-OTA per-page battery sag guard (`sensor_app.c`), and ESP relay low-latency Wi-Fi/TCP/WS-Ping + streaming `/contact/flash`.
-- **Group B — Design-to-Implementation Alignment (`TASK-09` – `TASK-13`)**:
-  - `TASK-09`: CMake preset simplification (`fw`, `host`, and `coverage`, removing legacy `fw-*` presets and `OWS_ENABLE_TX`), dynamic UART awake window on battery boards, and CI `.img` artifact upload.
-  - `TASK-10`: Multiplexed OWS host envelope (`0x53F0`/`0x53F1` + `sub_id`) within the `56 B` CH554 payload ceiling + `gw->unacked[].pkt[64]`.
-  - `TASK-11`: Hardened pinless software SBL entry (`chip_enter_sbl()` in `chip.c` + 4-wire `gwsync`/`sbl` support).
-  - `TASK-12`: Stock-faithful sensor button (`3.04 s` while-held trigger) & LED blink patterns + gateway scan/RX LED.
-  - `TASK-13`: Complete `sensor-motion-v1` bring-up (`DIO9/10`, `DIO13`, `DIO2`, `120 s` clear / `0xAB`, and `SLOTS` dual-slot OTA).
-- **Group C — New Features, Tooling & End-User Workflows (`TASK-14` – `TASK-19`, `TASK-24`)**:
-  - `TASK-14`: Runtime network config (`OWS_SUB_NETWORK`) & zero-ladder dongle-to-ESP32 NV sensor-table import/export (`OWS_SUB_NV_IMPORT` + `/contact/nv`).
-  - `TASK-15`: Stock v1 sensor `0xAD` offline missed-event log forwarding in `gateway.c`.
-  - `TASK-16`: Multi-sensor OTA staging queue & non-disruptive `wyzesense2mqtt-rs` / `host_link.py` OTA UX.
-  - `TASK-17`: ESP32/ESP8266 Web UI Day-2 controls, mDNS (`ows-relay-xxxx.local`), `gwsync` safe-mode override, and per-sensor diagnostics.
-  - `TASK-18`: Flashing & CLI safety/polish (`uniflash.py` `--backup` enforcement + one-step `provision`, `user-guide.md` fix, VID:PID auto-detect + udev rule, `nvows.py` & `wyzesense_ref` fixes).
-  - `TASK-19`: Runtime sensor-type & pin-profile configuration in `OWNV` for repurposed `wyze_contact_v1` DIY sensors.
-  - `TASK-24`: Align hardware HIL scripts (`test_hw_gateway.py`, `test_hw_contact_gateway.py`, `test_hw_inputs.py`, `test_hw_esp32.py`) with P0/P1 changes (`TASK-01`, `TASK-09`, `TASK-12`, `TASK-14`).
-- **Group D — Unknown Prototyping, Future Features & Hardware Research (`TASK-20` – `TASK-23`, `TASK-25`)**:
-  - `TASK-20`: CH554 USB-HID `> 63 B` framing & software exit from `0x4312` update mode (`TASK-20`).
-  - `TASK-21`: Standalone battery/mains hardware verification of `chip_enter_sbl()` & `WDT` reset without XDS110 debug power (`TASK-21`).
-  - `TASK-22`: Stock v2 sensor compatibility audit for `A6_OURS` padding & `> 32 B` frames (`TASK-22`).
-  - `TASK-23`: Multi-gateway shared-PAN single-ACK-owner roaming prototype (`TASK-23`).
-  - `TASK-25`: Under-load coin-cell low-battery detection (`post-TX` `AON_BATMON`, auto-clearing `pt[12]` sag hysteresis, `< 2.50 V` `OWNV` write guard, RF-silent `load` pulse) & zero-extra-hardware ESP32 coin-cell HIL simulator ([`docs/low-battery.md`](low-battery.md)).
 
 ---
 

@@ -713,7 +713,7 @@ static void test_sensor_without_radio(void)
     CHECK(sensor_app.halted && sn->led[BOARD_LED_ERROR]);
 }
 
-// --- OTA updates (docs/ota.md, common/ota.h) ---
+// --- OTA updates (docs/design/ota.md, common/ota.h) ---
 
 #define IMG_MAX (SLOT_IMAGE_OFFSET + 9000)
 static uint8_t img_old[IMG_MAX] __attribute__((aligned(8)));
