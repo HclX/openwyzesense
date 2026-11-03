@@ -617,6 +617,16 @@ static void test_joining_and_short_addr_guards(void)
     CHECK(joining_used(&gw) == 1);
     gw_host(&gw, p, host_build(p, HOST_DELETE_ALL, NULL, 0, false));
     CHECK(joining_used(&gw) == 0 && gw.n_sensors == 0);
+
+    // 3. Pairing off: an A3 is not reported (stock gates 0x5320 on its permit, #60), nor tracked as joining.
+    gw.permit = false;
+    n_host = 0;
+    send_a3(&gw, 0x0021, (const uint8_t *)"77JOIN98");
+    CHECK(n_host == 0 && joining_used(&gw) == 0);
+    gw.permit = true;
+    send_a3(&gw, 0x0021, (const uint8_t *)"77JOIN98");
+    host_pkt_t h;
+    CHECK(n_host == 1 && host_parse(host[0].b, host[0].n, &h) && h.cmd == HOST_SCAN_RESULT && joining_used(&gw) == 1);
 }
 
 static void test_sensor_list_64_streaming(void)

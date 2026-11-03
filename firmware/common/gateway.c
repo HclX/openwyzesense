@@ -1028,7 +1028,9 @@ static void sensor_message(gateway_t *gw, uint16_t src, const uint8_t *pt, size_
         case APP_DECOMM_ACK:
             break;
         case APP_JOIN_ANNOUNCE: {  // A3 -> scan result: A3 plaintext bytes 0-10
-            if (n < 11) {
+            // only while pairing, as stock (FACTS.md 0x5320: gated by permitJoinActive): a gateway sharing the PAN
+            // with roaming off hears the A3 a pairing gateway's sensor sends, and must not pair it too (#60)
+            if (n < 11 || !gw->permit) {
                 break;
             }
             expire_joining(gw);
