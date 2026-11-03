@@ -7,9 +7,9 @@ we fell into with the first. Facts here come from FACTS.md (§5) with their evid
 
 ## The board
 
-![The v1 contact board, component side: the CC1310 in the middle, the reed switch (glass) on the right, the button (white) on the left, the antenna spring at the bottom](img/v1_contact_board.jpg)
+![The v1 contact board, pad side, each pad circled in its signal's colour](img/contact_v1.jpg)
 
-(The user's photo, 2026-10-24. The test pads are on the other side.)
+(The user's photo, 2026-11-03; the pad table with its colours: [guide/pads.md](guide/pads.md).)
 
 - MCU: **CC1310F128, 5x5 package (RHB, 32 pins)**. Its CCFG keeps the sensor's MAC as ASCII at 0x1FFCC; the ROM
   bootloader is **disabled** in it (BL_CONFIG 0x00FE0100), so JTAG is the only way in.

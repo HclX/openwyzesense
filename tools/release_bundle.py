@@ -95,6 +95,7 @@ PRODUCT_BOARD = {
     'sensor-motion-v1-slot-b.img': ('sensor-motion-v1', 'wyze_motion_v1'),
 }
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+GUIDE = 'https://github.com/HclX/openwyzesense'
 # The README's section for users without a clone of the repository (#46)
 QUICK_START = [
     '## Without the repository: a Wyze USB dongle',
@@ -115,8 +116,9 @@ QUICK_START = [
     '',
     '## Without the repository: v1 sensors and the contact-board gateway',
     '',
-    'Prepared once on the bench, wired to a LaunchPad (docs/user-guide.md §3): `ows-flash fetch-uniflash` (TI UniFlash',
-    "from TI, ~380 MB, once; TI's own tool, not redistributed here), install `71-ti-xds110.rules`, then",
+    'Prepared once on the bench, wired to a LaunchPad (the wiring: the user guide, levels 2-4): `ows-flash',
+    "fetch-uniflash` (TI UniFlash from TI, ~380 MB, once; TI's own tool, not redistributed here), install",
+    '`71-ti-xds110.rules`, then',
     '`ows-flash v1 provision --sensor --boot <boot>.bin --slot-a <slot A>.img` (a sensor) or `ows-flash v1 provision',
     "--gateway --app ows-gateway-contact-v1-<version>.bin` (the relay's contact board). It backs the unit up first",
     '(`backups/<board>/<MAC>`). Later updates go over the air: `ows-flash ota MAC <slot A> <slot B>`.',
@@ -236,9 +238,10 @@ def bundle(version, firmware, out, esp32=None, esp8266=None, ows_flash=None):
     lines = [
         f'# OpenWyzeSense {version}',
         '',
-        'Firmware for Wyze Sense v1 hardware and the ESP32/ESP8266 IP relay. The tools are in the repository at this',
-        'tag; see docs/user-guide.md. Check the files with `sha256sum -c SHA256SUMS`; manifest.json lists the same',
-        "with each file's board and product, for programs (crates/ows-host).",
+        'Firmware for Wyze Sense v1 hardware and the ESP32/ESP8266 IP relay, and the `ows-flash` tool. Step by step,',
+        f'with only these files: the user guide, {GUIDE}/tree/{version}/docs/guide. Check the files with',
+        "`sha256sum -c SHA256SUMS`; manifest.json lists the same with each file's board and product, for programs",
+        '(crates/ows-host).',
         '',
         'Before the first write to a Wyze device, back up its stock firmware (the tools do this, or refuse',
         'without one).',

@@ -182,6 +182,10 @@ Stock behaviour resolved from `contact_v1`, `motion_v1` and `gateway_v1.8` disas
 - #84 follow-up: two of our gateways both in pairing mode can still collide (carrier sense before a beacon, as stock
   seems to do, would fix it). The beacon delay itself passed on hardware 2026-10-31 (PR #86).
 - `e2e-host` CI job (wyzesense2mqtt-rs end to end): first result not seen (private repo, no `gh` here).
+- User guide (`docs/guide/`, #65), not yet walked through on hardware with release files only: the LaunchPad
+  jumper-block order in `wiring-contact-launchpad.svg` (GND 5V 3V3 RXD TXD RST TMS TCK TDO TDI SWO, from the board's
+  silkscreen as remembered), the second S / V− pads in `contact_v1.jpg` (read from the photo's colours), an ESP's
+  first flash with plain `esptool` and the `-full` image, and the dashboard's sensor OTA in wyzesense2mqtt-rs.
 - A long soak test (days) of our gateway with sensors on the test network.
 - Current on a battery board (standby, receive windows).
 
