@@ -44,6 +44,20 @@ linked for their slot (`cc1310f128_slot_{a,b}.ld`); a product built with `SLOTS`
 and `boot-<board>.bin`. Verified on the LaunchPad: `reference/tests/test_hw_boot.py` (probation, the fallback after
 three boots, confirmation, a slot with one wrong byte skipped).
 
+### The version number (#57)
+
+The header's version is a `uint32_t`, compared unsigned ("newer" = higher, by the sensor and the boot selector). It is
+encoded from the release tag (`firmware/image_version.cmake`, from `git describe`):
+
+    major << 24 | minor << 16 | patch << 8 | commits since the tag
+
+so v0.2.2 is `0x00020200`, three commits after it `0x00020203`. Each release field is one byte (a tag above 255 stops
+the build); the commit count saturates at 255 (a warning), so it never carries into the patch byte. Every release is
+above every build numbered the old way (the commit count: the archive repository's builds reach a few hundred, the
+public repository's first releases 5-21), so those sensors take a release. A pre-release tag (`v0.3.0-rc1`) would
+sort equal to its release and stops the build; `-DOWS_IMAGE_VERSION=<n>` sets any number by hand. Without a tag (a
+clone without tags) a build is `0.0.0` + the commit count (saturated), below every release.
+
 ## On the air
 
 Our own application messages C0-C3 (`firmware/common/ota.h`, encrypted as all the others), on the existing poll /
