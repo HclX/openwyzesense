@@ -42,7 +42,7 @@ pub const OWS_SUB_OTA_DATA: u8 = 0x12;
 pub const OWS_SUB_OTA_DONE: u8 = 0x13;
 
 pub const FLAG_DEDUP: u32 = 1 << 0;
-pub const FLAG_FIX_ZERO_MAC: u32 = 1 << 1;
+// 1 << 1: reserved (was FIX_ZERO_MAC, removed in #31: the gateway drops a zero-MAC report, as stock)
 pub const FLAG_OTA: u32 = 1 << 2;
 pub const FLAG_ANNOUNCE: u32 = 1 << 3;
 pub const FLAG_ROAM: u32 = 1 << 4;

@@ -270,6 +270,7 @@ static void test_host(void)
            "\x07\x13\x5e\x00\x01\x00\x0a\x75",
            17);
     app_encrypt(pt, 17, ct);
+    CHECK(gw_add_sensor(&gw, (const uint8_t *)"77C681D1", 0x000C));  // only a paired sensor is heard (#31)
     gw.clock_ms = 0x019E4E7BF23Bull;
     n_tx = n_host = 0;
     gw_rx(&gw, f, mac_build_data(f, 7, PAN, SHORT, 0x000C, ct, 32, true), -0x4C);
@@ -375,13 +376,22 @@ static int alarms(uint8_t mac[8])
     return n;
 }
 
+// An A1 heartbeat (v1 contact, as in the capture) with MAC who from short address src; the alarms it brought
+static int report_from(gateway_t *gw, const char *who, uint16_t src, uint8_t mac[8])
+{
+    uint8_t pt[32] = {APP_STATUS}, ct[32], f[64];
+    memcpy(pt + 1, who, 8);
+    pt[9] = SENSOR_CONTACT_V1, pt[10] = 0x11, pt[11] = 0x5A, pt[13] = 1, pt[15] = 0x0D;
+    app_encrypt(pt, 17, ct);
+    n_host = 0;
+    gw_rx(gw, f, mac_build_data(f, 0x21, PAN, SHORT, src, ct, 32, true), -60);
+    return alarms(mac);
+}
+
+// The same from the paired sensor 777ABCDE on 0x0010
 static int receive_report(gateway_t *gw, uint8_t mac[8])
 {
-    uint8_t f[64];
-    size_t n = unhex(zero_mac_frame, f);
-    n_host = 0;
-    gw_rx(gw, f, n, -60);
-    return alarms(mac);
+    return report_from(gw, "777ABCDE", 0x0010, mac);
 }
 
 // Update mode (WyzeSenseUpdater): the same reply as the stock dongle gave (2026-10-23 backup, info.json), so the
@@ -403,9 +413,9 @@ static void test_flags(void)
     gateway_t gw;
     uint32_t supported = 0;
     gw_init(&gw, PAN, SHORT, EXT, (const uint8_t *)"778B5F63", &io);
-    CHECK(flags_call(&gw, NULL, &supported) == 0);  // off after a reset
-    CHECK(supported == (GW_FLAG_DEDUP | GW_FLAG_FIX_ZERO_MAC | GW_FLAG_OTA | GW_FLAG_ANNOUNCE | GW_FLAG_ROAM));
-    CHECK(flags_call(&gw, all, NULL) == GW_FLAGS_SUPPORTED);  // only what it has
+    CHECK(flags_call(&gw, NULL, &supported) == 0);                                        // off after a reset
+    CHECK(supported == (GW_FLAG_DEDUP | GW_FLAG_OTA | GW_FLAG_ANNOUNCE | GW_FLAG_ROAM));  // bit 1: reserved (#31)
+    CHECK(flags_call(&gw, all, NULL) == GW_FLAGS_SUPPORTED);                              // only what it has
     CHECK(flags_call(&gw, dedup, NULL) == GW_FLAG_DEDUP);
     gw_init(&gw, PAN, SHORT, EXT, (const uint8_t *)"778B5F63", &io);
     CHECK(flags_call(&gw, NULL, NULL) == 0);  // not kept across a reset
@@ -416,6 +426,7 @@ static void test_dedup(void)
     static const uint8_t on[4] = {0, 0, 0, GW_FLAG_DEDUP};
     gateway_t gw;
     gw_init(&gw, PAN, SHORT, EXT, (const uint8_t *)"778B5F63", &io);
+    CHECK(gw_add_sensor(&gw, (const uint8_t *)"777ABCDE", 0x0010));
     gw_tick(&gw, 1000);
     CHECK(receive_report(&gw, NULL) == 1 && receive_report(&gw, NULL) == 1);  // off: a retry goes up, as stock
     flags_call(&gw, on, NULL);
@@ -426,18 +437,46 @@ static void test_dedup(void)
     CHECK(receive_report(&gw, NULL) == 1);  // much later: a new report
 }
 
-static void test_zero_mac(void)
+// Only a sensor in the table is heard, as the stock dongle (stock-unknowns.md D8, #31): a report goes up only when
+// its short address and MAC both match an entry; a zero MAC is never "recovered", and a stranger teaches no type
+static void test_only_paired_sensors(void)
 {
-    static const uint8_t on[4] = {0, 0, 0, GW_FLAG_FIX_ZERO_MAC}, zero[8];
+    static const uint8_t all[4] = {0xff, 0xff, 0xff, 0xff}, zero[8];
+    uint8_t f[64], mac[8];
     gateway_t gw;
-    uint8_t mac[8];
     gw_init(&gw, PAN, SHORT, EXT, (const uint8_t *)"778B5F63", &io);
+    CHECK(receive_report(&gw, NULL) == 0);  // not paired: dropped
     CHECK(gw_add_sensor(&gw, (const uint8_t *)"777ABCDE", 0x0010));
-    CHECK(receive_report(&gw, mac) == 1 && !memcmp(mac, zero, 8));  // off: as the stock dongle
-    flags_call(&gw, on, NULL);
-    CHECK(receive_report(&gw, mac) == 1 && !memcmp(mac, "777ABCDE", 8));  // on: the table's MAC
-    CHECK(gw_add_sensor(&gw, (const uint8_t *)"777FFFFF", 0x0010));       // two on 0x0010 (a stock table)
-    CHECK(receive_report(&gw, mac) == 1 && !memcmp(mac, zero, 8));        // cannot tell: left alone
+    CHECK(receive_report(&gw, mac) == 1 && !memcmp(mac, "777ABCDE", 8));
+    CHECK(report_from(&gw, "777FFFFF", 0x0010, NULL) == 0);  // another MAC on its address
+    CHECK(report_from(&gw, "777ABCDE", 0x0011, NULL) == 0);  // its MAC from another address
+    flags_call(&gw, all, NULL);                              // whatever the host turns on
+    n_host = 0;
+    gw_rx(&gw, f, unhex(zero_mac_frame, f), -60);  // the captured zero-MAC A1 from 0x0010
+    CHECK(alarms(NULL) == 0);
+    CHECK(report_from(&gw, (const char *)zero, 0x0010, NULL) == 0);
+
+    // a stranger's report on a paired sensor's address teaches no type: that sensor's poll gets no B0
+    gw_init(&gw, PAN, SHORT, EXT, (const uint8_t *)"778B5F63", &io);
+    CHECK(gw_add_sensor(&gw, (const uint8_t *)"777C1FCA", 0x0010));
+    gw.clock_ms = 1792718500000ull;
+    gw_rx(&gw, f, unhex(zero_mac_frame, f), -60);
+    uint8_t dreq[10] = {0x63, 0x88, 0x12, PAN & 0xFF, PAN >> 8, SHORT & 0xFF, SHORT >> 8, 0x10, 0x00, MAC_CMD_DATA_REQ};
+    n_tx = 0;
+    gw_rx(&gw, dreq, sizeof dreq, -60);
+    CHECK(n_tx == 1 && (tx[0].b[0] & 0x10) == 0);  // the ACK alone, no frame pending
+}
+
+// A sensor associating with an all-zero address (a stock v1 contact that lost its MAC) is never paired (#31)
+static void test_zero_mac_never_pairs(void)
+{
+    gateway_t gw;
+    uint8_t f[24] = {0x23, 0xC8, 1, PAN & 0xFF, PAN >> 8, SHORT & 0xFF, SHORT >> 8, 0xFF, 0xFF};
+    gw_init(&gw, PAN, SHORT, EXT, (const uint8_t *)"778B5F63", &io);
+    gw.permit = true;
+    f[17] = MAC_CMD_ASSOC_REQ, f[18] = 0x80;  // ext source (f[9..16]) all zero
+    gw_rx(&gw, f, 19, -50);
+    CHECK(gw.n_sensors == 0);
 }
 
 // Two sensors on one address in the table (a stock table can have that): the one that associates gets a new one
@@ -771,14 +810,14 @@ static void test_ows_build_info_pages_and_unacked64(void)
 
     // Legacy 0x53F0 flags compatibility (empty query & 0x00-prefixed 4-byte set) for older hosts.
     n_host = 0;
-    gw_host(&gw, p, host_build(p, HOST_OWS_FLAGS, (const uint8_t *)"\x00\x00\x00\x03", 4, false));
+    gw_host(&gw, p, host_build(p, HOST_OWS_FLAGS, (const uint8_t *)"\x00\x00\x00\x05", 4, false));
     CHECK(n_host == 2 && host_parse(host[1].b, host[1].n, &h) && h.cmd == HOST_OWS_RSP && h.len == 8 &&
-          h.payload[3] == 0x03);
+          h.payload[3] == 0x05);
     gw_host(&gw, p, host_build_ack(p, HOST_OWS_RSP, false));
     n_host = 0;
     gw_host(&gw, p, host_build(p, HOST_OWS_FLAGS, NULL, 0, false));
     CHECK(n_host == 2 && host_parse(host[1].b, host[1].n, &h) && h.cmd == HOST_OWS_RSP && h.len == 8 &&
-          h.payload[3] == 0x03);
+          h.payload[3] == 0x05);
 }
 
 typedef struct {
@@ -1054,13 +1093,14 @@ static void test_history_log_ad(void)
     gw_rx(&gw, dreq, sizeof dreq, -60);
     CHECK(n_tx == 2 && (tx[0].b[0] & 0x10) != 0);
 
-    // 2. Unsynced sensor clock (ts=0) + zero-MAC recovery + consecutive tiebreaker + dedup.
-    uint8_t fl[4] = {0, 0, 0, GW_FLAG_DEDUP | GW_FLAG_FIX_ZERO_MAC};
-    CHECK(flags_call(&gw, fl, NULL) == (GW_FLAG_DEDUP | GW_FLAG_FIX_ZERO_MAC));
+    // 2. Unsynced sensor clock (ts=0) + consecutive tiebreaker + dedup.
+    uint8_t fl[4] = {0, 0, 0, GW_FLAG_DEDUP};
+    CHECK(flags_call(&gw, fl, NULL) == GW_FLAG_DEDUP);
     gw_host(&gw, ack, host_build_ack(ack, HOST_OWS_RSP, false));
 
     memset(pt, 0, sizeof pt);
-    pt[0] = APP_HISTORY_LOG;  // mac[1..8] left all-zero
+    pt[0] = APP_HISTORY_LOG;
+    memcpy(pt + 1, "777B42DF", 8);
     pt[9] = SENSOR_CONTACT_V1;
     put_be64_test(pt + 10, 0);  // unsynced sensor clock -> rebased onto gw.clock_ms
     pt[18] = APP_EVENT;
@@ -1329,7 +1369,8 @@ int main(int argc, char **argv)
     test_update_mode_reply();
     test_flags();
     test_dedup();
-    test_zero_mac();
+    test_only_paired_sensors();
+    test_zero_mac_never_pairs();
     test_no_shared_address();
     test_pending_queue();
     test_truncated_payloads();

@@ -29,7 +29,7 @@ Each level stands on its own; pick the one you need. Later levels refer back to 
 | [2. Revive a dead v1 contact](2-revive-contact.md) | A "zero-MAC" contact sensor working again | the sensor, a TI LaunchPad, 5 wires | yes, the sensor |
 | [3. Flash a working v1 contact](3-contact-sensor.md) | Immunity to the zero-MAC bug, updates over the air, DIY sensor types (leak, dry contact, PIR) | as level 2 | yes, the sensor |
 | [4. Build a Wi-Fi gateway](4-wifi-gateway.md) | A gateway anywhere you have Wi-Fi and USB power; several of them for a large house | a v1 contact board, an ESP board, a LaunchPad (once), 6 wires | yes, the sensor |
-| [5. wyzesense2mqtt-rs with OWS features](5-wyzesense2mqtt.md) | Deduplication, zero-MAC fixing for stock sensors, roaming between gateways, firmware updates from the dashboard | levels 1 or 4 | no |
+| [5. wyzesense2mqtt-rs with OWS features](5-wyzesense2mqtt.md) | Deduplication, roaming between gateways, firmware updates from the dashboard | levels 1 or 4 | no |
 
 Reference: [pads of the contact and the dongle](pads.md), [troubleshooting](troubleshooting.md).
 

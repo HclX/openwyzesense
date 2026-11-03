@@ -145,7 +145,7 @@ def test_host_link_ota_batch_and_flag_restore(tmp_path, monkeypatch):
             self.offers = []
             self.data_chunks = []
             self.flag_sets = []
-            self.cur_flags = host.FLAG_DEDUP | host.FLAG_FIX_ZERO_MAC
+            self.cur_flags = host.FLAG_DEDUP | host.FLAG_ANNOUNCE
 
         def close(self):
             pass
@@ -211,8 +211,8 @@ def test_host_link_ota_batch_and_flag_restore(tmp_path, monkeypatch):
     assert cli_link.offers[0][:8] == b'********' and cli_link.offers[0][8:] != bytes(24)
     assert cli_link.offers[-1] == b'********' + bytes(24)  # ota_cancel() in finally
     assert cli_link.flag_sets == [
-        host.FLAG_DEDUP | host.FLAG_FIX_ZERO_MAC | host.FLAG_OTA,
-        host.FLAG_DEDUP | host.FLAG_FIX_ZERO_MAC,
+        host.FLAG_DEDUP | host.FLAG_ANNOUNCE | host.FLAG_OTA,
+        host.FLAG_DEDUP | host.FLAG_ANNOUNCE,
     ]
 
 

@@ -59,12 +59,12 @@ Related, for sensors that hang at end of battery without wiping flash: TI's CC13
 the supply hovers at the brown-out threshold (~1.78 V, a dying coin cell) a brown-out during boot can lock the chip up
 (drawing ~2.25 mA) until a pin reset or a power-down below ~1 V; a fresh battery alone does not end it.
 
-**In our gateway** (R3 flag `GW_FLAG_FIX_ZERO_MAC`, off by default): a report whose MAC is all zero gets the
-MAC the sensor table holds for its short address, if exactly one sensor has that address (on our gateway's own
-table always: it never repeats an address, §2; a stock table loaded from the page may have duplicates, and then
-the report is left as it is). This only helps a sensor that lost its MAC while staying joined, as the captured
-one did; one that joins again with the zero MAC gets a new table entry under it. Test: `test_zero_mac`
-(`test_gateway.c`), on the captured frame.
+**In our gateway**: as in the stock dongle (stock-unknowns.md D8), a report goes to the host only when its short
+address and its MAC both match a sensor in the table, so a zero-MAC report is dropped, never "recovered"; and a sensor
+associating with an all-zero address is never paired (#31). A zero-MAC unit is cured only by reflashing it with our
+sensor firmware (guide level 2). Why both must match: on the house network (2026-11-03) the dead contact above still reports from 0x0010, an address
+the migrated table gives 77C681ED.
+Tests: `test_only_paired_sensors`, `test_zero_mac_never_pairs` (`test_gateway.c`), on the captured frame.
 
 **In our firmware** (R2): on a Wyze board that keeps each unit's MAC in its CCFG (`BOARD_MAC_IN_CCFG`, e.g.
 `sensor-contact-v1` and `sensor-motion-v1`) the unit's own CCFG stays: the image is written below it
