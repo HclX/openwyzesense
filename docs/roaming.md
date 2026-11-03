@@ -20,6 +20,13 @@ With the flag on (`OWS_SUB_FLAGS`; like every flag, not kept across a reset):
 | Association request | the gateway that is pairing (`0x531C` on) ACKs and answers it | **silent** |
 | Beacon request | every gateway answers (after its random delay, #84) | (same) |
 
+Whatever the flag, a gateway reports a sensor's join (A3 -> `0x5320`) only while it is pairing, as stock does (#60).
+With roaming off, two gateways on one PAN both ACK every frame, so a PAN shared by several gateways needs the flag on
+all of them. Pairing is one gateway at a time: every gateway shares one identity, so a sensor cannot choose between
+them, and several pairing at once would ACK one association request together and each hand out an address. The best
+gateway is the host's choice after the join, by handover on the RSSIs it gets from the owner and from
+`OWS_SUB_OVERHEARD` (the user's decision, 2026-11-02).
+
 `OWS_SUB_OVERHEARD` (`0x53F1` sub-ID `0x20`, gateway → host): `[0x20, short_le16, <the 0x5319 payload>]`, i.e. the
 sensor's short address, then exactly what the owner would have sent (gateway clock, the plaintext up to its counter,
 the RSSI as -dBm). It is sent once and not kept for resending (it would crowd out the gateway's own async packets), so
