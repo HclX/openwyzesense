@@ -1,4 +1,4 @@
-//! Sensor OTA updates through our gateway (docs/ota.md, `firmware/common/ota.h`), the host's side: what
+//! Sensor OTA updates through our gateway (docs/design/ota.md, `firmware/common/ota.h`), the host's side: what
 //! `tools/host_link.py --ota` does (`ota_batch`), as a state machine without I/O, so a program with its own read loop
 //! (wyzesense2mqtt-rs) drives it, and [`run`] for a blocking [`Link`].
 //!

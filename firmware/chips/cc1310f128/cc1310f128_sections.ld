@@ -2,7 +2,7 @@
 
 SECTIONS
 {
-    /* a slot image (OTA, docs/ota.md): its 256-byte header first, the vector table at IMAGE_OFFSET */
+    /* a slot image (OTA, docs/design/ota.md): its 256-byte header first, the vector table at IMAGE_OFFSET */
     .ows_header ORIGIN(FLASH) : { KEEP(*(.ows_header)) } > FLASH
     .resetVecs ORIGIN(FLASH) + IMAGE_OFFSET : { KEEP(*(.resetVecs)) } > FLASH
     /* the build info block (common/build_info.h): right after the vectors, in the image's first 1 KB */

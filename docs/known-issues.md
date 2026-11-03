@@ -71,7 +71,7 @@ one did; one that joins again with the zero MAC gets a new table entry under it.
 (`<product>-app.bin` or slot images; the CCFG page is not erased), and our firmware reads the MAC directly from CCFG
 `0x1FFCC`, refusing anything but 8 ASCII hex digits (an erased or zeroed field is not taken for a MAC). Furthermore,
 our sensor firmware keeps the sequence counter in RAM only (#38) and never writes flash on boot (`nvstore.c` only
-writes page 30 when joining). See [`docs/v1-contact.md`](v1-contact.md) for the v1 contact bring-up guide.
+writes page 30 when joining). See [`docs/design/v1-contact.md`](design/v1-contact.md) for the v1 contact bring-up guide.
 
 ## 2. Two radios on one short address
 

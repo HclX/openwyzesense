@@ -14,7 +14,7 @@ void rig_default_cfg(rig_cfg_t *cfg)
     cfg->pulse_us = 10;
     cfg->hold_us = 100;
     cfg->v_release_mv = 3150;
-    cfg->cap_nf = 10000;  // a guess (docs/low-battery.md: ~5-10 µF on the board) until calibrated
+    cfg->cap_nf = 10000;  // a guess (docs/design/low-battery.md: ~5-10 µF on the board) until calibrated
 }
 
 void rig_start(rig_t *r, const rig_cfg_t *cfg)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """The image the ESP32 relay reflashes its contact board with (POST /contact/flash, esp32/README.md): the boot
-selector at 0x0 and a slot image at 0x1000 (the OTA layout, docs/ota.md), as tools/uniflash.py slots writes them.
+selector at 0x0 and a slot image at 0x1000 (the OTA layout, docs/design/ota.md), as tools/uniflash.py slots writes them.
 
     uv run python tools/contact_image.py BOOT.bin SLOT_A.img contact.bin
     curl -u admin:<pass> -F firmware=@contact.bin 'http://<relay>/contact/flash?mac=777B42DF'

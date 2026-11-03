@@ -8,7 +8,7 @@ OPENOCD_URL=https://github.com/xpack-dev-tools/openocd-xpack/releases/download/v
 OPENOCD_SHA256=94b3790983beaf8ed57e646c0620dd66d705fddae03d290823a6ed3b439468d6
 
 # TI UniFlash (optional: `tools/toolchain.sh uniflash`): DSLite for 2-pin cJTAG targets (the v1 contact,
-# docs/v1-contact.md), which OpenOCD cannot reach. An installer, not an archive.
+# docs/design/v1-contact.md), which OpenOCD cannot reach. An installer, not an archive.
 UNIFLASH_VERSION=9.7.0.5873
 UNIFLASH_URL=https://dr-download.ti.com/software-development/software-programming-tool/MD-QeJBJLj8gq/9.7.0/uniflash_sl.9.7.0.5873.run
 UNIFLASH_SHA256=3d1788cd1ce413acf2b3927834288213bf9751100ff256687440e3a32c97b1a1

@@ -17,11 +17,11 @@ Other agents may work here too: `AGENTS.md` (workflow, hard rules, tests). Work 
 ## Task list
 `docs/stock-unknowns.md`: stock behaviour still to find out (buttons, reports, joins, dongle, boards), with why and
 how, for helpers too; answers go into FACTS.md with evidence and the row is closed in the same commit.
-`docs/TODO.md`: what is open (next, back burner, protocol, verification, housekeeping). Keep it current: add what
+`docs/TODO.md`: the one task list (next, bench checklist, hardware research, small fixes, ideas, back burner, protocol). Keep it current: add what
 comes up, remove what gets done, in the same commit as the work.
 
 ## Requirements
-`docs/requirements.md`: R1 compatibility with stock devices both ways, R2 fix the v1 zero MAC, R3 runtime
+`docs/design/requirements.md`: R1 compatibility with stock devices both ways, R2 fix the v1 zero MAC, R3 runtime
 feature flags (protocol-affecting features off by default; compatible fixes always on), and the user's
 decisions so far.
 
@@ -70,7 +70,7 @@ decisions so far.
   stock page 30 table and page 31 kept); `ows-flash restore` puts stock back (from a copy of that backup: `flash` writes `nv.json` into the directory). `test_hw_sensor.py` therefore now
   checks our sensor against our gateway on the dongle (all six types pass); the stock-dongle runs are in ground truth. The CH554 answers the sync
   host commands (Inquiry, Get ENR, Get MAC) itself, so the dongle keeps its stock identity with our firmware.
-- **v1 contact sensors** (the user's many zero-MAC units, the DIY version's main hardware): `docs/v1-contact.md`
+- **v1 contact sensors** (the user's many zero-MAC units, the DIY version's main hardware): `docs/design/v1-contact.md`
   (pads, wiring to the LaunchPad with RESET_N, UniFlash over 2-pin cJTAG since OpenOCD cannot, the bring-up steps, and
   the traps: cold joints, pin counting, a 3V3-only power-cycle that is none, the hang after a UniFlash run). Back up
   every unit read-only first; never write its CCFG (its MAC) except enabling `BL_CONFIG` on `W` during provisioning.
@@ -107,13 +107,13 @@ decisions so far.
 - Hardware tests (`reference/tests/test_hw*.py`, skipped unless `OWS_HW=1`) flash and reset through
   `reference/tests/hw.py` (retries the XDS110's flaky JTAG). If every OpenOCD scan reads "all zeroes", the XDS110's JTAG
   side has hung: `hw.usb_reset()` (USBDEVFS_RESET on the probe) brings it back without a replug; the target was fine
-  every time. See `docs/development.md` and `docs/DESIGN.md` §10.1 for the full HIL opt-in matrix (`OWS_HW=1`, `OWS_HW_TX=1`,
+  every time. See `docs/development.md` and `docs/design/DESIGN.md` §10.1 for the full HIL opt-in matrix (`OWS_HW=1`, `OWS_HW_TX=1`,
   `OWS_HW_CONTACT=1`, `OWS_HW_ESP32=<ip>`).
 - Receive-only LaunchPad tests (`OWS_HW=1`):
   - `test_hw.py`: flashes `sniffer-launchpad.elf` (`fw`) and compares what the LaunchPad receives with an RTL-SDR
     recording (`OWS_HW_SECONDS`, default 180s).
   - `test_hw_boot.py` (`fw`, unjoined sensor): the OTA two-slot boot on the LaunchPad (selector in page 0, sensor app
-    in slots A and B; `docs/ota.md`). Leaves the LaunchPad with the selector in page 0: any full flash replaces it.
+    in slots A and B; `docs/design/ota.md`). Leaves the LaunchPad with the selector in page 0: any full flash replaces it.
   - `test_hw_ccfg.py` (`fw`): clears `BL_CONFIG` over JTAG and verifies `OWS_SUB_CCFG` (`0x53F0` sub-ID `0x03`) restores
     page 31 byte-for-byte.
   - `test_hw_gateway.py`: passive house-mirror gateway (requires `cmake --preset fw -B build/fw-mirror -DOWS_PASSIVE=ON
@@ -138,7 +138,7 @@ decisions so far.
   `hw.usb_reset()`.
 - Flash page 30 holds the gateway's table and the sensor app's join (item `0x20`) and optional DIY pin/type profile
   (item `0x21`, `NV_CFG`), in **our own format** since #61
-  (`docs/nv-format.md`; `wyzesense_ref.nvows`): the firmware formats any other page (stock, garbage) on start, so a
+  (`docs/design/nv-format.md`; `wyzesense_ref.nvows`): the firmware formats any other page (stock, garbage) on start, so a
   stock dongle's table is carried over by the tools (`tools/nv_json.py export` -> JSON -> `import`), never by the
   firmware. A power cut may lose NV data but never stops a start (#38). `wyzesense_ref.nvpage` decodes stock pages.
 - OpenOCD: `-c "transport select jtag"` before `target/ti_cc13x0.cfg`. Its reset is VECTRESET (CPU only):

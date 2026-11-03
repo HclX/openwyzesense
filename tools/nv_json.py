@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""A device's NV page (flash page 30) to and from JSON (docs/nv-format.md, issue #61): how the flashing tools carry a
-stock dongle's network and sensor table into our format, and validate it on the way.
+"""A device's NV page (flash page 30) to and from JSON (docs/design/nv-format.md, issue #61): how the flashing tools
+carry a stock dongle's network and sensor table into our format, and validate it on the way.
 
     uv run python tools/nv_json.py export PAGE_OR_FLASH.bin [-o NV.json]   # a stock page or one of ours -> JSON
     uv run python tools/nv_json.py import NV.json -o PAGE.bin                # JSON -> a page in our format

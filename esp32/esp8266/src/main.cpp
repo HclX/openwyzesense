@@ -129,7 +129,7 @@ void contact_reset()
     pad(OWS_CONTACT_RESET, false);
 }
 
-// W low through a reset: the ROM bootloader, if the unit's CCFG enables it on W (docs/v1-contact.md)
+// W low through a reset: the ROM bootloader, if the unit's CCFG enables it on W (docs/design/v1-contact.md)
 void contact_enter_bootloader()
 {
     pad(OWS_CONTACT_BOOT, true);

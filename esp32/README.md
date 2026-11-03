@@ -39,7 +39,7 @@ Hardware bench test: `reference/tests/test_hw_esp32.py`, with the board wired as
 | `S` (RESET_N) | GPIO4, open-drain (hardware reset; optional in 4-wire mode once OWS firmware is running, recommended for recovery) |
 | `W` (DIO10) | GPIO5, open-drain: low at a reset = the ROM bootloader (the contact's CCFG has backdoor `w`: `0xC5FE0AC5`, #14) |
 
-Provision the contact board once over JTAG (`docs/v1-contact.md`), backing up its stock flash first:
+Provision the contact board once over JTAG (`docs/design/v1-contact.md`), backing up its stock flash first:
 `tools/uniflash.py provision --gateway --backup backups/contact_<MAC>` (or step by step:
 `tools/uniflash.py backup backups/contact_<MAC>`,
 `tools/uniflash.py flash --backup backups/contact_<MAC> build/fw/firmware/gateway-contact-v1-app.bin`, and
@@ -137,7 +137,7 @@ start, it sets the flash to 1.8 V. The console is UART0, the board's USB serial 
 ### Battery rig (classic ESP32, #95)
 
 The LOLIN32 can be the contact's battery instead of its 3V3 pin, to measure the sensor's sleep current with no meter
-(`docs/low-battery.md` §3, Option B; core `esp32/rig/`, tests `test_rig`). Move one wire: the contact's `+` from
+(`docs/design/low-battery.md` §3, Option B; core `esp32/rig/`, tests `test_rig`). Move one wire: the contact's `+` from
 **3V3** to **GPIO32** (`CONFIG_OWS_RIG_SUPPLY_GPIO`, ADC1 channel 4: ADC2 pins do not work with Wi-Fi on). Then:
 
 ```

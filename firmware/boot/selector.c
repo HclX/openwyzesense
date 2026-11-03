@@ -1,6 +1,6 @@
 // The boot selector: flash page 0, where the ROM starts the chip. Picks the slot to run (common/boot_slot.c:
 // the newest usable image) and jumps to it. Reads only, touches no hardware, uses only its stack; never updated
-// over the air (docs/ota.md). No slot to run: waits, for JTAG or the ROM bootloader's backdoor.
+// over the air (docs/design/ota.md). No slot to run: waits, for JTAG or the ROM bootloader's backdoor.
 #include <stdint.h>
 
 #include "board_config.h"

@@ -1,6 +1,6 @@
-# Our sensor firmware on a v1 contact sensor wired to the LaunchPad (docs/v1-contact.md: M, C, S = RESET_N, RX, TX, +, -
-# to the XDS110 side, those jumpers pulled), all from here, no hands: flash preset fw (console input during the 10 s
-# boot window keeps it awake for 5 minutes) via tools/uniflash.py, check that it starts with its CCFG MAC (never
+# Our sensor firmware on a v1 contact sensor wired to the LaunchPad (docs/design/v1-contact.md: M, C, S = RESET_N, RX,
+# TX, +, - to the XDS110 side, those jumpers pulled), all from here, no hands: flash preset fw (console input during the
+# 10 s boot window keeps it awake for 5 minutes) via tools/uniflash.py, check that it starts with its CCFG MAC (never
 # written), answers on its console, sees no input changing by itself, and comes back from the state a debugger's run
 # leaves it in by a board reset alone. It may transmit (a joined unit reports; test PAN only): opt in with OWS_HW=1,
 # OWS_HW_TX=1 and OWS_HW_CONTACT=1 (the LaunchPad's own CC1310 is then off its XDS110: the other test_hw_* need it).

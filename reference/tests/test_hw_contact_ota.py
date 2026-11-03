@@ -1,6 +1,6 @@
-# An OTA update of a v1 contact sensor over the air, no hands (issue #3): the bench unit (docs/v1-contact.md, wired to
-# the LaunchPad's XDS110) gets the boot selector and version N in slot A through tools/uniflash.py, joined to our
-# gateway on the spare dongle (PAN 0x65FE; it keeps its join from earlier, or joins now from the console); the host
+# An OTA update of a v1 contact sensor over the air, no hands (issue #3): the bench unit (docs/design/v1-contact.md,
+# wired to the LaunchPad's XDS110) gets the boot selector and version N in slot A through tools/uniflash.py, joined to
+# our gateway on the spare dongle (PAN 0x65FE; it keeps its join from earlier, or joins now from the console); the host
 # stages N+1 (both builds), the console's "ota" opens the window as a short press would; the unit takes the slot-B
 # build, restarts into it, reports, and confirms itself. Transmits (test PAN): OWS_HW=1 OWS_HW_TX=1 OWS_HW_CONTACT=1.
 import os

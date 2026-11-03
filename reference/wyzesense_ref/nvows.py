@@ -1,5 +1,5 @@
-# Our NV page format (docs/nv-format.md, issue #61): encode, decode, and the JSON the flashing tools carry data in
-# (export from a stock page or one of ours, validated; import into ours). The firmware's nvstore.c follows the same
+# Our NV page format (docs/design/nv-format.md, issue #61): encode, decode, and the JSON the flashing tools carry data
+# in (export from a stock page or one of ours, validated; import into ours). The firmware's nvstore.c follows the same
 # spec; the tests check that both read each other's pages.
 import zlib
 
@@ -93,7 +93,7 @@ def encode(items):
     return bytes(page) + b'\xff' * (PAGE_SIZE - len(page))
 
 
-# --- the items' data (docs/nv-format.md) ---
+# --- the items' data (docs/design/nv-format.md) ---
 
 
 def h16(v):

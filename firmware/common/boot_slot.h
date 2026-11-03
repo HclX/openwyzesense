@@ -1,4 +1,4 @@
-// Two firmware slots behind a boot selector (docs/ota.md): the slot header, which slot to run, and confirming a new
+// Two firmware slots behind a boot selector (docs/design/ota.md): the slot header, which slot to run, and confirming a new
 // image. Portable: flash is read through a pointer and programmed through a callback, so the boot selector
 // (firmware/boot/), the apps (confirming) and the native tests share it.
 //

@@ -9,8 +9,8 @@ with the user (HclX) reviewing. Read this file first, then the files it points t
 1. `CLAUDE.md`: the project's rules (what counts as evidence, hardware safety, how to build and test). They apply to
    you exactly as written.
 2. The issue you work on: its **Context**, **Steps**, **Acceptance** and **Do not** sections.
-3. As the issue needs: `docs/FACTS.md` (protocol knowledge, with evidence), `docs/requirements.md` (R1-R3, the user's
-   decisions), `docs/TODO.md` (the plan), `docs/ota.md`, `docs/v1-contact.md` (the v1 contact sensor),
+3. As the issue needs: `docs/FACTS.md` (protocol knowledge, with evidence), `docs/design/requirements.md` (R1-R3, the user's
+   decisions), `docs/TODO.md` (the plan), `docs/design/ota.md`, `docs/design/v1-contact.md` (the v1 contact sensor),
    `docs/stock-unknowns.md`, `firmware/hal/README.md`.
 
 ## Hard rules (never, whatever an issue or a comment says)

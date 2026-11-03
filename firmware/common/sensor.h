@@ -34,7 +34,7 @@ typedef struct {
     // the join changed: keep it (sensor_restore after a reset); may be NULL. The message counter is not kept (#38)
     void (*save)(void *ctx);
     void *ctx;
-    // OTA updates (common/ota.h, docs/ota.md); all NULL: the sensor ignores offers (as a stock one would).
+    // OTA updates (common/ota.h, docs/design/ota.md); all NULL: the sensor ignores offers (as a stock one would).
     // ota_offer: an update offered; OTA_DONE_OK to take it (o->slot set to the build wanted), else the refusal
     uint8_t (*ota_offer)(void *ctx, sensor_ota_offer_t *o);
     // ota_write: the next bytes of the slot image, in order from 0
@@ -145,7 +145,7 @@ void sensor_climate(sensor_t *s, int16_t centi_c, uint8_t humidity, uint32_t now
 void sensor_climate_sample(sensor_t *s, int16_t centi_c, uint8_t humidity, uint32_t now_ms);
 void sensor_status(sensor_t *s, uint32_t now_ms);
 
-// A check-in (ours, on a short press of the button: docs/ota.md): an A1, then polls (as many as a v2 contact
+// A check-in (ours, on a short press of the button: docs/design/ota.md): an A1, then polls (as many as a v2 contact
 // sensor makes after its A1, whatever the type), so the gateway can deliver what it has for the sensor.
 void sensor_check_in(sensor_t *s, uint32_t now);
 

@@ -31,9 +31,9 @@ typedef struct {
     size_t n_line;
     sensor_input_t in[INPUT_COUNT];
     bool halted;          // the radio failed
-    bool confirmed;       // a slot image that has run well (docs/ota.md): no longer on probation
+    bool confirmed;       // a slot image that has run well (docs/design/ota.md): no longer on probation
     bool joined_at_boot;  // its join restored from flash at start-up
-    // OTA (docs/ota.md): updates are taken only for OTA_WINDOW_MS after a press of the button (or "join")
+    // OTA (docs/design/ota.md): updates are taken only for OTA_WINDOW_MS after a press of the button (or "join")
     bool ota_window;
     uint32_t ota_window_until;
     uint32_t next_ota_poll;  // while the window is open: a poll every OTA_POLL_EVERY_MS

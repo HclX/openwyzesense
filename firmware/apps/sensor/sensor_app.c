@@ -30,7 +30,7 @@
 // "input <event|button> <0|1>". The button held LONG_PRESS_MS pairs like "join" (a joined sensor pairs again, and
 // keeps its network if that fails), as the stock sensors do ("button long"); a shorter press ("button short", ours:
 // what stock does then is open, docs/stock-unknowns.md B1) opens the OTA window and checks in (an A1, then polls).
-// OTA updates (docs/ota.md), on a slot image only: in the window (OTA_WINDOW_MS after a short press) the sensor
+// OTA updates (docs/design/ota.md), on a slot image only: in the window (OTA_WINDOW_MS after a short press) the sensor
 // also polls every OTA_POLL_EVERY_MS, and an update our gateway offers is taken if it is for this board, newer,
 // and the battery is good;
 // "ota <status>" lines, then a reset into the new image. A new image confirms itself once it has run CONFIRM_MS
@@ -73,7 +73,7 @@
 #define MAX_DEBOUNCE_MS    5000u  // upper bound for custom INPUT_EVENT debounce in NV_CFG (0x21)
 #define SHORT_PRESS_MAX_MS 1000   // short press (40..1000 ms): check-in + 5-min OTA window
 #define LONG_PRESS_MS      3040   // stock Ssf_buttonClockCb: 40 ms debounce + 300 x 10 ms ticks while held
-#define CONFIRM_MS         60000  // an OTA image that runs this long confirms itself (docs/ota.md)
+#define CONFIRM_MS         60000  // an OTA image that runs this long confirms itself (docs/design/ota.md)
 #define OTA_WINDOW_MS      (5u * 60 * 1000)
 #define OTA_POLL_EVERY_MS  10000  // in the window: an update staged after the press is still found within this
 #define BOOT_LOW_BAT_MV    2590   // stock 0x53 (83/32 V = 2.59 V): 5 x 200 ms low-battery blink at boot
@@ -82,7 +82,7 @@
     (0x7FFFu &     \
      ~(DIO_BIT(BOARD_UART_RX) | DIO_BIT(BOARD_UART_TX) | DIO_BIT(BOARD_LED_OK_DIO) | DIO_BIT(BOARD_LED_ERROR_DIO)))
 #define OTA_MIN_MV 2500  // no flash erase / write below this (the zero-MAC failure: a write at low battery)
-// The battery under load (#75, docs/low-battery.md): an old coin cell reads ~2.9 V at rest and sags hundreds of mV
+// The battery under load (#75, docs/design/low-battery.md): an old coin cell reads ~2.9 V at rest and sags hundreds of mV
 // while a frame goes out, where it browns out. Reports carry the loaded reading (stock samples after each frame,
 // FACTS.md R5); the low-battery flag (byte 12) as stock sets it, but cleared again by a fresh cell
 #define LOW_BAT_WARN_MV  2625  // stock 0x54: loaded readings below this, LOW_BAT_STREAK in a row, set the flag
@@ -294,7 +294,7 @@ static void on_joined(void *ctx, bool ok)
     a->was.active = false;
 }
 
-// --- OTA (docs/ota.md) ---
+// --- OTA (docs/design/ota.md) ---
 
 static void ota_open_window(sensor_app_t *a)
 {

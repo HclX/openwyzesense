@@ -1,4 +1,4 @@
-// The v1 contact board the relay serves (docs/v1-contact.md; wiring: esp32/README.md): its UART (the gateway's host
+// The v1 contact board the relay serves (docs/design/v1-contact.md; wiring: esp32/README.md): its UART (the gateway's host
 // link, and the ROM bootloader's), its S pad (RESET_N) and W pad (DIO10: low at reset = the ROM bootloader, backdoor
 // `w`, #14), both open-drain.
 #pragma once

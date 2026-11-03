@@ -48,7 +48,7 @@ typedef struct {
     bool (*sbl)(void *ctx, bool enter);
 } gw_io_t;
 
-// Feature flags (R3, docs/requirements.md): what changes the protocol a stock peer sees is off until the host
+// Feature flags (R3, docs/design/requirements.md): what changes the protocol a stock peer sees is off until the host
 // turns it on with OWS_SUB_FLAGS (0x53F0 0x01; sub-payload: 4 bytes BE flags wanted, or empty to ask; legacy 0- or
 // 0x00-prefixed 4-byte 0x53F0 packets are also accepted). The reply (0x53F1 0x01) carries the flags now on, then the
 // flags this firmware supports (4 + 4 bytes BE). A stock dongle does not answer it, which is how a host tells them
@@ -60,7 +60,7 @@ enum {
     GW_FLAG_OTA = 1u << 2,           // OTA updates of our sensors (common/ota.h): the host's offers taken
     GW_FLAG_ANNOUNCE = 1u << 3,      // the A6 of a pairing says the gateway is ours, and its features
                                      // (wyze_app.h A6_OURS_*), in the bytes a stock dongle leaves 0
-    GW_FLAG_ROAM = 1u << 4,          // roaming (#90, docs/roaming.md): several gateways share one network identity;
+    GW_FLAG_ROAM = 1u << 4,          // roaming (#90, design/roaming.md): several gateways share one network identity;
                                      // each ACKs and answers only the sensors in its own table (and associations
                                      // only while pairing), and forwards reports it overhears from the others'
                                      // sensors as OWS_SUB_OVERHEARD, unACKed on the air

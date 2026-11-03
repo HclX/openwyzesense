@@ -1,4 +1,4 @@
-# OTA slot images' version (#57): a uint32 that a sensor compares unsigned ("newer" = higher, docs/ota.md), encoded from
+# OTA slot images' version (#57): a uint32 that a sensor compares unsigned ("newer" = higher, docs/design/ota.md), encoded from
 # the release tag so that every release is above every older build, the archive repository's included (whose images
 # were numbered by commit count, up to a few hundred):
 #
