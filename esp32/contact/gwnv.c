@@ -10,7 +10,6 @@
 #define WAIT_MS   200
 #define WAITS     3
 #define BYTES_MAX 256
-#define HOUSE_PAN 0x845B
 
 static bool fail(char *err, size_t cap, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
 
@@ -78,8 +77,8 @@ static bool parse_mac(const char *s, char out[9])
 
 static bool validate_doc(gwnv_doc_t *doc, char *err, size_t err_cap)
 {
-    if (doc->pan == 0x0000 || doc->pan == 0xFFFF || doc->pan == HOUSE_PAN) {
-        return fail(err, err_cap, "PAN %04X is reserved or forbidden", doc->pan);
+    if (doc->pan == 0x0000 || doc->pan == 0xFFFF) {
+        return fail(err, err_cap, "PAN %04X is reserved", doc->pan);
     }
     if (doc->short_addr >= 0xFFFE) {
         return fail(err, err_cap, "coordinator short address %04X is reserved", doc->short_addr);

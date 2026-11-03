@@ -127,9 +127,9 @@ static void test_json_validation(void)
           doc.sensors[0].type == SENSOR_CONTACT_V2);
     CHECK(doc.sensors[1].sub == 1 && !strcmp(doc.sensors[1].mac, "77123456") && doc.sensors[1].short_addr == 0x0009);
 
-    // Reject house PAN 845B, duplicate short_addr, all-zero MAC, wrong version, and trailing garbage.
+    // Reject PAN FFFF, duplicate short_addr, all-zero MAC, wrong version, and trailing garbage.
     static const char *bad[] = {
-        "{\"format\":\"openwyzesense-nv-json\",\"version\":1,\"network\":{\"pan\":\"845B\",\"short\":\"0001\",\"ext\":"
+        "{\"format\":\"openwyzesense-nv-json\",\"version\":1,\"network\":{\"pan\":\"FFFF\",\"short\":\"0001\",\"ext\":"
         "\"1\"}}",
         "{\"format\":\"openwyzesense-nv-json\",\"version\":2,\"network\":{\"pan\":\"1234\",\"short\":\"0001\",\"ext\":"
         "\"1\"}}",

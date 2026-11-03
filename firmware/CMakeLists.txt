@@ -54,8 +54,7 @@ if(NOT CMAKE_CROSSCOMPILING)
     target_link_options(test_boot PRIVATE -fsanitize=address,undefined)
     add_test(NAME boot COMMAND test_boot)
 
-    # The apps, unchanged, on the host board: the hardware interface (hal/) simulated (the simulated radio refuses
-    # the house PAN as the real one does), with the debug host command.
+    # The apps, unchanged, on the host board: the hardware interface (hal/) simulated, with the debug host command.
     set(host_flags -Wall -Wextra -Werror -fsanitize=address,undefined)
     add_library(board_host STATIC boards/host/host_board.c boards/host/build_info_host.c)
     target_include_directories(board_host PUBLIC hal boards/host)

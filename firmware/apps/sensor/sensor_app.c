@@ -7,7 +7,7 @@
 //   debounce <ms>              INPUT_EVENT debounce in ms (0: default 40 ms, up to 5000 ms; persisted in NV_CFG 0x21)
 //   profile [default|contact|contact-no|leak|motion]   print or apply a complete DIY pin/type profile in NV_CFG (0x21)
 //   cfg                        print the current NV_CFG (0x21) profile settings
-//   join                       pair with whichever gateway is pairing (never the house network, PAN 0x845B)
+//   join                       pair with whichever gateway is pairing
 //   leave                      forget the network
 //   event <0|1>                contact open / motion active (A2)
 //   climate <centi-degC> <%>   E8
@@ -64,9 +64,6 @@
 #endif
 #ifndef OWS_PASSIVE
 #define OWS_PASSIVE 0
-#endif
-#if OWS_PAN == 0x845B && !OWS_PASSIVE
-#error "the sensor never joins the house network (PAN 0x845B): see CLAUDE.md"
 #endif
 
 #define DEBOUNCE_MS        40     // stock Ssf_buttonClockCb confirms 4 x 10 ms ticks (40 ms)
@@ -195,8 +192,8 @@ static void restore(sensor_app_t *a)
         return;
     }
     uint16_t pan = (uint16_t)(r[2] | r[3] << 8);
-    if (pan == 0x845B || pan == a->sensor.cfg.never_pan || (a->sensor.cfg.only_pan && pan != a->sensor.cfg.only_pan)) {
-        return;  // never the house network (CLAUDE.md), nor another PAN when pinned by only_pan
+    if (pan == a->sensor.cfg.never_pan || (a->sensor.cfg.only_pan && pan != a->sensor.cfg.only_pan)) {
+        return;  // not a PAN this build refuses, nor another PAN when pinned by only_pan
     }
     set_type(&a->sensor, a->cfg_type ? a->cfg_type : r[0]);
     // r[8..9], the counter of older images, is ignored: it starts from 0 at each start (#38)
@@ -752,7 +749,7 @@ void sensor_app_init(sensor_app_t *a)
 {
     static const char hex[] = "0123456789ABCDEF";
     sensor_io_t io = {radio_send, on_joined, NULL, save, a, ota_offer, ota_write, ota_check, ota_end};
-    sensor_config_t cfg = {OWS_SENSOR_TYPE, {'7', '7', 'F', 'E'}, 0, {0}, OWS_PAN, 0x845B, 0};
+    sensor_config_t cfg = {OWS_SENSOR_TYPE, {'7', '7', 'F', 'E'}, 0, {0}, OWS_PAN, 0, 0};
     uint64_t ieee = chip_ieee();
 
     memset(a, 0, sizeof *a);

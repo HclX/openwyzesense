@@ -82,12 +82,13 @@ def test_import_of_an_export_keeps_it(dump):
     assert again['dropped'] == []  # nothing invalid is carried over
 
 
-def test_join_round_trip_and_the_house_network_refused():
+def test_join_round_trip_and_bad_pans_refused():
     j = {'type': '01', 'gw_ours': True, 'pan': '65FE', 'coord': 'D425', 'short': '0006', 'gw_features': '0001'}
     doc = {'format': nvows.JSON_FORMAT, 'version': 1, 'network': None, 'sensors': [], 'join': j}
     assert nvows.export(nvows.import_(doc))['join'] == j
     with pytest.raises(ValueError):
-        nvows.import_({**doc, 'join': {**j, 'pan': '845B'}})
+        nvows.import_({**doc, 'join': {**j, 'pan': 'FFFF'}})
+    assert nvows.export(nvows.import_({**doc, 'join': {**j, 'pan': '845B'}}))['join']['pan'] == '845B'  # any PAN (#70)
 
 
 def test_sensor_cfg_round_trip_and_validation():
@@ -223,7 +224,7 @@ def test_host_link_nv_import_export(tmp_path):
         link = host_link.HostLink(str(pty_path))
         try:
             link.handshake()
-            refused = link.network(0x845B, 0x0001, 0x00124B0000000001)
+            refused = link.network(0xFFFF, 0x0001, 0x00124B0000000001)  # FFFF is broadcast; any other PAN is fine (#70)
             assert refused and refused['status'] == 0xE0
             ok_net = link.network(0x55AA, 0x0000, 0x00124B00AABBCCDD)
             assert ok_net == {'status': 0x00, 'pan': '55AA', 'short': '0000', 'ext': '00124B00AABBCCDD'}

@@ -32,9 +32,6 @@ size_t mac_build_data(uint8_t *out, uint8_t seq, uint16_t pan, uint16_t dst, uin
                       size_t n, bool ack_req);
 
 // ACK: FC 0x0002 or 0x0012 (pending) + seq. Returns 3.
-// Whether the frame has pan as its source or destination PAN (radio_tx refuses the house network's).
-bool mac_on_pan(const uint8_t *frame, size_t n, uint16_t pan);
-
 size_t mac_build_ack(uint8_t *out, uint8_t seq, bool pending);
 
 // The FCS stock devices put on an ACK: CRC-32 over FC, seq and one zero byte, little-endian.

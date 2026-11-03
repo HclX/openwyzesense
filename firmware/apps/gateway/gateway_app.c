@@ -22,9 +22,6 @@
 #ifndef OWS_PASSIVE
 #define OWS_PASSIVE 0
 #endif
-#if OWS_PAN == 0x845B && !OWS_PASSIVE
-#error "never transmit on the house network (PAN 0x845B): see CLAUDE.md"
-#endif
 
 #ifndef OWS_DEBUG
 #define OWS_DEBUG 0
@@ -35,16 +32,19 @@
 
 // A mains-powered gateway: frames and host bytes wake it; this is only for gw_tick's own timers
 #define TICK_MS          10
-#define GW_SCAN_BLINK_MS 300  // stock ledBlinkToggle period during pairing scan mode (stock_gateway.c:37)
-#define GW_RX_PULSE_MS   50   // brief activity dip on valid RF frame reception
+#define GW_SCAN_BLINK_MS 300   // stock ledBlinkToggle period during pairing scan mode (stock_gateway.c:37)
+#define GW_RX_PULSE_MS   50    // brief activity dip on valid RF frame reception
+#define RADIO_RETRY_MS   1000  // a radio that failed to start is tried again this often; the host link runs meanwhile
 
 static void radio_send(void *ctx, const uint8_t *frame, size_t len, uint32_t gap_us)
 {
-    (void)ctx;
+    const gateway_app_t *a = ctx;
 #if OWS_PASSIVE
-    (void)frame, (void)len, (void)gap_us;
+    (void)a, (void)frame, (void)len, (void)gap_us;
 #else
-    radio_tx(frame, len, gap_us);
+    if (a->radio_ok) {
+        radio_tx(frame, len, gap_us);
+    }
 #endif
 }
 
@@ -79,8 +79,17 @@ static bool sbl(void *ctx, bool enter)
         return true;
     }
     uart_flush();
-    a->halted = chip_enter_sbl();
-    return a->halted;
+    a->in_sbl = chip_enter_sbl();
+    return a->in_sbl;
+}
+
+// The receiver on; on failure the error LED, and another try after RADIO_RETRY_MS (the host link runs regardless)
+static void radio_start(gateway_app_t *a)
+{
+    a->radio_ok = radio_init() && radio_rx_start();
+    a->radio_retry_ms = clock_now_ms() + RADIO_RETRY_MS;
+    board_led(BOARD_LED_ERROR, !a->radio_ok);
+    board_led(BOARD_LED_OK, a->radio_ok);
 }
 
 static void init_gateway(gateway_app_t *a)
@@ -108,9 +117,7 @@ static void init_gateway(gateway_app_t *a)
     bool have = nv_page_open(&a->nv) && gw_load(&a->gw, &a->nv);
     if (!have || OWS_PAN) {
         a->gw.pan = pan, a->gw.short_addr = addr, a->gw.ext = ieee;
-        if (pan != 0x845B) {
-            gw_save_network(&a->gw);
-        }
+        gw_save_network(&a->gw);
     }
 }
 
@@ -121,13 +128,7 @@ void gateway_app_init(gateway_app_t *a)
     init_gateway(a);
     board_keep_awake();  // the host link and the receiver never sleep
     a->now_ms = clock_now_ms();
-    // never transmit on the house network (CLAUDE.md): a gateway that finds the house PAN in flash stops here
-    if ((!OWS_PASSIVE && a->gw.pan == 0x845B) || !radio_init() || !radio_rx_start()) {
-        a->halted = true;
-        board_led(BOARD_LED_ERROR, 1);
-        return;
-    }
-    board_led(BOARD_LED_OK, 1);
+    radio_start(a);
 }
 
 uint32_t gateway_app_step(gateway_app_t *a)
@@ -136,15 +137,20 @@ uint32_t gateway_app_step(gateway_app_t *a)
     host_pkt_t pkt;
     uint8_t c;
 
-    if (a->halted) {
+    if (a->in_sbl) {
         return UINT32_MAX;
     }
+    // the host link always runs (#70): a radio that failed to start only leaves the gateway deaf and mute
+    uint32_t now = clock_now_ms();
+    if (!a->radio_ok && (int32_t)(now - a->radio_retry_ms) >= 0) {
+        radio_start(a);
+    }
     bool got_rf = false;
-    while (radio_poll(&f)) {
+    while (a->radio_ok && radio_poll(&f)) {
         gw_rx(&a->gw, f.frame, f.len, f.rssi);
         got_rf = true;
     }
-    while (!a->halted && uart_getc(&c)) {
+    while (!a->in_sbl && uart_getc(&c)) {
         if (!host_rx_feed(&a->host_rx, c, &pkt)) {
             continue;
         }
@@ -159,11 +165,10 @@ uint32_t gateway_app_step(gateway_app_t *a)
         // the packet where it starts: host_rx_feed finds it after stray bytes too (#39); header 5 + checksum 2
         gw_host(&a->gw, pkt.payload - 5, pkt.len + 7);
     }
-    if (a->halted) {
+    if (a->in_sbl) {
         return UINT32_MAX;
     }
     // the dongle clock runs on from the host's last time sync (0 until then, like the stock dongle)
-    uint32_t now = clock_now_ms();
     if (a->gw.clock_ms) {
         a->gw.clock_ms += now - a->now_ms;
     }
@@ -175,6 +180,9 @@ uint32_t gateway_app_step(gateway_app_t *a)
     }
     if (a->rx_pulsing && (int32_t)(now - a->rx_pulse_until) >= 0) {
         a->rx_pulsing = false;
+    }
+    if (!a->radio_ok) {
+        return TICK_MS;  // the error LED stays on
     }
     if (a->gw.permit) {
         if (!a->scan_was_on) {

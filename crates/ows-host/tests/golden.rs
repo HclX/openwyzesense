@@ -57,7 +57,7 @@ fn import_refuses_what_the_reference_refuses() {
             r#"{base}{net},"sensors":[{{"sub":1,"mac":"77A8C793","short":"0003"}},{{"sub":2,"mac":"77A8C793","short":"0004"}}]}}"#
         ),
         format!(
-            r#"{base},"join":{{"type":"01","gw_ours":false,"pan":"845B","coord":"3366","short":"0005","gw_features":"0000"}}}}"#
+            r#"{base},"join":{{"type":"01","gw_ours":false,"pan":"FFFF","coord":"3366","short":"0005","gw_features":"0000"}}}}"#
         ),
         format!(r#"{base},"cfg":{{"type":"0E","pull":"sideways"}}}}"#),
         format!(r#"{base},"cfg":{{"debounce_ms":5001}}}}"#),

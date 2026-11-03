@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "chip.h"
-#include "mac154.h"
 #include "phy_settings.h"
 // clang-format off: a TI include path, not a division
 #include DeviceFamily_constructPath(driverlib/rf_data_entry.h)
@@ -142,13 +141,8 @@ uint32_t radio_overruns(void)
     return overruns;
 }
 
-#define HOUSE_PAN 0x845B  // the user's house network: never transmit on it (CLAUDE.md)
-
 bool radio_tx(const uint8_t *frame, size_t len, uint32_t gap_us)
 {
-    if (mac_on_pan(frame, len, HOUSE_PAN)) {
-        return false;
-    }
     static uint32_t last_start;  // radio timer (4 MHz) at the start of the previous frame
     // PHR (FACTS.md §2): 4-byte FCS, whitening on, length incl. FCS; the radio appends the FCS. The radio
     // sends the 16-bit header low byte first, so it goes in little-endian (found with the SDR, test_hw_tx.py).

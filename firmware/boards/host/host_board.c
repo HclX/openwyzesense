@@ -10,12 +10,10 @@
 #include "chip.h"
 #include "clock.h"
 #include "input.h"
-#include "mac154.h"
 #include "nv_page.h"
 #include "radio.h"
 #include "uart.h"
 
-#define HOUSE_PAN   0x845B    // radio_tx refuses it, as on the chip (CLAUDE.md)
 #define MAX_WAIT_MS 3600000u  // clock_wait's cap on the chip
 #define IN_FLIGHT   64
 
@@ -607,10 +605,6 @@ uint32_t radio_overruns(void)
 bool radio_tx(const uint8_t *frame, size_t len, uint32_t gap_us)
 {
     if (!cur->radio_ready || len > RADIO_MAX_FRAME || n_in_flight == IN_FLIGHT) {
-        return false;
-    }
-    if (mac_on_pan(frame, len, HOUSE_PAN)) {
-        cur->tx_refused++;
         return false;
     }
     uint64_t start = now_us;

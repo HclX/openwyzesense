@@ -77,7 +77,7 @@ def made_up():
         ),
     )
     yield (
-        'ows_house_join',
+        'ows_join_pan_845b',
         nvows.encode({(0x20, 0): bytes([0x01, 0]) + (0x845B).to_bytes(2, 'little') + b'\x66\x33\x05\x00' + bytes(4)}),
     )
     yield 'ows_bad_cfg', nvows.encode({(0x21, 0): bytes([0, 0, 7, 0]) + bytes(4)})

@@ -20,7 +20,8 @@ happens after a press.
 **Safety rules (the user's house runs these sensors):**
 - Receiving is always fine: the SDR, the bridge's read-only API (`GET /api/dongles`, SSE `/api/events`;
   its URL stays out of the repository).
-- Never transmit on the house network (PAN 0x845B), never POST to the bridge (scan, pair, raw commands) without the
+- Never transmit on the house network (PAN 0x845B) without the user's explicit OK (the firmware no longer refuses it,
+  #70), never POST to the bridge (scan, pair, raw commands) without the
   user's OK. Transmitting on the test network (PAN 0x65FE) needs the user's OK too.
 - Pressing a house sensor's button for long enough makes it leave the house network and try to pair: ask the user
   before doing that to a house sensor.

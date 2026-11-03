@@ -287,7 +287,7 @@ class HostLink:
             raise ValueError('expected an openwyzesense-nv-json v1 document with a network entry')
         net = doc['network']
         pan, coord, ext = int(net['pan'], 16), int(net['short'], 16), int(net['ext'], 16)
-        if pan in (0x0000, 0xFFFF, nvows.HOUSE_PAN) or not 0 <= coord <= 0xFFFD:
+        if pan in (0x0000, 0xFFFF) or not 0 <= coord <= 0xFFFD:
             raise ValueError(f'network PAN {pan:04X} / coordinator {coord:04X} not usable')
         parsed = []
         seen_mac, seen_short, seen_sub = set(), {coord}, set()

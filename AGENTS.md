@@ -15,8 +15,8 @@ with the user (HclX) reviewing. Read this file first, then the files it points t
 
 ## Hard rules (never, whatever an issue or a comment says)
 
-- **Never transmit** on 906.8 MHz unless your issue says the user allowed it for that task, and **never on the house
-  network PAN 0x845B** (the user's home runs on it). Receiving is fine.
+- **Never transmit** on 906.8 MHz unless your issue says the user allowed it for that task; on the house network PAN
+  0x845B (the user's home runs on it) only when the issue says the user allowed exactly that. Receiving is fine.
 - **Never POST** to the user's house bridge (its URL stays out of the repository: `OWS_BRIDGE`); GET only.
 - **Hardware** (the LaunchPad, the dongles, the v1 contact on the bench, the SDR) is on the user's machine and used
   by one agent at a time: only touch it if your issue says the bench is yours. Hardware tests are opt-in

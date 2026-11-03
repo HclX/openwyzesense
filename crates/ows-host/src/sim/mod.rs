@@ -48,6 +48,8 @@ pub struct SimDongle {
     pub corrupt_at: Option<usize>,
     /// After the bootloader's reset, answer nothing until replugged (as a dongle that does not leave update mode).
     pub needs_replug: bool,
+    /// The CC1310 answers no async command (a firmware that does not run): the CH554 still answers Inquiry (#70).
+    pub radio_silent: bool,
     /// Fail read() with this I/O error kind (e.g. the device gone).
     pub fail_io: Option<io::ErrorKind>,
     out: VecDeque<Vec<u8>>,
@@ -109,6 +111,7 @@ impl SimDongle {
             log: vec![],
             corrupt_at: None,
             needs_replug: false,
+            radio_silent: false,
             fail_io: None,
             out: VecDeque::new(),
             status: 0x40,
@@ -216,6 +219,13 @@ impl HidTransport for SimDongle {
                     self.report(&[0x55, 0xAA, 0x43, 0x03, 0x13, 0x01, 0x58]);
                 } else if data == sbl::INQUIRY {
                     self.report(&[0x55, 0xAA, 0x43, 0x04, 0x28, 0x01, 0x01, 0x6A]);
+                } else if data == crate::dongle::GET_VERSION && !self.radio_silent {
+                    let v = b"0.0.0.47 V1.8 Gateway GW3U";
+                    let mut r = vec![0x55, 0xAA, 0x53, (v.len() + 3) as u8, 0x17];
+                    r.extend_from_slice(v);
+                    let sum = r.iter().fold(0u16, |a, &b| a.wrapping_add(b as u16));
+                    r.extend_from_slice(&sum.to_be_bytes());
+                    self.report(&r);
                 }
                 return Ok(());
             }
