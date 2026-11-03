@@ -107,7 +107,7 @@ decisions so far.
 - Hardware tests (`reference/tests/test_hw*.py`, skipped unless `OWS_HW=1`) flash and reset through
   `reference/tests/hw.py` (retries the XDS110's flaky JTAG). If every OpenOCD scan reads "all zeroes", the XDS110's JTAG
   side has hung: `hw.usb_reset()` (USBDEVFS_RESET on the probe) brings it back without a replug; the target was fine
-  every time. See `README.md` and `docs/DESIGN.md` §10.1 for the full HIL opt-in matrix (`OWS_HW=1`, `OWS_HW_TX=1`,
+  every time. See `docs/development.md` and `docs/DESIGN.md` §10.1 for the full HIL opt-in matrix (`OWS_HW=1`, `OWS_HW_TX=1`,
   `OWS_HW_CONTACT=1`, `OWS_HW_ESP32=<ip>`).
 - Receive-only LaunchPad tests (`OWS_HW=1`):
   - `test_hw.py`: flashes `sniffer-launchpad.elf` (`fw`) and compares what the LaunchPad receives with an RTL-SDR

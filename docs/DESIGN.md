@@ -8,7 +8,8 @@
 - [`docs/stock-re/`](stock-re/README.md) — Reconstructed C source code of stock sensor (`contact_v1`, `motion_v1`) and gateway (`gateway_v1.8`) firmware with flash/SRAM addresses
 - [`docs/known-issues.md`](known-issues.md) — Root-cause analysis of stock firmware bugs
 - [`docs/project-review-issues.md`](project-review-issues.md) — Tracked implementation bugs and UX/DX gaps in the current codebase
-- [`docs/user-guide.md`](user-guide.md) — End-user flashing, pairing, and operational guide
+- [`docs/guide/`](guide/README.md) — End-user guide by level, from release files only (dongle, v1 contact revive / flash, Wi-Fi gateway, wyzesense2mqtt-rs)
+- [`docs/development.md`](development.md) — Development environment: toolchain, builds, tests, HIL matrix, repository tools
 
 ---
 
