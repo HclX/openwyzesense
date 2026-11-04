@@ -32,7 +32,7 @@
 
 static const char VERSION[] = "0.0.0.47 V1.8 Gateway GW3U";
 
-enum { PEND_ASSOC_RESP, PEND_JOIN_TOKEN, PEND_JOIN_DONE };
+enum { PEND_ASSOC_RESP, PEND_JOIN_TOKEN, PEND_JOIN_DONE, PEND_KEYPAD_REPLY };
 
 void gw_init(gateway_t *gw, uint16_t pan, uint16_t short_addr, uint64_t ext, const uint8_t mac[8], const gw_io_t *io)
 {
@@ -446,6 +446,9 @@ static void send_pending(gateway_t *gw, gw_pending_t *p)
             send_data(gw, (uint16_t)p->dst, pt, n);
             break;
         }
+        case PEND_KEYPAD_REPLY:
+            send_data(gw, (uint16_t)p->dst, p->data, p->len);
+            break;
         default:
             break;
     }
@@ -1706,6 +1709,24 @@ void gw_host(gateway_t *gw, const uint8_t *pkt, size_t len)
                 forget_joining_short(gw, (uint16_t)s);
             }
             host_send(gw, h.cmd + 1, NULL, 0);
+            break;
+        }
+        case HOST_SEND_KEYPAD: {  // MAC(8) + 0xE9 + n + data[n] -> RF keypad reply on the next poll
+            if (h.len < 10 || h.payload[8] != 0xE9) {
+                break;
+            }
+            size_t n = h.payload[9];
+            if (h.len < 10 + n || n < 1 || n > sizeof(((gw_pending_t *)0)->data) - 2) {
+                break;
+            }
+            int32_t s = short_of(gw, h.payload);
+            gw_pending_t *p = s >= 0 ? queue(gw, (uint64_t)s, PEND_KEYPAD_REPLY) : NULL;
+            if (p) {
+                p->data[0] = 0xE9;
+                p->data[1] = (uint8_t)n;
+                memcpy(p->data + 2, h.payload + 10, n);
+                p->len = (uint8_t)(2 + n);
+            }
             break;
         }
         case HOST_GET_SENSOR_COUNT:

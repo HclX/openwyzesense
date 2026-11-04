@@ -1087,6 +1087,32 @@ static void test_keypad_alarm2(void)
     CHECK(n_host == 0);
 }
 
+static void test_keypad_reply(void)
+{
+    gateway_t gw;
+    uint8_t pkt[HOST_MAX_PACKET], pt[16];
+    host_pkt_t h = {0};
+    gw_init(&gw, PAN, SHORT, EXT, (const uint8_t *)"778B5F63", &io);
+    gw_add_sensor(&gw, (const uint8_t *)"77BD567E", 0x0006);
+
+    // Host 0x5353: MAC(8), 0xE9, n, data. Queue the reply for the keypad's next poll.
+    uint8_t payload[14] = {'7', '7', 'B', 'D', '5', '6', '7', 'E', 0xE9, 0x04, 0x03, 0x01, 0x04, 0x00};
+    size_t n = host_build(pkt, HOST_SEND_KEYPAD, payload, sizeof payload, false);
+    n_host = 0;
+    gw_host(&gw, pkt, n);
+    CHECK(n_host == 1 && host_parse(host[0].b, host[0].n, &h) && h.cmd == HOST_ACK &&
+          h.acked == HOST_SEND_KEYPAD);
+
+    uint8_t dreq[10] = {0x63, 0x88, 0x12, PAN & 0xFF, PAN >> 8, SHORT & 0xFF, SHORT >> 8, 0x06, 0x00,
+                        MAC_CMD_DATA_REQ};
+    n_tx = 0;
+    gw_rx(&gw, dreq, sizeof dreq, -50);
+    CHECK(n_tx == 2);
+    CHECK(tx[1].n == 29);  // 9-byte MAC header + 16-byte ciphertext + 4-byte FCS
+    aes128_ecb_decrypt(app_key, tx[1].b + 9, pt, 16);
+    CHECK(pt[0] == 0xE9 && pt[1] == 0x04 && pt[2] == 0x03 && pt[3] == 0x01 && pt[4] == 0x04 && pt[5] == 0x00);
+}
+
 static void test_history_log_ad(void)
 {
     gateway_t gw;
@@ -1421,6 +1447,7 @@ int main(int argc, char **argv)
     test_network_and_nv_import();
     test_history_log_ad();
     test_keypad_alarm2();
+    test_keypad_reply();
     test_ota_queue_and_wildcard();
     test_beacon_delay();
     printf("%d checks, %d failed\n", checks, failures);
