@@ -3,13 +3,13 @@
 **Status:** Authoritative Design Specification  
 **Scope:** Sensor Firmware, Gateway Firmware, RF & Host Protocols, Flash/NV/OTA Architecture, ESP32 IP Relay, and Tooling  
 **Related Documents:**
-- [`docs/TODO.md`](../../TODO.md) — The one task list: what is open, including the bench checklist
-- [`docs/FACTS.md`](../../FACTS.md) — Protocol reference tables and hardware facts with primary evidence
-- [`docs/known-issues.md`](../../known-issues.md) — Root-cause analysis of stock firmware bugs
-- [`docs/stock-re/`](../../stock-re/README.md) — Reconstructed C source code of stock sensor (`contact_v1`, `motion_v1`) and gateway (`gateway_v1.8`) firmware with flash/SRAM addresses
+- [`docs/TODO.md`](../TODO.md) — The one task list: what is open, including the bench checklist
+- [`docs/FACTS.md`](../FACTS.md) — Protocol reference tables and hardware facts with primary evidence
+- [`docs/known-issues.md`](../known-issues.md) — Root-cause analysis of stock firmware bugs
+- [`docs/stock-re/`](../stock-re/README.md) — Reconstructed C source code of stock sensor (`contact_v1`, `motion_v1`) and gateway (`gateway_v1.8`) firmware with flash/SRAM addresses
 - In this folder: [`requirements.md`](requirements.md) (requirements and the user's decisions), [`nv-format.md`](nv-format.md) (flash page 30), [`ota.md`](ota.md) (sensor updates), [`roaming.md`](roaming.md) (several gateways, one network), [`low-battery.md`](low-battery.md) (battery reports), [`v1-contact.md`](v1-contact.md) (the v1 contact board on the bench)
-- [`docs/guide/`](../../guide/README.md) — End-user guide by level, from release files only
-- [`docs/development.md`](../../development.md) — Development environment: toolchain, builds, tests, HIL matrix, bench hardware, repository tools
+- [`docs/guide/`](../guide/README.md) — End-user guide by level, from release files only
+- [`docs/development.md`](../development.md) — Development environment: toolchain, builds, tests, HIL matrix, bench hardware, repository tools
 
 ---
 
@@ -17,8 +17,8 @@
 
 ### 1.1 Problem Statement
 Wyze discontinued the Wyze Sense v1 and v2 product lines, leaving existing hardware unsupported and vulnerable to critical stock firmware bugs:
-1. **The Stock v1 "Zero-MAC" Brick Bug ([`docs/known-issues.md` §1](../../known-issues.md), [`docs/FACTS.md` §5](../../FACTS.md))**: Stock v1 sensors store their runtime identity—the 16-byte XXTEA key and 8-byte ASCII MAC—in TI `NVOCTP` item `(sys=6, item=8, sub=0)` on **Flash Page 30 (`0x1E000–0x1EFFF`)**; the duplicate 8-byte ASCII MAC in CCFG (`0x1FFCC`, Page 31) is written once on the factory line and **never read back** during normal boot (`Ssf_readMacAndKey()` reads only NV item `8`). Worse, `Sensor_init()` unconditionally increments and writes NV item `(6, 6, 0)` (boot counter) and `(6, 4, 0)` (`seq + 25`) to Page 30 *before* `Ssf_checkBootBattery()` checks the unloaded coin-cell voltage (`bat_v32 <= 0x53`, i.e., `2.59 V`). As a CR2032 ages, ~250 brownout boot loops fill the 4 KB Page 30 log until `NVOCTP_compactPage()` erases `0x1E000` (`FlashSectorErase`) and browns out mid-erase—permanently wiping NV item `8` (and network item `1`) so the sensor forgets its pairing and transmits an all-zero MAC (`00:00:00:00:00:00:00:00`) forever, even with a fresh battery.
-2. **Stock USB Dongle Limitations ([`docs/known-issues.md` §2–§4](../../known-issues.md))**:
+1. **The Stock v1 "Zero-MAC" Brick Bug ([`docs/known-issues.md` §1](../known-issues.md), [`docs/FACTS.md` §5](../FACTS.md))**: Stock v1 sensors store their runtime identity—the 16-byte XXTEA key and 8-byte ASCII MAC—in TI `NVOCTP` item `(sys=6, item=8, sub=0)` on **Flash Page 30 (`0x1E000–0x1EFFF`)**; the duplicate 8-byte ASCII MAC in CCFG (`0x1FFCC`, Page 31) is written once on the factory line and **never read back** during normal boot (`Ssf_readMacAndKey()` reads only NV item `8`). Worse, `Sensor_init()` unconditionally increments and writes NV item `(6, 6, 0)` (boot counter) and `(6, 4, 0)` (`seq + 25`) to Page 30 *before* `Ssf_checkBootBattery()` checks the unloaded coin-cell voltage (`bat_v32 <= 0x53`, i.e., `2.59 V`). As a CR2032 ages, ~250 brownout boot loops fill the 4 KB Page 30 log until `NVOCTP_compactPage()` erases `0x1E000` (`FlashSectorErase`) and browns out mid-erase—permanently wiping NV item `8` (and network item `1`) so the sensor forgets its pairing and transmits an all-zero MAC (`00:00:00:00:00:00:00:00`) forever, even with a fresh battery.
+2. **Stock USB Dongle Limitations ([`docs/known-issues.md` §2–§4](../known-issues.md))**:
    - **Single-point USB placement**: The stock dongle must plug directly into a host USB port (originally the back of a Wyze Cam), limiting RF coverage across larger homes.
    - **NV Sensor Table Defects**: Deleting sensors via `0x5325` (`DeleteSensor`) scans only the first `num_devices` contiguous NV `subID`s (`0 .. count-1`), orphaning higher slots when earlier slots are deleted (`known-issues.md` §2).
    - **Fixed 8-Second Downlink Window & Broken >32 B AES**: Stock gateways expire buffered indirect downlink frames (`ApiMac_sec_t` / MAC indirect queue) after ~`8 s` and contain a broken `> 32 B` branch in `AES_decryptBuffer` (`known-issues.md` §3).
@@ -32,7 +32,7 @@ Wyze discontinued the Wyze Sense v1 and v2 product lines, leaving existing hardw
    - Recovers "dead" Zero-MAC v1 sensors by reading their intact 8-byte ASCII MAC directly from CCFG (`0x1FFCC`) on every boot, eliminating runtime NV flash writes during normal operation, and adding fail-safe dual-slot Over-The-Air (OTA) firmware updates.
 2. **Open-Source Gateway Firmware (`gateway-*`)**:
    - Runs on the stock Wyze Sense USB Dongle (`gateway-dongle`), repurposed v1 contact sensor PCBs (`gateway-contact-v1`), and TI LaunchPads (`gateway-launchpad`).
-   - Speaks the stock `AA 55` / `55 AA` UART host protocol so [`wyzesense2mqtt-rs`](https://github.com/HclX/wyzesense2mqtt-rs) works out of the box, while adding backward-compatible OWS host extensions for deduplication, Zero-MAC recovery of un-reflashed stock sensors, CCFG restoration, build identification, direct software SBL entry, and streaming sensor OTA updates.
+   - Speaks the stock `AA 55` / `55 AA` UART host protocol so [`wyzesense2mqtt-rs`](https://github.com/HclX/wyzesense2mqtt-rs) works out of the box, while adding backward-compatible OWS host extensions for deduplication, CCFG restoration, build identification, direct software SBL entry, and streaming sensor OTA updates.
 3. **Network / IP Gateway Relay (`esp32/`, `tools/ws_bridge.py`)**:
    - Pairs an **ESP32-S3**, **classic ESP32 (LOLIN32)**, **ESP8266 (Wemos D1 mini / NodeMCU)**, or Linux host with a `gateway-contact-v1` board over UART (`RX`/`TX`) to bridge the gateway protocol over Wi-Fi WebSockets (`/ws/bridge`) to `wyzesense2mqtt-rs`, with local RAM buffering and replay of up to 32 sensor alarms across network outages.
    - Embeds the canonical `gateway-contact-v1` firmware image and automatically updates the CC1310 over its ROM Serial Bootloader whenever the `OWSB` build image ID changes.
@@ -42,7 +42,7 @@ Wyze discontinued the Wyze Sense v1 and v2 product lines, leaving existing hardw
    - Enables building future new sensor types—either by reusing/repurposing `wyze_contact_v1` boards (via their exposed `DIO7`, `DIO11`, `DIO10` `W`, and `DIO0`/`DIO1` `TX`/`RX` pads) or by designing completely new CC1310-based hardware—that join and report through the same gateway protocol.
 6. **Companion Host Service (`wyzesense2mqtt-rs`, Separate Repository)**:
    - Maintained in [`HclX/wyzesense2mqtt-rs`](https://github.com/HclX/wyzesense2mqtt-rs), this Rust daemon is the host-side counterpart that bridges both local USB HID dongles (`/dev/hidrawN`) and remote Wi-Fi IP relays (`/ws/bridge` WebSocket endpoint) to MQTT and Home Assistant.
-   - While OWS firmware remains 100% compatible with stock hosts and unmodified `wyzesense2mqtt-rs`, pairing OWS with `wyzesense2mqtt-rs` is how OWS's extra capabilities are fully utilized in production—unlocking multi-room Wi-Fi IP gateway relays with outage alarm replay, runtime gateway feature flag configuration (on-gateway deduplication, Zero-MAC recovery, `A6` OWS capability announcement), build-info introspection, sensor OTA firmware delivery, and future coordinated multi-gateway roaming.
+   - While OWS firmware remains 100% compatible with stock hosts and unmodified `wyzesense2mqtt-rs`, pairing OWS with `wyzesense2mqtt-rs` is how OWS's extra capabilities are fully utilized in production—unlocking multi-room Wi-Fi IP gateway relays with outage alarm replay, runtime gateway feature flag configuration (on-gateway deduplication, `A6` OWS capability announcement), build-info introspection, sensor OTA firmware delivery, and future coordinated multi-gateway roaming.
 
 ### 1.3 Core Design Requirements & Invariants
 
@@ -132,7 +132,7 @@ The C/C++ build system is organized around **three** clean CMake presets—one f
 ## 3. Hardware Platform & Lessons from Stock Firmware Reverse Engineering
 
 ### 3.1 Board Pinout & Signal Map
-Reverse-engineering of the stock firmware dumps (`contact_v1`, `motion_v1`, `gateway_v1.8` in [`docs/stock-re/`](../../stock-re/README.md) and [`docs/FACTS.md` §5](../../FACTS.md))—including `BoardGpioInitTable` in `.rodata` and the LZSS-compressed `.data` initializer tables unpacked by `__TI_decompress_lzss` at startup—established the complete hardware pin mapping across all devices:
+Reverse-engineering of the stock firmware dumps (`contact_v1`, `motion_v1`, `gateway_v1.8` in [`docs/stock-re/`](../stock-re/README.md) and [`docs/FACTS.md` §5](../FACTS.md))—including `BoardGpioInitTable` in `.rodata` and the LZSS-compressed `.data` initializer tables unpacked by `__TI_decompress_lzss` at startup—established the complete hardware pin mapping across all devices:
 
 | Function | `wyze_contact_v1` (5×5 RHB) | `wyze_motion_v1` (5×5 RHB) | `wyze_dongle` (5×5 RHB) | `launchxl_cc1310` (7×7 RGZ) | Notes |
 |---|---|---|---|---|---|
@@ -166,7 +166,7 @@ In stock sensor firmware (`contact_v1` `BoardGpioInitTable` at `0x1532C`, `motio
 | **Firmware Upgradability** | Sensor: None (`BL_CONFIG` disabled, no OTA). Gateway: USB HID `0x4312` enters CH554/ROM SBL | Sensor: Dual-slot A/B OTA (`0xC0–0xC3`) with CRC-32 + 3-boot probation rollback, plus ROM SBL on `W` pad. Gateway: SBL + `OWSB` auto-update |
 
 ### 3.4 Definitive Root Cause of the Stock v1 "Zero-MAC" Bug
-Disassembly of `contact_v1` and `motion_v1` ([`docs/stock-re/stock_sensor.c`](../../stock-re/stock_sensor.c), [`docs/known-issues.md` §1](../../known-issues.md)) proved how the infamous v1 bricking bug actually works:
+Disassembly of `contact_v1` and `motion_v1` ([`docs/stock-re/stock_sensor.c`](../stock-re/stock_sensor.c), [`docs/known-issues.md` §1](../known-issues.md)) proved how the infamous v1 bricking bug actually works:
 1. **CCFG (`0x1FFCC`, Page 31) is write-only in stock firmware and never erased**: During factory provisioning (`W` held low), command `0x08` writes the 8-byte ASCII MAC to CCFG `0x1FFCC` (note: `0x1FFD8` in CCFG is `CCFG_O_BL_CONFIG`, *not* an XXTEA key), while command `0x0A` writes `{xxtea_key[16], mac[8], valid=1}` into **Page 30 (`0x1E000`) `NVOCTP` item `(6, 8, 0)`**. During normal operation, `Ssf_readMacAndKey()` (`0x11C50` / `0x11EC8`) reads the MAC and XXTEA key **exclusively from Page 30 NV item `8`** and has no fallback to CCFG `0x1FFCC`. Every "dead" Zero-MAC unit inspected (`777B42DF`, etc.) still has its original ASCII MAC intact at `0x1FFCC` while its Page 30 (`0x1E000`) is blank or freshly re-initialized without item `8`.
 2. **Unconditional NV Flash Writes Before the Boot Battery Check**:
    - In `Sensor_init()`, the firmware calls `Ssf_incrementBootCounter()` (writing NV item `(6, 6, 0)`) and updates NV item `(6, 4, 0)` (`seq + 25`) **before** `Ssf_checkBootBattery()` checks whether `bat_v32 <= 0x53` (`2.59 V`).
@@ -174,14 +174,14 @@ Disassembly of `contact_v1` and `motion_v1` ([`docs/stock-re/stock_sensor.c`](..
    - Across ~250 brownout boot loops, those unconditional boot records pack all 4096 bytes of Page 30 until `NVOCTP_compactPage()` (`0x11258`) is forced to erase Page 30 (`FlashSectorErase(0x1E000)`—the highest-energy flash operation on the chip) before copying live items (`1`, `8`, `9`) back from scratch RAM. Voltage collapse mid-erase leaves Page 30 blank (`0xFF`), permanently destroying NV item `8` (MAC + XXTEA key) and item `1` (PAN + short address). On the next battery change, `NVOCTP` formats an empty Page 30 and the sensor transmits `00:00:00:00:00:00:00:00` forever.
 3. **How OpenWyzeSense Permanently Fixes It**:
    - **On OWS Sensors**: `board_mac()` reads CCFG `0x1FFCC` directly into `sensor_config_t.mac` on every boot; boot counters and message counters live in RAM only; normal reed/PIR/heartbeat operation performs **zero** flash writes; and `nvstore.c` formats and boots cleanly even if power is cut at any byte during pairing.
-   - **On OWS Gateways (for un-reflashed stock sensors)**: Enabling `GW_FLAG_FIX_ZERO_MAC` (`1 << 1`) instructs `gateway.c` to rewrite an incoming all-zero MAC in an encrypted report (`0xA1`/`0xA2`/`0xE8`) with the real MAC recorded in `gw->sensors[]` for that 16-bit `short_addr` (when unique).
+   - **On OWS Gateways (for un-reflashed stock sensors)**: nothing is recovered. As the stock dongle does (`stock-unknowns.md` D8), a report goes to the host only when its short address and MAC both match a sensor in the table, so a zero-MAC report is dropped, and a sensor associating with an all-zero address is never paired (#31). The cure is reflashing the sensor with our firmware.
 
 ---
 
 ## 4. RF Protocol & Cryptography Design (906.8 MHz)
 
 ### 4.1 Physical Layer (PHY) & Framing
-All devices communicate on a single sub-GHz channel using **TI SimpleLink Long Range Mode 2 (`SWRA642`)** on the CC1310's proprietary + 802.15.4g radio core (`CMD_PROP_RADIO_DIV_SETUP` + `rf_patch_mce_sl_longrange` + `rf_patch_rfe_sl_longrange`, [`docs/FACTS.md` §1–§2](../../FACTS.md), [`firmware/soc/cc13x0/radio.c`](../../../firmware/soc/cc13x0/radio.c)):
+All devices communicate on a single sub-GHz channel using **TI SimpleLink Long Range Mode 2 (`SWRA642`)** on the CC1310's proprietary + 802.15.4g radio core (`CMD_PROP_RADIO_DIV_SETUP` + `rf_patch_mce_sl_longrange` + `rf_patch_rfe_sl_longrange`, [`docs/FACTS.md` §1–§2](../FACTS.md), [`firmware/soc/cc13x0/radio.c`](../../firmware/soc/cc13x0/radio.c)):
 
 | Parameter | Value | Evidence / Detail |
 |---|---|---|
@@ -205,7 +205,7 @@ Inside the PHR and FCS sits a standard IEEE 802.15.4-2006 MAC frame:
 - **Addressing Modes**:
   - `0` (`MAC_ADDR_NONE`): No PAN ID or address (used in ACKs and Beacon SrcPAN-less frames).
   - `2` (`MAC_ADDR_SHORT`): 2-byte PAN ID + 2-byte short address (little-endian).
-  - `3` (`MAC_ADDR_EXT`): 2-byte PAN ID + 8-byte extended address. During association, a sensor sends its **8-byte ASCII MAC in forward order** (e.g., `"77BD514D"` = `37 37 42 44 35 31 34 44`, [`docs/FACTS.md` §3](../../FACTS.md)).
+  - `3` (`MAC_ADDR_EXT`): 2-byte PAN ID + 8-byte extended address. During association, a sensor sends its **8-byte ASCII MAC in forward order** (e.g., `"77BD514D"` = `37 37 42 44 35 31 34 44`, [`docs/FACTS.md` §3](../FACTS.md)).
   - Mode `1` (`0b01`) is reserved in IEEE 802.15.4 and must be rejected on parse (`TASK-03`).
 - **ACK & Indirect Data Polling (`Frame Pending`)**:
   - Sensors are sleepy end-devices whose receivers are off by default.
@@ -216,7 +216,7 @@ Inside the PHR and FCS sits a standard IEEE 802.15.4-2006 MAC frame:
 ### 4.3 Cryptography & Authentication (`firmware/common/wyze_app.c`)
 
 #### 4.3.1 AES-128-ECB Transport Encryption
-All application data frames (`0xA1–0xE8`, `0xC0–0xC3`, except unencrypted `0xA0` Wake) are encrypted in 16-byte blocks using **AES-128-ECB** with a single static 128-bit key—the NIST FIPS-197 Appendix B example key from TI's `CryptoCC26XX.h` (`contact_v1` SRAM `0x20001944`, `motion_v1` `0x20001988`, `gateway_v1.8` `0x200014E0`, [`docs/FACTS.md` §4](../../FACTS.md)):
+All application data frames (`0xA1–0xE8`, `0xC0–0xC3`, except unencrypted `0xA0` Wake) are encrypted in 16-byte blocks using **AES-128-ECB** with a single static 128-bit key—the NIST FIPS-197 Appendix B example key from TI's `CryptoCC26XX.h` (`contact_v1` SRAM `0x20001944`, `motion_v1` `0x20001988`, `gateway_v1.8` `0x200014E0`, [`docs/FACTS.md` §4](../FACTS.md)):
 
 ```text
 AES-128 Key: 2B 7E 15 16 28 AE D2 A6 AB F7 15 88 09 CF 4F 3C
@@ -334,7 +334,7 @@ All traffic between the host (`wyzesense2mqtt-rs`, `host_link.py`, or an ESP32/E
 ### 5.2 Stock vs. OpenWyzeSense Host Commands
 
 #### 5.2.1 Stock Host Commands (`0x43xx` / `0x53xx`)
-These commands match the stock `gateway_v1.8` UART protocol ([`docs/stock-re/stock_gateway.c`](../../stock-re/stock_gateway.c), [`firmware/common/host_proto.h`](../../../firmware/common/host_proto.h)):
+These commands match the stock `gateway_v1.8` UART protocol ([`docs/stock-re/stock_gateway.c`](../stock-re/stock_gateway.c), [`firmware/common/host_proto.h`](../../firmware/common/host_proto.h)):
 
 | Cmd (Req → Rsp) | Type | Name | Purpose & OWS Behavior |
 |---|---|---|---|
@@ -367,7 +367,7 @@ All OWS-specific host extensions share **one** top-level async command pair, str
 
 | `sub_id` | Function | Direction | Payload & Behavior (`<= 56 B` per packet) |
 |---|---|---|---|
-| `0x01` | `OWS_SUB_FLAGS` | Host ↔ GW | Query (`[0x01]`) or set (`[0x01, flags_be32(4)]`) runtime gateway feature flags (dedup, Zero-MAC fix, OTA, announce, roaming). Reply (`9 B`): `[0x01, active_be32(4), supported_be32(4)]`. |
+| `0x01` | `OWS_SUB_FLAGS` | Host ↔ GW | Query (`[0x01]`) or set (`[0x01, flags_be32(4)]`) runtime gateway feature flags (dedup, OTA, announce, roaming; bit 1 reserved). Reply (`9 B`): `[0x01, active_be32(4), supported_be32(4)]`. |
 | `0x02` | `OWS_SUB_BUILD_INFO` | Host → GW | Paged query of the 116-byte `build_info_t` (`OWSB`) block (`req: [0x02, part=0|1|2]`): `part = 0` (`53 B`: `[0x02]` + 8 B header `magic/format/flags/reserved` + `id[8]` + `product[24]` + `app[12]`), `part = 1` (`55 B`: `[0x02]` + `id[8]` + `board[24]` + `version[0..21]`), `part = 2` (`27 B`: `[0x02]` + `id[8]` + `version[22..39]`). All pages are CH554-safe (`<= 55 B`), and `gwsync.c` needs only `part = 0` for its `OWSB` ID check. |
 | `0x03` | `OWS_SUB_CCFG` | Host → GW | Two-step nonce-authenticated restoration of Flash Page 31 (`ows_ccfg_builtin`), bound to the chip's factory 8-byte IEEE address. Reply echoes `[0x03, step(1), status(1)]` (`3 B`, plus `nonce_be32(4)` = `7 B` on step 1). |
 | `0x04` | `OWS_SUB_NETWORK` | Host ↔ GW | Query (`[0x04]`) or set (`[0x04, pan_le16(2), short_le16(2), ext_le64(8)]`) the gateway's PAN ID, coordinator short address, and extended address in `OWNV` item `1` at runtime. Reply (`14 B`): `[0x04, status(1), pan_le16(2), short_le16(2), ext_le64(8)]`. |
@@ -638,7 +638,7 @@ flowchart TD
 
 ### 9.1 Physical Device UX Specification (Stock Behavior vs. OpenWyzeSense)
 
-OpenWyzeSense preserves the exact **stock sensor button and LED behaviors** ([`docs/stock-re/stock_sensor.c`](../../stock-re/stock_sensor.c)) so user muscle memory and visual diagnostics stay identical, and layers OWS-specific actions only on top of states that stock firmware leaves unused.
+OpenWyzeSense preserves the exact **stock sensor button and LED behaviors** ([`docs/stock-re/stock_sensor.c`](../stock-re/stock_sensor.c)) so user muscle memory and visual diagnostics stay identical, and layers OWS-specific actions only on top of states that stock firmware leaves unused.
 
 #### Sensor Button Actions (`Ssf_buttonClockCb` at `0x080AC` vs. OWS `sensor_app.c`)
 | Action | Hold Duration | Stock Firmware Behavior | OpenWyzeSense Behavior (Follows Stock + Additions) |
@@ -718,7 +718,7 @@ Because OpenWyzeSense spans bare-metal 906.8 MHz sub-GHz RF firmware, ultra-low-
 
 ### 10.2 Physical Device Inventory & Bench Setup
 
-Moved to [`docs/development.md`](../../development.md#bench-hardware).
+Moved to [`docs/development.md`](../development.md#bench-hardware).
 
 ### 10.3 Scenarios Requiring Manual Physical Testing (Cannot Be Automated)
 
@@ -748,7 +748,7 @@ Even with full `Env 4A/4B/4C` HIL scripting, eight hardware scenarios **cannot b
 
 ### 10.4 Pending Hardware & Manual Regression Checklist
 
-The checks still to run on hardware are in the bench checklist of [`docs/TODO.md`](../../TODO.md#bench-checklist).
+The checks still to run on hardware are in the bench checklist of [`docs/TODO.md`](../TODO.md#bench-checklist).
 
 ---
 

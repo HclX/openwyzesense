@@ -19,7 +19,6 @@ roaming, which turns on by itself when it is needed.
 | Feature | What it does | Config |
 |---|---|---|
 | Deduplication | The gateway reports a sensor's event once, even when the sensor resends it | `dedup` |
-| Zero-MAC fixing | A report with an all-zero MAC from a **stock** v1 contact gets the MAC that the gateway's table holds for that sensor's address. It only helps while the table still has the real MAC; a unit that lost its pairing needs [level 2](2-revive-contact.md) | `fix_zero_mac` |
 | Capability announcement | When a sensor pairs, the gateway tells it that it is ours, and which features it has | `OWS_ANNOUNCE` (environment) |
 | Roaming | Several gateways share one network: each sensor is answered by one gateway, heard by all, and handed over when another hears it better | automatic; `roam` to force it on or off, `roam_hysteresis_db` |
 

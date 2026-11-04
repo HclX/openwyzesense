@@ -54,18 +54,17 @@ typedef struct {
 // flags this firmware supports (4 + 4 bytes BE). A stock dongle does not answer it, which is how a host tells them
 // apart. Not kept across a reset: the host sets them again.
 enum {
-    GW_FLAG_DEDUP = 1u << 0,         // a report the gateway already forwarded (a sensor's retry) is not forwarded again
-    GW_FLAG_FIX_ZERO_MAC = 1u << 1,  // a report with an all-zero MAC (known-issues.md §1) gets the MAC the table has
-                                     // for its short address, when exactly one sensor has that address
-    GW_FLAG_OTA = 1u << 2,           // OTA updates of our sensors (common/ota.h): the host's offers taken
-    GW_FLAG_ANNOUNCE = 1u << 3,      // the A6 of a pairing says the gateway is ours, and its features
-                                     // (wyze_app.h A6_OURS_*), in the bytes a stock dongle leaves 0
-    GW_FLAG_ROAM = 1u << 4,          // roaming (#90, design/roaming.md): several gateways share one network identity;
-                                     // each ACKs and answers only the sensors in its own table (and associations
-                                     // only while pairing), and forwards reports it overhears from the others'
-                                     // sensors as OWS_SUB_OVERHEARD, unACKed on the air
+    GW_FLAG_DEDUP = 1u << 0,  // a report the gateway already forwarded (a sensor's retry) is not forwarded again
+    // 1u << 1: reserved (was GW_FLAG_FIX_ZERO_MAC, removed in #31: a zero-MAC report is dropped, never recovered)
+    GW_FLAG_OTA = 1u << 2,       // OTA updates of our sensors (common/ota.h): the host's offers taken
+    GW_FLAG_ANNOUNCE = 1u << 3,  // the A6 of a pairing says the gateway is ours, and its features
+                                 // (wyze_app.h A6_OURS_*), in the bytes a stock dongle leaves 0
+    GW_FLAG_ROAM = 1u << 4,      // roaming (#90, design/roaming.md): several gateways share one network identity;
+                                 // each ACKs and answers only the sensors in its own table (and associations
+                                 // only while pairing), and forwards reports it overhears from the others'
+                                 // sensors as OWS_SUB_OVERHEARD, unACKed on the air
 };
-#define GW_FLAGS_SUPPORTED (GW_FLAG_DEDUP | GW_FLAG_FIX_ZERO_MAC | GW_FLAG_OTA | GW_FLAG_ANNOUNCE | GW_FLAG_ROAM)
+#define GW_FLAGS_SUPPORTED (GW_FLAG_DEDUP | GW_FLAG_OTA | GW_FLAG_ANNOUNCE | GW_FLAG_ROAM)
 #define GW_DEDUP_ENTRIES   8
 #define GW_DEDUP_MS        30000  // a retry comes within seconds; the same A1 two hours on is a new one
 #define GW_MAX_OTA_TARGETS 8      // sensor MACs staged in one OTA wave (plus wildcard "********")

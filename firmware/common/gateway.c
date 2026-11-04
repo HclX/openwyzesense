@@ -592,6 +592,9 @@ static void associate(gateway_t *gw, uint64_t ext)
     uint8_t mac[8];
     int32_t s;
     gw_pending_t *p;
+    if (!ext) {
+        return;  // an all-zero address: a stock v1 contact that lost its MAC is never paired (#31)
+    }
     expire_joining(gw);
     for (int i = 0; i < 8; i++) {
         mac[i] = (uint8_t)(ext >> (8 * i));
@@ -666,21 +669,21 @@ static bool seen_lately(gateway_t *gw, uint16_t src, const uint8_t *pt, size_t n
     return false;
 }
 
-// GW_FLAG_FIX_ZERO_MAC: the MAC of the only sensor in the table on short address src, if there is exactly one
-static const uint8_t *only_mac_on(const gateway_t *gw, uint16_t src)
+// A report's sender is a sensor in the table: its short address and the MAC in the report both match one entry.
+// Anything else (an unpaired sensor still on our PAN, a stock v1 contact that lost its MAC and reports zeros) is
+// dropped silently, as the stock dongle does (stock-unknowns.md D8; #31): never forwarded, never "recovered".
+static bool paired(const gateway_t *gw, uint16_t src, const uint8_t mac[8])
 {
     static const uint8_t zero[8];
-    const uint8_t *mac = NULL;
-    for (size_t i = 0; i < gw->n_sensors; i++) {
-        if (gw->sensors[i].short_addr != src) {
-            continue;
-        }
-        if (mac) {
-            return NULL;  // two radios on one address (known-issues.md §2)
-        }
-        mac = gw->sensors[i].mac;
+    if (!memcmp(mac, zero, 8)) {
+        return false;
     }
-    return mac && memcmp(mac, zero, 8) != 0 ? mac : NULL;
+    for (size_t i = 0; i < gw->n_sensors; i++) {
+        if (gw->sensors[i].short_addr == src && !memcmp(gw->sensors[i].mac, mac, 8)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // --- OTA (common/ota.h) ---
@@ -934,13 +937,16 @@ static void ota_data_command(gateway_t *gw, const uint8_t *payload, size_t len)
 static void sensor_message(gateway_t *gw, uint16_t src, const uint8_t *pt, size_t n, int8_t rssi)
 {
     static const uint8_t zero[8];
-    uint8_t payload[HOST_MAX_PACKET], fixed[APP_MAX_PAYLOAD];
+    uint8_t payload[HOST_MAX_PACKET];
     switch (pt[0]) {
         case APP_STATUS:
         case APP_EVENT:
         case APP_CLIMATE:
         case APP_MOTION_SUMMARY: {
             size_t len;
+            if (n < 9 || !paired(gw, src, pt + 1)) {
+                break;
+            }
             // byte 13 is the data length; byte 12 the low-battery flag (FACTS.md: 0x01 once a stock sensor latched
             // it), not a length's high byte: read as one, it dropped exactly the reports of a sensor with a low battery
             size_t need = pt[0] == APP_MOTION_SUMMARY ? 23 : 16 + (size_t)pt[13];
@@ -968,14 +974,6 @@ static void sensor_message(gateway_t *gw, uint16_t src, const uint8_t *pt, size_
             if ((gw->flags & GW_FLAG_DEDUP) && seen_lately(gw, src, pt, n)) {
                 break;
             }
-            if ((gw->flags & GW_FLAG_FIX_ZERO_MAC) && n >= 9 && n <= sizeof fixed && !memcmp(pt + 1, zero, 8)) {
-                const uint8_t *mac = only_mac_on(gw, src);
-                if (mac) {
-                    memcpy(fixed, pt, n);
-                    memcpy(fixed + 1, mac, 8);
-                    pt = fixed;
-                }
-            }
             len = host_alarm_payload(payload, pt, n, gw->clock_ms, (uint8_t)-rssi);
             if (len) {
                 host_send(gw, HOST_ALARM, payload, len);
@@ -983,7 +981,7 @@ static void sensor_message(gateway_t *gw, uint16_t src, const uint8_t *pt, size_
             break;
         }
         case APP_HISTORY_LOG: {  // AD: stock v1 50-entry offline missed-event record -> synthetic A2 HOST_ALARM
-            if (n < 22 || pt[18] != APP_EVENT) {
+            if (n < 22 || pt[18] != APP_EVENT || !paired(gw, src, pt + 1)) {
                 break;
             }
             set_type(gw, src, pt[9]);
@@ -991,12 +989,6 @@ static void sensor_message(gateway_t *gw, uint16_t src, const uint8_t *pt, size_
                 break;
             }
             const uint8_t *mac = pt + 1;
-            if ((gw->flags & GW_FLAG_FIX_ZERO_MAC) && !memcmp(mac, zero, 8)) {
-                const uint8_t *m = only_mac_on(gw, src);
-                if (m) {
-                    mac = m;
-                }
-            }
             uint64_t ts = 0;
             for (int i = 0; i < 8; i++) {
                 ts = ts << 8 | pt[10 + i];
@@ -1030,8 +1022,8 @@ static void sensor_message(gateway_t *gw, uint16_t src, const uint8_t *pt, size_
         case APP_JOIN_ANNOUNCE: {  // A3 -> scan result: A3 plaintext bytes 0-10
             // only while pairing, as stock (FACTS.md 0x5320: gated by permitJoinActive): a gateway sharing the PAN
             // with roaming off hears the A3 a pairing gateway's sensor sends, and must not pair it too (#60)
-            if (n < 11 || !gw->permit) {
-                break;
+            if (n < 11 || !gw->permit || !memcmp(pt + 1, zero, 8)) {
+                break;  // (a zero MAC: a stock v1 contact that lost its MAC, which can never be told apart: #31)
             }
             expire_joining(gw);
             set_type(gw, src, pt[9]);
@@ -1102,10 +1094,14 @@ static void sensor_message(gateway_t *gw, uint16_t src, const uint8_t *pt, size_
 // the gateway's own async packets).
 static void overheard(gateway_t *gw, uint16_t src, const uint8_t *pt, size_t n, int8_t rssi)
 {
+    static const uint8_t zero[8];
     uint8_t buf[OWS_MAX_PAYLOAD], pkt[HOST_MAX_PACKET];
     size_t len;
     if (pt[0] != APP_STATUS && pt[0] != APP_EVENT && pt[0] != APP_CLIMATE && pt[0] != APP_MOTION_SUMMARY) {
         return;
+    }
+    if (n < 9 || !memcmp(pt + 1, zero, 8)) {
+        return;  // a zero MAC names no sensor (#31)
     }
     if ((gw->flags & GW_FLAG_DEDUP) && seen_lately(gw, src, pt, n)) {
         return;

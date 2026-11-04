@@ -59,8 +59,8 @@ addresses, inside any range.
   The export keeps the lowest sub-ID and lists the other under `dropped` with its MAC and "re-pair ... after the
   migration" (the flashing tools print it); the gateway and the import tools refuse a second MAC on a taken address
   (the user's decision, 2026-11-01). Until it is re-paired, the dropped sensor still sends from the shared address and
-  its owner ACKs and forwards its reports under its own MAC, but the host does not know it and `GW_FLAG_FIX_ZERO_MAC`
-  would give a zero-MAC report from it the kept sensor's MAC. Re-pairing it (a long press with pairing on) gives it a
+  its owner ACKs it but forwards nothing from it (only a sensor whose address and MAC both match the table is heard,
+  #31). Re-pairing it (a long press with pairing on) gives it a
   new address, since its old one is taken.
 - **Beacons**: every gateway with the identity answers a beacon request. With #84's random delays, a pairing gateway
   answers first; the others' beacons follow and carry permit off. A sensor scanning for a network takes any of them.
