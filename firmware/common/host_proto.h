@@ -22,6 +22,7 @@ enum {
     HOST_FINISH_AUTH = 0x5314,
     HOST_GET_VERSION = 0x5316,
     HOST_ALARM = 0x5319,
+    HOST_ALARM2 = 0x5355,  // secondary leak/keypad report (RF opcode 0xEA), forwarded verbatim + RSSI
     HOST_SET_SCAN = 0x531C,
     HOST_SCAN_RESULT = 0x5320,
     HOST_GET_R1 = 0x5321,

@@ -18,6 +18,8 @@ enum {
     APP_TIME_SYNC = 0xB0,
     APP_DECOMM_ACK = 0xB1,
     APP_CLIMATE = 0xE8,
+    // Secondary alarm/keypad event (RF opcode 0xEA). The host forwards it as HOST_ALARM2 (0x5355).
+    APP_ALARM2 = 0xEA,
 };
 
 enum {

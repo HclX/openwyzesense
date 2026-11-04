@@ -980,6 +980,24 @@ static void sensor_message(gateway_t *gw, uint16_t src, const uint8_t *pt, size_
             }
             break;
         }
+        case APP_ALARM2: {  // 0xEA: keypad/leak secondary event -> 0x5355, exactly as the stock dongle's E8 path
+            // Plaintext: [EA][MAC(8)][type][len][constant][battery][reserved][subtype][data...]
+            //             [constant][sequence]. The stock dongle copies through the sequence byte
+            // (pt[10] + 11) and appends -RSSI.
+            uint8_t out[32];
+            if (n < 11 || !paired(gw, src, pt + 1)) {
+                break;
+            }
+            size_t copy = (size_t)pt[10] + 11u;
+            if (copy > 30 || copy > n) {
+                break;
+            }
+            set_type(gw, src, pt[9]);
+            memcpy(out, pt, copy);
+            out[copy] = (uint8_t)-rssi;
+            host_send(gw, HOST_ALARM2, out, copy + 1u);
+            break;
+        }
         case APP_HISTORY_LOG: {  // AD: stock v1 50-entry offline missed-event record -> synthetic A2 HOST_ALARM
             if (n < 22 || pt[18] != APP_EVENT || !paired(gw, src, pt + 1)) {
                 break;
