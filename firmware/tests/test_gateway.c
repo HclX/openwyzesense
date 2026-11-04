@@ -1100,11 +1100,9 @@ static void test_keypad_reply(void)
     size_t n = host_build(pkt, HOST_SEND_KEYPAD, payload, sizeof payload, false);
     n_host = 0;
     gw_host(&gw, pkt, n);
-    CHECK(n_host == 1 && host_parse(host[0].b, host[0].n, &h) && h.cmd == HOST_ACK &&
-          h.acked == HOST_SEND_KEYPAD);
+    CHECK(n_host == 1 && host_parse(host[0].b, host[0].n, &h) && h.cmd == HOST_ACK && h.acked == HOST_SEND_KEYPAD);
 
-    uint8_t dreq[10] = {0x63, 0x88, 0x12, PAN & 0xFF, PAN >> 8, SHORT & 0xFF, SHORT >> 8, 0x06, 0x00,
-                        MAC_CMD_DATA_REQ};
+    uint8_t dreq[10] = {0x63, 0x88, 0x12, PAN & 0xFF, PAN >> 8, SHORT & 0xFF, SHORT >> 8, 0x06, 0x00, MAC_CMD_DATA_REQ};
     n_tx = 0;
     gw_rx(&gw, dreq, sizeof dreq, -50);
     CHECK(n_tx == 2);
