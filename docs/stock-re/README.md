@@ -7,6 +7,7 @@ dongle (gateway) firmwares in [`ground_truth/firmware/`](../../ground_truth/firm
 |---|---|---|---|
 | `contact_v1_777B42DF_2026-10-24/flash.bin` | Wyze Sense v1 Contact Sensor (`sensor_type = 0x01`) | CC1310F128 5x5 (`RHB`) | `0x16` (22) |
 | `motion_v1_777A9A46/dump.bin` | Wyze Sense v1 Motion Sensor (`sensor_type = 0x02`) | CC1310F128 5x5 (`RHB`) | `0x18` (24) / `0x19` (25) |
+| `sensor_77C68193_2026-11-05/flash.bin` | Wyze Sense Climate Sensor (`sensor_type = 0x07`) | CC1310F128 5x5 (`RHB`) | `0x0F` (15) |
 | `gateway_2025-02-08_v1.8/FLASH.bin` + `RAM.bin` | Wyze Sense USB Dongle (`0.0.0.47 V1.8 Gateway GW3U`) | CC1310F128 5x5 (`RHB`) | `1.8.0.0` |
 | `gateway_2025-02-02_v1.4/FLASH.bin` | Wyze Sense USB Dongle (`V1.4`) | CC1310F128 5x5 (`RHB`) | `1.4.0.0` |
 
@@ -19,6 +20,9 @@ dongle (gateway) firmwares in [`ground_truth/firmware/`](../../ground_truth/firm
 - [`stock_sensor.c`](stock_sensor.c): Reconstructed C business logic for the v1 Contact (`contact_v1`) and v1 Motion
   (`motion_v1`) sensors, with every function and global variable annotated with its exact flash/SRAM address in both
   binaries.
+- [`stock_climate.c`](stock_climate.c): Reconstructed C business logic for the Climate Sensor (`77C68193`), with its
+  Sensirion SHTC3 I2C driver on `DIO9`/`DIO10` (address `0x70`), `BoardGpioInitTable` on `0x084C` (`DIO8` LED, `DIO12`
+  button, `DIO6` strap), and `0xE8` threshold reporting logic.
 - [`stock_gateway.c`](stock_gateway.c): Reconstructed C business logic for the v1.8 USB Dongle (`gateway_v1.8`), with
   every function and global variable annotated with its exact flash/SRAM address.
 
