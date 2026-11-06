@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "cjtag_task.h"
 #include "contact.h"
 #include "esp_app_desc.h"
 #include "esp_http_server.h"
@@ -534,6 +535,133 @@ static esp_err_t contact_nv_post(httpd_req_t *req)
     return httpd_resp_sendstr(req, msg);
 }
 
+static bool to_cjtag_stage(void *ctx, const uint8_t *data, size_t len)
+{
+    (void)ctx;
+    return cjtag_task_stage_feed(data, len);
+}
+
+static esp_err_t cjtag_get(httpd_req_t *req)
+{
+    char out[768];
+    size_t n = cjtag_task_json(out, sizeof out);
+    httpd_resp_set_type(req, "application/json");
+    return httpd_resp_send(req, out, (ssize_t)n);
+}
+
+static esp_err_t cjtag_arm_post(httpd_req_t *req)
+{
+    if (!require_auth(req)) {
+        return ESP_OK;
+    }
+    char query[96] = "", body[96] = "", mode_s[16] = "", pa_s[8] = "", pb_s[8] = "";
+    httpd_req_get_url_query_str(req, query, sizeof query);
+    httpd_query_key_value(query, "mode", mode_s, sizeof mode_s);
+    httpd_query_key_value(query, "pin_a", pa_s, sizeof pa_s);
+    httpd_query_key_value(query, "pin_b", pb_s, sizeof pb_s);
+    if (!mode_s[0] && req->content_len > 0 && req->content_len < (int)sizeof body) {
+        int n = httpd_req_recv(req, body, req->content_len);
+        if (n > 0) {
+            body[n] = 0;
+            form_value(body, "mode", mode_s, sizeof mode_s);
+            form_value(body, "pin_a", pa_s, sizeof pa_s);
+            form_value(body, "pin_b", pb_s, sizeof pb_s);
+        }
+    }
+    cjtag_mode_t m = CJTAG_MODE_NONE;
+    if (!strcmp(mode_s, "dump")) {
+        m = CJTAG_MODE_DUMP;
+    } else if (!strcmp(mode_s, "flash")) {
+        m = CJTAG_MODE_FLASH;
+    }
+    int pin_a = pa_s[0] ? (int)strtol(pa_s, NULL, 10) : -1;
+    int pin_b = pb_s[0] ? (int)strtol(pb_s, NULL, 10) : -1;
+    char msg[128] = "";
+    if (!cjtag_task_arm(m, pin_a, pin_b, msg, sizeof msg)) {
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, msg);
+    }
+    return httpd_resp_sendstr(req, msg);
+}
+
+static esp_err_t cjtag_stage_post(httpd_req_t *req)
+{
+    if (!require_auth(req)) {
+        return ESP_OK;
+    }
+    if (req->content_len <= 0 || req->content_len > MAX_CONTACT_IMAGE + 2048) {
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
+                                   "an image for pages 0-29, a multiple of 4 bytes (a form field image, or the body)");
+    }
+    char query[96] = "", nv[8] = "", pa_s[8] = "", pb_s[8] = "", msg[128] = "";
+    httpd_req_get_url_query_str(req, query, sizeof query);
+    httpd_query_key_value(query, "nv", nv, sizeof nv);
+    httpd_query_key_value(query, "pin_a", pa_s, sizeof pa_s);
+    httpd_query_key_value(query, "pin_b", pb_s, sizeof pb_s);
+    int pin_a = pa_s[0] ? (int)strtol(pa_s, NULL, 10) : -1;
+    int pin_b = pb_s[0] ? (int)strtol(pb_s, NULL, 10) : -1;
+    if (pin_a >= 0 && pin_b >= 0) {
+        (void)cjtag_task_arm(CJTAG_MODE_NONE, pin_a, pin_b, msg, sizeof msg);
+    }
+    if (!cjtag_task_stage_begin(!strcmp(nv, "wipe"), msg, sizeof msg)) {
+        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, msg);
+    }
+    bool rx_ok = receive(req, "image", to_cjtag_stage, NULL);
+    if (!cjtag_task_stage_end(rx_ok, msg, sizeof msg)) {
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, msg);
+    }
+    return httpd_resp_sendstr(req, msg);
+}
+
+static esp_err_t cjtag_dump_get(httpd_req_t *req)
+{
+    if (!require_auth(req)) {
+        return ESP_OK;
+    }
+    uint8_t *page = malloc(CJTAG_PAGE);
+    if (!page) {
+        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "out of memory");
+    }
+    if (!cjtag_task_get_dump_page(0, page)) {
+        free(page);
+        return httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "no completed cJTAG flash dump available");
+    }
+    char disp[80];
+    snprintf(disp, sizeof disp, "attachment; filename=\"sensor_%s_flash.bin\"", cjtag_task_mac());
+    httpd_resp_set_type(req, "application/octet-stream");
+    httpd_resp_set_hdr(req, "Content-Disposition", disp);
+    for (uint32_t p = 0; p < CJTAG_TOTAL_PAGES; p++) {
+        if (!cjtag_task_get_dump_page(p, page) ||
+            httpd_resp_send_chunk(req, (const char *)page, CJTAG_PAGE) != ESP_OK) {
+            free(page);
+            return ESP_FAIL;
+        }
+    }
+    free(page);
+    return httpd_resp_send_chunk(req, NULL, 0);
+}
+
+static esp_err_t cjtag_fcfg1_get(httpd_req_t *req)
+{
+    if (!require_auth(req)) {
+        return ESP_OK;
+    }
+    uint8_t *fcfg1 = malloc(CJTAG_FCFG1_SIZE);
+    if (!fcfg1) {
+        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "out of memory");
+    }
+    if (!cjtag_task_get_fcfg1(fcfg1)) {
+        free(fcfg1);
+        return httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "no completed cJTAG FCFG1 dump available");
+    }
+    char disp[80];
+    snprintf(disp, sizeof disp, "attachment; filename=\"sensor_%s_fcfg1.bin\"", cjtag_task_mac());
+    httpd_resp_set_type(req, "application/octet-stream");
+    httpd_resp_set_hdr(req, "Content-Disposition", disp);
+    esp_err_t err = httpd_resp_send(req, (const char *)fcfg1, CJTAG_FCFG1_SIZE);
+    free(fcfg1);
+    return err;
+}
+
 static bool to_ota(void *ctx, const uint8_t *data, size_t len)
 {
     return esp_ota_write(*(esp_ota_handle_t *)ctx, data, len) == ESP_OK;
@@ -566,7 +694,7 @@ void web_start(void)
     httpd_config_t cfg = HTTPD_DEFAULT_CONFIG();
     cfg.stack_size = 8192;
     cfg.recv_wait_timeout = 30;
-    cfg.max_uri_handlers = 15;
+    cfg.max_uri_handlers = 20;
     httpd_handle_t h;
     if (httpd_start(&h, &cfg) != ESP_OK) {
         ESP_LOGE(TAG, "the web server did not start");
@@ -586,6 +714,11 @@ void web_start(void)
         {.uri = "/api/rig", .method = HTTP_GET, .handler = rig_get},
         {.uri = "/rig", .method = HTTP_POST, .handler = rig_post},
         {.uri = "/contact/console", .method = HTTP_POST, .handler = contact_console_post},
+        {.uri = "/api/cjtag", .method = HTTP_GET, .handler = cjtag_get},
+        {.uri = "/cjtag/arm", .method = HTTP_POST, .handler = cjtag_arm_post},
+        {.uri = "/cjtag/stage", .method = HTTP_POST, .handler = cjtag_stage_post},
+        {.uri = "/cjtag/dump.bin", .method = HTTP_GET, .handler = cjtag_dump_get},
+        {.uri = "/cjtag/fcfg1.bin", .method = HTTP_GET, .handler = cjtag_fcfg1_get},
     };
     for (size_t i = 0; i < sizeof uris / sizeof uris[0]; i++) {
         httpd_register_uri_handler(h, &uris[i]);

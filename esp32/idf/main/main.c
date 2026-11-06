@@ -1,5 +1,6 @@
 // The ESP32-S3 relay (issue #22): a v1 contact board running our gateway, relayed over Wi-Fi to wyzesense2mqtt-rs.
 // Wiring and use: esp32/README.md.
+#include "cjtag_task.h"
 #include "contact.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
@@ -24,6 +25,7 @@ void app_main(void)
     ESP_ERROR_CHECK(err);
     settings_load();
     rig_task_start();  // first: when the rig is the contact's supply, power it before anything talks to it
+    cjtag_task_start();
     contact_init();
     contact_reset();  // a known start: the contact's firmware, W released
     net_start();

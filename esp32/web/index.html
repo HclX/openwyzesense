@@ -59,7 +59,7 @@ tr:last-child td{border-bottom:0}
 <header><div class=wrap>
 <div class=top><div><h1 id=name>OpenWyzeSense relay</h1><div class=sub id=where>&nbsp;</div></div>
 <span class=pill id=pill><span class=dot></span><span id=pilltext>loading</span></span></div>
-<nav><button data-tab=status class=on>Status</button><button data-tab=update>Update</button>
+<nav><button data-tab=status class=on>Status</button><button data-tab=probe>Probe (M/C)</button><button data-tab=update>Update</button>
 <button data-tab=setup>Setup</button></nav></div></header>
 <main class=wrap>
 
@@ -89,6 +89,42 @@ tr:last-child td{border-bottom:0}
 <div id=snswrap hidden style="overflow-x:auto"><table id=snstbl><thead>
 <tr><th>MAC</th><th>Type</th><th>Signal</th><th>Battery</th><th>Last seen</th></tr>
 </thead><tbody id=snsbody></tbody></table></div></div>
+</div></section>
+
+<section id=probe hidden><div class=grid>
+<div class="card wide"><h2>Hands-free 2-pin cJTAG probe (M &amp; C pads)</h2>
+<p class=note>Arm <b>Dump</b> or <b>Flash</b> below, then pick up the two GPIO probes and hold them against the sensor's
+<code>M</code> (TMSC) and <code>C</code> (TCKC) pads. Polarity is auto-detected on contact, audio tones announce lock
+and page progress, and if a probe slips mid-operation you can simply re-touch the pads to resume from the last verified
+4 KB page. Page 31 (CCFG + factory MAC) is never erased or written.</p>
+<div class=big id=cjstate style="margin-top:8px">Disarmed</div>
+<div class=prog id=cjprog style="display:block;height:12px"><i id=cjbar></i></div>
+<div class=msg id=cjmsg>Select Dump or Flash below to arm hands-free probing.</div>
+<dl style="margin-top:10px">
+<dt>Sensor MAC</dt><dd id=cjmac>–</dd>
+<dt>Detected pins</dt><dd id=cjpins>–</dd>
+<dt>Progress</dt><dd id=cjpages>0 / 0 pages</dd>
+<dt>CCFG / Chip</dt><dd id=cjchip>–</dd>
+</dl>
+<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-top:10px">
+<div><label style="margin-top:0">Probe A GPIO</label><input type=text id=cjpina value=19 style="width:80px"></div>
+<div><label style="margin-top:0">Probe B GPIO</label><input type=text id=cjpinb value=21 style="width:80px"></div>
+<label class=check style="margin-top:0"><input type=checkbox id=cjsound checked>Audio cues (lock, page ticks, slip, done)</label>
+</div>
+<div class=btns style="margin-top:14px">
+<button class=btn id=cjarmdump>Arm Hands-Free Dump</button>
+<button class="btn ghost" id=cjdisarm>Disarm</button>
+<button class="btn ghost" id=cjdlflash hidden>Download flash.bin (128 KB)</button>
+<button class="btn ghost" id=cjdlfcfg1 hidden>Download fcfg1.bin (1 KB)</button>
+</div></div>
+
+<div class="card wide"><h2>Hands-free cJTAG flash (pages 0–29)</h2>
+<p class=note>Stage a CC1310 binary (up to 120 KB, pages 0–29) and arm hands-free flashing. Once armed, touch the two
+probes to <code>M</code> and <code>C</code> to erase, program, and verify page by page via the CC1310 ROM Hard-API.</p>
+<label>CC1310 image (.bin)</label><input type=file id=cjfile accept=".bin">
+<label class=check><input type=checkbox id=cjwipe>Wipe NV page 30 (0x1E000)</label>
+<button class=btn id=cjarmflash>Stage &amp; Arm Hands-Free Flash</button>
+</div>
 </div></section>
 
 <section id=update hidden><div class=grid>
@@ -216,4 +252,50 @@ $('setupform').onsubmit=async e=>{e.preventDefault();const b=new URLSearchParams
 ['ssid','url','token'].forEach(k=>b.set(k,b.get(k).trim()));
 $('setupmsg').className='msg';$('setupmsg').textContent='Saving…';try{const r=await fetch('/setup',{method:'POST',body:b});
 showMsg($('setupmsg'),r.ok,(await r.text()).trim())}catch(_){showMsg($('setupmsg'),true,'Saved; restarting.')}};
+let actx=null,cjLastState='idle',cjLastPage=0,cjLastDoneSeq=0,cjPinsFilled=false;
+function tone(freq,ms,delayMs,type){if(!$('cjsound').checked)return;try{
+if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();if(actx.state=='suspended')actx.resume();
+const o=actx.createOscillator(),g=actx.createGain(),t0=actx.currentTime+(delayMs||0)/1000;
+o.type=type||'sine';o.frequency.setValueAtTime(freq,t0);
+g.gain.setValueAtTime(0.15,t0);g.gain.exponentialRampToValueAtTime(0.001,t0+ms/1000);
+o.connect(g);g.connect(actx.destination);o.start(t0);o.stop(t0+ms/1000)}catch(_){}}
+function dlUrl(url,name){const a=document.createElement('a');a.href=url;if(name)a.download=name;
+document.body.appendChild(a);a.click();a.remove()}
+async function pollCjtag(){if($('probe').hidden&&cjLastState=='idle')return;try{
+const r=await fetch('/api/cjtag',{cache:'no-store'});if(!r.ok)return;const c=await r.json();
+if(!cjPinsFilled&&c.pin_a>=0){cjPinsFilled=true;$('cjpina').value=c.pin_a;$('cjpinb').value=c.pin_b}
+const labels={idle:'Disarmed',armed:'Armed ('+c.mode+') — touch M & C',running:c.mode=='dump'?'Dumping…':'Flashing…',
+slipped:'Paused (probe slip) — re-touch M & C',done:'Complete!',error:'Error'};
+$('cjstate').textContent=labels[c.state]||c.state;
+const pct=c.total_pages?Math.round(100*c.pages_done/c.total_pages):0;
+$('cjbar').style.width=pct+'%';
+$('cjmsg').className='msg '+(c.state=='done'?'ok':c.state=='error'||c.state=='slipped'?'bad':'');
+$('cjmsg').textContent=c.msg||'';
+$('cjmac').textContent=c.mac||'–';
+$('cjpins').textContent=c.tck_pin>=0?'TCKC (C) = GPIO'+c.tck_pin+' · TMSC (M) = GPIO'+c.tms_pin:'GPIO'+c.pin_a+' / GPIO'+c.pin_b+' (auto-polarity)';
+$('cjpages').textContent=c.pages_done+' / '+c.total_pages+' pages ('+pct+'%)'+(c.slips?' · '+c.slips+' slip(s)':'');
+$('cjchip').textContent=c.mac?('USER_ID '+c.user_id+' · BL_CONFIG '+c.bl_config+' · IEEE '+c.ieee_mac):'–';
+$('cjdlflash').hidden=!c.dump_ready;$('cjdlfcfg1').hidden=!c.dump_ready;
+if(c.state=='running'&&cjLastState!='running'){tone(660,90,0,'triangle');tone(880,120,100,'triangle')}
+if(c.state=='running'&&c.pages_done>cjLastPage){tone(900+c.pages_done*22,30,0,'sine')}
+if(c.state=='slipped'&&cjLastState!='slipped'){tone(330,140,0,'sawtooth');tone(260,180,160,'sawtooth')}
+if(c.state=='done'&&c.done_seq!=cjLastDoneSeq){
+cjLastDoneSeq=c.done_seq;tone(523,110,0,'triangle');tone(659,110,120,'triangle');tone(1046,260,240,'triangle');
+if(c.mode=='dump'&&c.dump_ready){dlUrl('/cjtag/dump.bin','sensor_'+c.mac+'_flash.bin');
+setTimeout(()=>dlUrl('/cjtag/fcfg1.bin','sensor_'+c.mac+'_fcfg1.bin'),600)}}
+cjLastState=c.state;cjLastPage=c.pages_done}catch(_){}}
+setInterval(pollCjtag,350);
+$('cjarmdump').onclick=async()=>{tone(520,60,0,'sine');
+const q='mode=dump&pin_a='+encodeURIComponent($('cjpina').value.trim())+'&pin_b='+encodeURIComponent($('cjpinb').value.trim());
+const r=await fetch('/cjtag/arm?'+q,{method:'POST'});const t=(await r.text()).trim();
+showMsg($('cjmsg'),r.ok,t);cjLastState='armed';cjLastPage=0;pollCjtag()};
+$('cjdisarm').onclick=async()=>{const r=await fetch('/cjtag/arm?mode=none',{method:'POST'});
+showMsg($('cjmsg'),r.ok,(await r.text()).trim());cjLastState='idle';pollCjtag()};
+$('cjarmflash').onclick=()=>{const f=$('cjfile').files[0];
+if(!f){showMsg($('cjmsg'),false,'Pick a CC1310 .bin file first.');return}
+tone(520,60,0,'sine');
+const q='pin_a='+encodeURIComponent($('cjpina').value.trim())+'&pin_b='+encodeURIComponent($('cjpinb').value.trim())+($('cjwipe').checked?'&nv=wipe':'');
+upload('/cjtag/stage?'+q,'image',f,$('cjprog'),$('cjmsg'),$('cjarmflash'),()=>{cjLastState='armed';cjLastPage=0;pollCjtag()})};
+$('cjdlflash').onclick=()=>dlUrl('/cjtag/dump.bin');
+$('cjdlfcfg1').onclick=()=>dlUrl('/cjtag/fcfg1.bin');
 </script></body></html>

@@ -24,5 +24,11 @@ config OWS_RIG_SUPPLY_GPIO
 config OWS_STATUS_LED
     int "GPIO of a status LED (active high), -1 for none"
     default -1
+config OWS_CJTAG_PIN_A
+    int "GPIO for cJTAG probe A (M/TMSC or C/TCKC, auto-detected)"
+    default 19
+config OWS_CJTAG_PIN_B
+    int "GPIO for cJTAG probe B (C/TCKC or M/TMSC, auto-detected)"
+    default 21
 
 endmenu

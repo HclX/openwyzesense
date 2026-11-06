@@ -1,4 +1,4 @@
-idf_component_register(SRCS "main.c" "settings.c" "net.c" "contact.c" "relay_task.c" "web.c" "rig_task.c"
+idf_component_register(SRCS "main.c" "settings.c" "net.c" "contact.c" "relay_task.c" "web.c" "rig_task.c" "cjtag_task.c"
                        INCLUDE_DIRS "."
                        EMBED_TXTFILES "../../web/index.html"  # the page shared with the ESP8266 build
                        REQUIRES ows_core nvs_flash esp_wifi esp_netif esp_event esp_http_server app_update
