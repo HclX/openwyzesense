@@ -1047,6 +1047,70 @@ static void put_be64_test(uint8_t *p, uint64_t v)
     }
 }
 
+static void test_keypad_alarm2(void)
+{
+    gateway_t gw;
+    uint8_t pt[32] = {0}, ct[32], f[64];
+    host_pkt_t h = {0};
+    gw_init(&gw, PAN, SHORT, EXT, (const uint8_t *)"778B5F63", &io);
+    gw_add_sensor(&gw, (const uint8_t *)"77BD567E", 0x0006);
+
+    // Captured stock host frame: ea 77BD567E 05 08 13 74 00 02 01 00 00 01,
+    // with -RSSI (0x1f) appended by the dongle.
+    pt[0] = APP_ALARM2;
+    memcpy(pt + 1, "77BD567E", 8);
+    pt[9] = 0x05;   // keypad
+    pt[10] = 0x08;  // payload length
+    pt[11] = 0x13;
+    pt[12] = 0x74;  // battery
+    pt[13] = 0x00;
+    pt[14] = 0x02;  // button
+    pt[15] = 0x01;  // disarm
+    pt[16] = 0x00;
+    pt[17] = 0x00;
+    pt[18] = 0x01;  // sequence
+    CHECK(app_encrypt(pt, 19, ct) == 32);
+
+    n_tx = n_host = 0;
+    gw_rx(&gw, f, mac_build_data(f, 0x11, PAN, SHORT, 0x0006, ct, 32, true), -31);
+    CHECK(n_tx == 1 && tx[0].n == 7);
+    CHECK(n_host == 1 && host_parse(host[0].b, host[0].n, &h) && h.cmd == HOST_ALARM2 && h.len == 20);
+    if (!h.payload || h.len < 20) {
+        return;
+    }
+    CHECK(h.payload[0] == APP_ALARM2 && !memcmp(h.payload + 1, "77BD567E", 8));
+    CHECK(h.payload[9] == 0x05 && h.payload[10] == 0x08 && h.payload[19] == 0x1f);
+
+    // A truncated plaintext must not be forwarded.
+    n_host = 0;
+    gw_rx(&gw, f, mac_build_data(f, 0x12, PAN, SHORT, 0x0006, ct, 16, true), -31);
+    CHECK(n_host == 0);
+}
+
+static void test_keypad_reply(void)
+{
+    gateway_t gw;
+    uint8_t pkt[HOST_MAX_PACKET], pt[16];
+    host_pkt_t h = {0};
+    gw_init(&gw, PAN, SHORT, EXT, (const uint8_t *)"778B5F63", &io);
+    gw_add_sensor(&gw, (const uint8_t *)"77BD567E", 0x0006);
+
+    // Host 0x5353: MAC(8), 0xE9, n, data. Queue the reply for the keypad's next poll.
+    uint8_t payload[14] = {'7', '7', 'B', 'D', '5', '6', '7', 'E', 0xE9, 0x04, 0x03, 0x01, 0x04, 0x00};
+    size_t n = host_build(pkt, HOST_SEND_KEYPAD, payload, sizeof payload, false);
+    n_host = 0;
+    gw_host(&gw, pkt, n);
+    CHECK(n_host == 1 && host_parse(host[0].b, host[0].n, &h) && h.cmd == HOST_ACK && h.acked == HOST_SEND_KEYPAD);
+
+    uint8_t dreq[10] = {0x63, 0x88, 0x12, PAN & 0xFF, PAN >> 8, SHORT & 0xFF, SHORT >> 8, 0x06, 0x00, MAC_CMD_DATA_REQ};
+    n_tx = 0;
+    gw_rx(&gw, dreq, sizeof dreq, -50);
+    CHECK(n_tx == 2);
+    CHECK(tx[1].n == 29);  // 9-byte MAC header + 16-byte ciphertext + 4-byte FCS
+    aes128_ecb_decrypt(app_key, tx[1].b + 9, pt, 16);
+    CHECK(pt[0] == 0xE9 && pt[1] == 0x04 && pt[2] == 0x03 && pt[3] == 0x01 && pt[4] == 0x04 && pt[5] == 0x00);
+}
+
 static void test_history_log_ad(void)
 {
     gateway_t gw;
@@ -1380,6 +1444,8 @@ int main(int argc, char **argv)
     test_software_sbl_entry();
     test_network_and_nv_import();
     test_history_log_ad();
+    test_keypad_alarm2();
+    test_keypad_reply();
     test_ota_queue_and_wildcard();
     test_beacon_delay();
     printf("%d checks, %d failed\n", checks, failures);

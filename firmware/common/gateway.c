@@ -32,7 +32,7 @@
 
 static const char VERSION[] = "0.0.0.47 V1.8 Gateway GW3U";
 
-enum { PEND_ASSOC_RESP, PEND_JOIN_TOKEN, PEND_JOIN_DONE };
+enum { PEND_ASSOC_RESP, PEND_JOIN_TOKEN, PEND_JOIN_DONE, PEND_KEYPAD_REPLY };
 
 void gw_init(gateway_t *gw, uint16_t pan, uint16_t short_addr, uint64_t ext, const uint8_t mac[8], const gw_io_t *io)
 {
@@ -446,6 +446,9 @@ static void send_pending(gateway_t *gw, gw_pending_t *p)
             send_data(gw, (uint16_t)p->dst, pt, n);
             break;
         }
+        case PEND_KEYPAD_REPLY:
+            send_data(gw, (uint16_t)p->dst, p->data, p->len);
+            break;
         default:
             break;
     }
@@ -978,6 +981,24 @@ static void sensor_message(gateway_t *gw, uint16_t src, const uint8_t *pt, size_
             if (len) {
                 host_send(gw, HOST_ALARM, payload, len);
             }
+            break;
+        }
+        case APP_ALARM2: {  // 0xEA: keypad/leak secondary event -> 0x5355, exactly as the stock dongle's E8 path
+            // Plaintext: [EA][MAC(8)][type][len][constant][battery][reserved][subtype][data...]
+            //             [constant][sequence]. The stock dongle copies through the sequence byte
+            // (pt[10] + 11) and appends -RSSI.
+            uint8_t out[32];
+            if (n < 11 || !paired(gw, src, pt + 1)) {
+                break;
+            }
+            size_t copy = (size_t)pt[10] + 11u;
+            if (copy > 30 || copy > n) {
+                break;
+            }
+            set_type(gw, src, pt[9]);
+            memcpy(out, pt, copy);
+            out[copy] = (uint8_t)-rssi;
+            host_send(gw, HOST_ALARM2, out, copy + 1u);
             break;
         }
         case APP_HISTORY_LOG: {  // AD: stock v1 50-entry offline missed-event record -> synthetic A2 HOST_ALARM
@@ -1688,6 +1709,24 @@ void gw_host(gateway_t *gw, const uint8_t *pkt, size_t len)
                 forget_joining_short(gw, (uint16_t)s);
             }
             host_send(gw, h.cmd + 1, NULL, 0);
+            break;
+        }
+        case HOST_SEND_KEYPAD: {  // MAC(8) + 0xE9 + n + data[n] -> RF keypad reply on the next poll
+            if (h.len < 10 || h.payload[8] != 0xE9) {
+                break;
+            }
+            size_t n = h.payload[9];
+            if (h.len < 10 + n || n < 1 || n > sizeof(((gw_pending_t *)0)->data) - 2) {
+                break;
+            }
+            int32_t s = short_of(gw, h.payload);
+            gw_pending_t *p = s >= 0 ? queue(gw, (uint64_t)s, PEND_KEYPAD_REPLY) : NULL;
+            if (p) {
+                p->data[0] = 0xE9;
+                p->data[1] = (uint8_t)n;
+                memcpy(p->data + 2, h.payload + 10, n);
+                p->len = (uint8_t)(2 + n);
+            }
             break;
         }
         case HOST_GET_SENSOR_COUNT:

@@ -346,6 +346,8 @@ These commands match the stock `gateway_v1.8` UART protocol ([`docs/stock-re/sto
 | `0x5314 → 0x5315` | Async | `FinishAuth` | Host sends `0xFF`; gateway ACKs `0x5314`, starts coordinator (`OWNV` item `1`), sends empty 0-byte `0x5315`, and schedules `0x5332` (`TimeSyncReq`) `300 ms` later. |
 | `0x5316 → 0x5317` | Async | `GetVersion` | Returns `"0.0.0.47 V1.8 Gateway GW3U"` (`26 B`, matching stock `gateway_v1.8` for host compatibility). |
 | `← 0x5319` | Async | `Alarm` | Forwards decrypted sensor reports (`0xA1`, `0xA2`, `0xAB`, `0xAD` converted to synthetic `0xA2`, and `0xE8`) to the host: `clock_be64(8)` + `plaintext_up_to_counter` + `uint8_t(-rssi)`. |
+| `← 0x5355` | Async | `Alarm2` | Forwards RF opcode `0xEA` reports (keypad button/PIN/motion, leak secondary report) to the host: the plaintext through its sequence byte (`pt[10] + 11` bytes) + `uint8_t(-rssi)`, matching the stock dongle's `0x5355` layout for `0xE8`. |
+| `0x5353 → ACK` | Async | `SendKeypad` | `MAC(8) + 0xE9 + n + data[n]`: queues an RF `0xE9` reply for that keypad's next data request (encrypted with the sensor key). |
 | `0x531C → 0x531D` | Async | `SetScan` | Enables (`0x01`) or disables (`0x00`) sensor inclusion (`gw->permit`) until toggled by the host. |
 | `← 0x5320` | Async | `ScanResult` | Forwards a joining sensor's decrypted `0xA3` (`mac[8] + type(1) + fw_ver(1)`) to the host. |
 | `0x5321 → 0x5322` | Async | `GetR1` | Host sends `mac[8] + token[16]`; gateway queues `0xA4` for the sensor and forwards the sensor's `0xA5` reply as `0x5322` (`mac[8] + r1[16] + type(1) + ver(1)`). |

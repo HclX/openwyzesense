@@ -85,7 +85,8 @@ typedef struct {
     uint64_t dst;         // short address, or the extended address of a sensor still associating
     uint16_t short_addr;  // association response: the address given
     uint8_t mac[8];       // association response: the sensor's ASCII MAC (= its extended address)
-    uint8_t data[16];     // A4 token, A6 status
+    uint8_t data[16];     // A4 token, A6 status, keypad reply
+    uint8_t len;          // data length for the keypad reply
 } gw_pending_t;
 
 typedef struct {
