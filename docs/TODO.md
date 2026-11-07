@@ -106,6 +106,13 @@ with the SDR running.
 
 ## Small fixes (left from the code review)
 
+- Relay on the old wiring (`+` on 3V3, no M/C; 9A78 + 7788CCF6, 2026-11-07, #81 build `b646e49`): after the relay's
+  own OTA restart the contact answered nothing at all, not even its ROM bootloader, also under the v0.2.5 relay, until
+  the user unplugged the relay (a real power cycle). Then gwsync fell back to the bootloader (W + S) and wrote all 10
+  pages, but the new gateway "answers nothing" right after; a `POST /contact/reset` later it answered, and the next
+  start's check said "same" (the archive's #88 again). Find why the reset after the flash is not enough without a power
+  GPIO (a longer wait or a second S pulse before asking?), and what hung the chip at the relay's restart.
+
 - `tools/host_link.py` `--pair` sends `VERIFY_SENSOR` with a hard-coded type `ff 04`.
 - `firmware/tests/test_gateway.c` `window()`: the frame-count check only catches more expected frames than sent.
 
