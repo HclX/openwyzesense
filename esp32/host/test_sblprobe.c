@@ -52,6 +52,8 @@ typedef struct {
     uint8_t flash[32 * SBL_PAGE];
     int read_cmd_count;
     int glitch_on_read_cmd;
+
+    unsigned touch_mask;  // probes on the sensor (the touching callback)
 } sim_sbl_target_t;
 
 static void sim_queue_bytes(sim_sbl_target_t *s, const uint8_t *data, size_t len)
@@ -300,6 +302,12 @@ static void sim_uart_flush(void *ctx)
     s->tx_len = 0;
 }
 
+static bool sim_touching(void *ctx, int pad)
+{
+    const sim_sbl_target_t *s = ctx;
+    return pad >= 0 && pad < SBLPROBE_PADS && (s->touch_mask & (1u << (unsigned)pad));
+}
+
 static void sim_sleep_ms(void *ctx, uint32_t ms)
 {
     (void)ctx;
@@ -337,6 +345,7 @@ int main(void)
         .uart_read = sim_uart_read,
         .uart_flush = sim_uart_flush,
         .sleep_ms = sim_sleep_ms,
+        .touching = sim_touching,
         .ctx = &sim,
     };
 
@@ -430,6 +439,40 @@ int main(void)
     sim.glitch_on_read_cmd = 0;
     CHECK(sbl_dump_page(&sbl, 3, page_buf));
     CHECK(memcmp(page_buf, sim.flash + (size_t)3 * SBL_PAGE, SBL_PAGE) == 0);
+
+    // 2 pads: two hand-held probes on the sensor's TX and RX, + and - clipped (#81): both orders, the backdoor on R (the
+    // stock DIO1) or on T; S and W (pads 2, 3) are not probed, and only R is ever driven by the UART
+    for (int r = 0; r < 2; r++) {
+        int t = 1 - r;
+        for (int b = 0; b < 2; b++) {
+            int bd = b ? t : r;
+            uint32_t want = 0x20018000u + (uint32_t)(r * 2 + b);
+            sim_init(&sim, r, t, 2, 3, bd, want);
+            sblprobe_result_t res2;
+            CHECK(sblprobe_find_n(&io, 2, &res2));
+            CHECK(res2.r_pad == r && res2.t_pad == t && res2.backdoor_pad == bd && res2.chip_id == want);
+            CHECK(!sim.backpower_violation);
+            CHECK(sim.uart_driven_mask == (1u << (unsigned)r));
+        }
+    }
+    sim_init(&sim, 0, 1, 2, 3, -1, 0x20018000u);  // bootloader disabled: nothing answers, the sensor left unpowered
+    sblprobe_result_t none;
+    CHECK(!sblprobe_find_n(&io, 2, &none) && none.error[0] && !sim.powered && !sim.backpower_violation);
+    sim_init(&sim, 0, 1, 2, 3, 0, 0x20018000u);  // the backdoor on a pad that is not probed (W): not found
+    sim.backdoor_pad = 2;
+    CHECK(!sblprobe_find_n(&io, 2, &none));
+    CHECK(!sblprobe_find_n(&io, 3, &none));  // only 2 or 4
+
+    // touch: all of the first n probes on the sensor
+    sim.touch_mask = 0x3;
+    CHECK(sblprobe_touched(&io, 2));
+    sim.touch_mask = 0x1;
+    CHECK(!sblprobe_touched(&io, 2));
+    CHECK(sblprobe_touched(&io, 1));
+    sblprobe_io_t no_touch = io;
+    no_touch.touching = NULL;
+    sim.touch_mask = 0x3;
+    CHECK(!sblprobe_touched(&no_touch, 2));
 
     if (failures) {
         fprintf(stderr, "%d of %d checks failed\n", failures, checks);

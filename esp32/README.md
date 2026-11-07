@@ -61,7 +61,12 @@ found), and a sensor with four unmarked pads besides `+`/`-` (the v2 leak sensor
 order: the station finds which is which through the TI ROM bootloader (`esp32/contact/sblprobe.c`). Probe tab, two
 separate steps: **Identify** (with `cjtag`, `sbl` or `auto`: the pins found, confirmed by a second independent
 connect, the sensor let go; nothing read but what identifies it, nothing written), then **Dump** or **Flash**, which use
-only the identified pins and wait for a sensor on the same pads (refused before an identification). A dump of the
+only the identified pins and wait for a sensor on the same pads (refused before an identification). Transport `sbl2`
+is for two hand-held probes on the sensor's TX and RX pads (the `R` and `T` wires, either way round) with `+` and `−`
+clipped to the battery holder: the station tries only once both probes have been on the sensor for 200 ms (a 20 us
+pull-up pulse on each probe, the sensor unpowered: low on a pad, high in the air), holds the candidate RX (the stock
+backdoor, DIO1) or the other pad low across a power-up, and listens for the bootloader; after a try that found
+nothing, it waits for the probes to be lifted and put back. A dump of the
 unit, downloaded, before any flash of it; pages 0-29 (30 only for an NV wipe), every page verified, page 31 never.
 
 Provision the contact board once over JTAG (`docs/design/v1-contact.md`), backing up its stock flash first:

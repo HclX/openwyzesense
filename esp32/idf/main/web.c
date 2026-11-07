@@ -590,6 +590,9 @@ static cjtag_transport_t parse_transport(const char *s)
     if (!strcmp(s, "auto")) {
         return CJTAG_TRANSPORT_AUTO;
     }
+    if (!strcmp(s, "sbl2")) {
+        return CJTAG_TRANSPORT_SBL2;
+    }
     return CJTAG_TRANSPORT_CJTAG;
 }
 

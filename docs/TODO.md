@@ -39,7 +39,11 @@ the evidence.
   GPIO27, M/C polarity found, 32 pages, ~27 s, equal to the carried gateway image) and an SBL dump with the pad search
   (R/T/backdoor W found on GPIO17/18/23, chip ID 0x20018000), the two dumps byte-identical. 2026-11-07, Identify then
   Dump/Flash as separate steps: dump refused before Identify; per transport Identify, Dump (equal) and Flash of the
-  running gateway image (10 pages verified, page 31 intact). Left: a sensor that is not a v1 contact (the leak sensor), the user guide's level 4 and its wiring SVGs (`tools/wiring_svg.py`) on the new wiring; the
+  running gateway image (10 pages verified, page 31 intact). `sbl2` (two hand probes on TX/RX, + and − clipped,
+  2026-11-07): touch seen on the soldered 777B42DF, one round, then waiting for a lift (its backdoor is W, not on the
+  probes). For the user's bench: a probe lifted and put back (the touch check in the air), the whole sequence on a unit
+  with the stock DIO1 backdoor (v1 motion, the spare dongle, or 7788CCF6 after asking), a slip during an SBL dump.
+  Left: a sensor that is not a v1 contact (the leak sensor), the user guide's level 4 and its wiring SVGs (`tools/wiring_svg.py`) on the new wiring; the
   ESP32-S3 (GPIO7, 15/16); a stock-backdoor unit (`R`) on the bootloader path; transmit bursts on GPIO power.
 
 - `TASK-01` relays: the fallback access point closes as soon as Wi-Fi is back (watch it from a phone); with a

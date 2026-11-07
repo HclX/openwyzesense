@@ -72,6 +72,17 @@ static uint8_t id_transport;  // 1 = cjtag, 2 = sbl
 static int id_tck = -1, id_tms = -1;
 static char id_mac[9];
 static bool have_sbl_map;  // id_transport == 2: saved_sbl_map holds the pads
+static int id_pads = 4;    // SBL: 4 pads (a fixture on R, T, S, W) or 2 (hand-held probes on R, T)
+
+// Two hand-held probes (the user, 2026-11-07: + and - clipped to the battery holder, two hands on the sensor's TX and
+// RX): the station tries only once both probes have been on the sensor for 200 ms, and after an attempt that found
+// nothing, only once they have been lifted and put back. "On the sensor" is a 20 us pull-up pulse on the probe with
+// the sensor unpowered (its supply pin driven low): in the air the line reads high at once; on a pad, that pin's
+// protection diode into the unpowered supply holds it near 0.5 V, low. About 1 nC a pulse: nothing is powered by it.
+#define TOUCH_POLL_MS 50
+#define TOUCH_STEADY  4  // polls: 200 ms
+static int touch_streak;
+static bool need_lift;
 static sblprobe_result_t saved_sbl_map;
 
 static size_t staged_bytes;
@@ -254,6 +265,52 @@ static bool sbl_pin_read(void *ctx, int pad)
     return gpio_get_level((gpio_num_t)cfg_sbl_pins[pad]) != 0;
 }
 
+static bool sbl_pin_touching(void *ctx, int pad)
+{
+    (void)ctx;
+    if (pad < 0 || pad >= SBLPROBE_PADS || cfg_sbl_pins[pad] < 0 || sbl_powered || sbl_uart_is_open) {
+        return false;
+    }
+    gpio_num_t pin = (gpio_num_t)cfg_sbl_pins[pad];
+    gpio_set_direction(pin, GPIO_MODE_INPUT);
+    gpio_pullup_en(pin);
+    esp_rom_delay_us(20);
+    bool high = gpio_get_level(pin) != 0;
+    gpio_pullup_dis(pin);
+    return !high;
+}
+
+static void release_sbl_pins(bool power_off);
+static void sbl_power(void *ctx, bool on);
+
+// Whether to try the two hand-held probes now (see TOUCH_POLL_MS): waits (one poll) otherwise. The sensor unpowered.
+static bool touch_gate(const sblprobe_io_t *io)
+{
+    if (sbl_powered || sbl_uart_is_open) {
+        release_sbl_pins(true);
+    } else {
+        // the supply driven low, not left floating: a sensor whose capacitors still hold charge (the relay powered it
+        // before a switch to the station, bench 2026-11-07) reads high on every pad, as if no probe touched it
+        sbl_power(NULL, false);
+    }
+    bool on = sblprobe_touched(io, 2);
+    if (need_lift) {
+        touch_streak = on ? 0 : touch_streak + 1;
+        if (touch_streak >= TOUCH_STEADY) {
+            need_lift = false;
+            touch_streak = 0;
+        }
+    } else {
+        touch_streak = on ? touch_streak + 1 : 0;
+        if (touch_streak >= TOUCH_STEADY) {
+            touch_streak = 0;
+            return true;
+        }
+    }
+    vTaskDelay(pdMS_TO_TICKS(TOUCH_POLL_MS));
+    return false;
+}
+
 static void sbl_power(void *ctx, bool on)
 {
     (void)ctx;
@@ -417,11 +474,14 @@ __attribute__((format(printf, 1, 2))) static void note(const char *fmt, ...)  //
     vsnprintf(line, sizeof line, fmt, ap);
     va_end(ap);
     xSemaphoreTake(lock, portMAX_DELAY);
+    bool same = !strcmp(status_msg, line);  // a waiting line repeated every poll: logged once
     if (state == STATE_ARMED || state == STATE_SLIPPED) {
         memcpy(status_msg, line, sizeof status_msg);
     }
     xSemaphoreGive(lock);
-    ESP_LOGI(TAG, "%s", line);
+    if (!same) {
+        ESP_LOGI(TAG, "%s", line);
+    }
 }
 
 // Step 1 and 2 of every sensor (the user, 2026-11-06: hands-free, the pins identified first, flash read or written
@@ -929,12 +989,19 @@ static void identify(cjtag_t *cj, esp_pin_ctx_t *pctx, const sblprobe_io_t *sbl_
             return;
         }
     }
-    if (tr == CJTAG_TRANSPORT_SBL || tr == CJTAG_TRANSPORT_AUTO) {
+    if (tr == CJTAG_TRANSPORT_SBL || tr == CJTAG_TRANSPORT_AUTO || tr == CJTAG_TRANSPORT_SBL2) {
+        int pads = tr == CJTAG_TRANSPORT_SBL2 ? 2 : SBLPROBE_PADS;
+        if (pads == 2 && !touch_gate(sbl_io)) {
+            if (!need_lift) {
+                note("Waiting: hold the two probes on the sensor's TX and RX pads");
+            }
+            return;
+        }
         sblprobe_result_t found = {0};
-        if (sblprobe_find(sbl_io, &found)) {
-            char pads[24];
-            snprintf(pads, sizeof pads, "R=GPIO%d T=GPIO%d", cfg_sbl_pins[found.r_pad], cfg_sbl_pins[found.t_pad]);
-            note("Found the bootloader on %s, backdoor GPIO%d: confirming", pads, cfg_sbl_pins[found.backdoor_pad]);
+        if (sblprobe_find_n(sbl_io, pads, &found)) {
+            char where[24];
+            snprintf(where, sizeof where, "R=GPIO%d T=GPIO%d", cfg_sbl_pins[found.r_pad], cfg_sbl_pins[found.t_pad]);
+            note("Found the bootloader on %s, backdoor GPIO%d: confirming", where, cfg_sbl_pins[found.backdoor_pad]);
             uint32_t cid = 0;
             char err[96] = "";
             release_sbl_pins(true);
@@ -959,19 +1026,27 @@ static void identify(cjtag_t *cj, esp_pin_ctx_t *pctx, const sblprobe_io_t *sbl_
                 saved_sbl_map = found;
                 have_sbl_map = true;
                 id_transport = 2;
+                id_pads = pads;
                 xSemaphoreGive(lock);
                 release_sbl_pins(true);
                 char how[96];
-                snprintf(how, sizeof how, "SBL, %s, backdoor GPIO%d, chip 0x%08" PRIX32, pads,
+                snprintf(how, sizeof how, "SBL, %s, backdoor GPIO%d, chip 0x%08" PRIX32, where,
                          cfg_sbl_pins[found.backdoor_pad], found.chip_id);
                 identified_done(how);
                 return;
             }
-            note("Not confirmed (the bootloader on %s answered once, then not the same): hold the probes still", pads);
+            note("Not confirmed (the bootloader on %s answered once, then not the same): hold the probes still", where);
+        } else if (pads == 2) {
+            note("Nothing answered on these two pads (%s): lift the probes, then try again", found.error);
         } else if (tr == CJTAG_TRANSPORT_SBL || found.error[0]) {
             note("Waiting for a sensor (%s)", found.error);
         }
         release_sbl_pins(true);
+        if (pads == 2) {
+            need_lift = true;  // not again while they stay on
+            touch_streak = 0;
+            return;
+        }
         vTaskDelay(pdMS_TO_TICKS(1000));
         return;
     }
@@ -994,6 +1069,7 @@ static void task(void *arg)
         .uart_read = sbl_uart_read,
         .uart_flush = sbl_uart_flush,
         .sleep_ms = sbl_sleep_ms,
+        .touching = sbl_pin_touching,
         .ctx = NULL,
     };
 
@@ -1018,6 +1094,12 @@ static void task(void *arg)
                 continue;
             }
         } else if (id_transport == 2) {
+            if (id_pads == 2 && !touch_gate(&sbl_io)) {
+                if (!need_lift) {
+                    note("Waiting: hold the two probes on the identified TX and RX pads");
+                }
+                continue;
+            }
             uint32_t cid = 0;
             char err[96] = "";
             if (sblprobe_enter(&sbl_io, &saved_sbl_map, &cid, err, sizeof err) && cid == saved_sbl_map.chip_id) {
@@ -1025,6 +1107,12 @@ static void task(void *arg)
                 continue;
             }
             release_sbl_pins(true);
+            if (id_pads == 2) {
+                note("Nothing answered on the identified pads (%s): lift the probes, then try again", err);
+                need_lift = true;
+                touch_streak = 0;
+                continue;
+            }
             note("Waiting for the sensor on the identified pads (%s)", err);
             vTaskDelay(pdMS_TO_TICKS(1000));
             continue;
@@ -1133,7 +1221,9 @@ bool cjtag_task_stage_end(bool rx_ok, cjtag_transport_t transport, char *msg, si
     (void)transport;  // the identification's
     mode = CJTAG_MODE_FLASH;
     state = STATE_ARMED;
-    const char *tr_label = id_transport == 2 ? "SBL, identified pads" : "cJTAG, identified pins";
+    const char *tr_label = id_transport != 2 ? "cJTAG, identified pins"
+                           : id_pads == 2    ? "SBL, two hand probes on the identified TX/RX"
+                                             : "SBL, identified pads";
     snprintf(status_msg, sizeof status_msg, "Armed Station Flash [%s] (%u B, %" PRIu32 " pages%s) — connect sensor!",
              tr_label, (unsigned)staged_bytes, staged_pages, staged_wipe_nv ? " + NV wipe" : "");
     snprintf(msg, msg_cap, "%s", status_msg);
@@ -1170,6 +1260,8 @@ bool cjtag_task_arm(cjtag_mode_t new_mode, cjtag_transport_t transport, char *ms
         return true;
     }
 
+    touch_streak = 0;  // two hand-held probes: a fresh start
+    need_lift = false;
     if (new_mode == CJTAG_MODE_IDENTIFY) {  // a new identification replaces the last one
         identified = false;
         id_transport = 0;
@@ -1183,6 +1275,7 @@ bool cjtag_task_arm(cjtag_mode_t new_mode, cjtag_transport_t transport, char *ms
         mode = new_mode;
         const char *label = (transport == CJTAG_TRANSPORT_SBL)    ? "SBL pad search"
                             : (transport == CJTAG_TRANSPORT_AUTO) ? "cJTAG, then SBL pad search"
+                            : (transport == CJTAG_TRANSPORT_SBL2) ? "SBL, two hand probes on TX/RX"
                                                                   : "cJTAG M/C";
         snprintf(status_msg, sizeof status_msg, "Identify armed [%s]: connect the sensor", label);
         state = STATE_ARMED;
@@ -1219,7 +1312,9 @@ bool cjtag_task_arm(cjtag_mode_t new_mode, cjtag_transport_t transport, char *ms
     (void)transport;  // Dump and Flash use the identification's transport and pins
     mode = new_mode;
 
-    const char *tr_label = id_transport == 2 ? "SBL, identified pads" : "cJTAG, identified pins";
+    const char *tr_label = id_transport != 2 ? "cJTAG, identified pins"
+                           : id_pads == 2    ? "SBL, two hand probes on the identified TX/RX"
+                                             : "SBL, identified pads";
     if (new_mode == CJTAG_MODE_DUMP) {
         dump_ready = false;
         fcfg1_ready = false;
@@ -1289,7 +1384,7 @@ size_t cjtag_task_json(char *out, size_t cap)
 {
     static const char *state_names[] = {"idle", "armed", "running", "slipped", "done", "error"};
     static const char *mode_names[] = {"none", "dump", "flash", "identify"};
-    static const char *tr_names[] = {"cjtag", "sbl", "auto"};
+    static const char *tr_names[] = {"cjtag", "sbl", "auto", "sbl2"};
     static const char *act_tr_names[] = {"none", "cjtag", "sbl"};
 
     if (!lock) {

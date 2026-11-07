@@ -81,27 +81,49 @@ static bool try_candidate(const sblprobe_io_t *io, int r, int t, int bd, uint32_
     return true;
 }
 
+bool sblprobe_touched(const sblprobe_io_t *io, int pads)
+{
+    if (!io->touching || pads < 1 || pads > SBLPROBE_PADS) {
+        return false;
+    }
+    for (int i = 0; i < pads; i++) {
+        if (!io->touching(io->ctx, i)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool sblprobe_find(const sblprobe_io_t *io, sblprobe_result_t *res)
+{
+    return sblprobe_find_n(io, SBLPROBE_PADS, res);
+}
+
+bool sblprobe_find_n(const sblprobe_io_t *io, int pads, sblprobe_result_t *res)
 {
     memset(res, 0, sizeof *res);
     res->r_pad = -1;
     res->t_pad = -1;
     res->backdoor_pad = -1;
+    if (pads != 2 && pads != SBLPROBE_PADS) {
+        snprintf(res->error, sizeof res->error, "2 or 4 pads");
+        return false;
+    }
 
-    for (int r = 0; r < SBLPROBE_PADS; r++) {
-        for (int t = 0; t < SBLPROBE_PADS; t++) {
+    for (int r = 0; r < pads; r++) {
+        for (int t = 0; t < pads; t++) {
             if (t == r) {
                 continue;
             }
-            int candidates[3];
+            int candidates[3];  // R first (the stock backdoor, DIO1), then the others (with 2 pads: T)
             candidates[0] = r;
             int k = 1;
-            for (int p = 0; p < SBLPROBE_PADS; p++) {
-                if (p != r && p != t) {
+            for (int p = 0; p < pads; p++) {
+                if (p != r && (p != t || pads == 2)) {
                     candidates[k++] = p;
                 }
             }
-            for (int c = 0; c < 3; c++) {
+            for (int c = 0; c < k; c++) {
                 uint32_t chip_id = 0;
                 if (try_candidate(io, r, t, candidates[c], &chip_id)) {
                     res->r_pad = r;
