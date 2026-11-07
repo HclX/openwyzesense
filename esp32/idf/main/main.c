@@ -27,7 +27,7 @@ void app_main(void)
     if (settings.role != ROLE_STATION) {
         rig_task_start();  // first: when the rig is the contact's supply, power it before anything talks to it
     }
-    if (settings.role != ROLE_RELAY) {
+    if (settings.role == ROLE_STATION) {
         cjtag_task_start();
     }
     if (settings.role != ROLE_STATION) {

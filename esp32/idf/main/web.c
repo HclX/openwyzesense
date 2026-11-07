@@ -21,6 +21,7 @@
 #include "relay_task.h"
 #include "rig_task.h"
 #include "settings.h"
+#include "pins.h"
 
 #define MAX_CONTACT_IMAGE 0x1E000  // pages 0-29
 
@@ -97,7 +98,8 @@ static esp_err_t api_status(httpd_req_t *req)
         snprintf(log_raw, sizeof log_raw, "station-only mode");
     }
     snprintf(build, sizeof build, "%s (%s)", relay_tag + 18, run ? run->label : "?");
-    js(gwmsg, sizeof gwmsg, g ? g->msg : (settings.role == ROLE_STATION ? "station-only mode (relay disabled)" : ""));
+    js(gwmsg, sizeof gwmsg,
+       g ? g->msg : (settings.role == ROLE_STATION ? "provisioning station (the relay is off)" : ""));
     carried[0] = running[0] = 0;
     if (g) {
         char v[96];
@@ -226,16 +228,16 @@ static bool refused_relay_disabled(httpd_req_t *req)
     if (settings.role != ROLE_STATION) {
         return false;
     }
-    httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "relay disabled in station-only role");
+    httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "the relay: set the role to relay (setup)");
     return true;
 }
 
 static bool refused_station_disabled(httpd_req_t *req)
 {
-    if (settings.role != ROLE_RELAY) {
+    if (settings.role == ROLE_STATION) {
         return false;
     }
-    httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "station disabled in relay-only role");
+    httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "the provisioning station: set the role to station (setup)");
     return true;
 }
 
@@ -279,13 +281,7 @@ static esp_err_t setup_post(httpd_req_t *req)
     }
     char role_s[16] = "";
     if (form_value(body, "role", role_s, sizeof role_s) && role_s[0]) {
-        if (!strcmp(role_s, "0") || !strcmp(role_s, "both")) {
-            settings.role = ROLE_BOTH;
-        } else if (!strcmp(role_s, "1") || !strcmp(role_s, "relay")) {
-            settings.role = ROLE_RELAY;
-        } else if (!strcmp(role_s, "2") || !strcmp(role_s, "station")) {
-            settings.role = ROLE_STATION;
-        }
+        settings.role = !strcmp(role_s, "2") || !strcmp(role_s, "station") ? ROLE_STATION : ROLE_RELAY;
     }
     if (!settings_save()) {
         return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "saving failed");
@@ -318,7 +314,7 @@ static esp_err_t contact_gwsync_post(httpd_req_t *req)
 }
 
 // The battery rig (#95, rig_task.c). GET /api/rig: state and results. POST /rig (form): enable=1|0 (kept in the
-// settings; restarts: the contact's + pad must then be on CONFIG_OWS_RIG_SUPPLY_GPIO, esp32/README.md), measure=1
+// settings; restarts: the contact's + pad must then be on OWS_PIN_RIG_SUPPLY, esp32/README.md), measure=1
 // (fresh counters, with any of cap_nf v_low_mv v_high_mv v_busy_mv v_hold_mv v_release_mv pulse_us hold_us) or 0.
 static esp_err_t rig_get(httpd_req_t *req)
 {
@@ -597,33 +593,6 @@ static cjtag_transport_t parse_transport(const char *s)
     return CJTAG_TRANSPORT_CJTAG;
 }
 
-static bool apply_sbl_query_or_form(const char *query, const char *body, char *msg, size_t msg_cap)
-{
-    static const char *keys[4] = {"sbl_0", "sbl_1", "sbl_2", "sbl_3"};
-    int pins[4] = {-1, -1, -1, -1};
-    int pwr = -1;
-    bool any = false;
-    for (int i = 0; i < 4; i++) {
-        char v[8] = "";
-        if (httpd_query_key_value(query, keys[i], v, sizeof v) == ESP_OK ||
-            (body[0] && form_value(body, keys[i], v, sizeof v))) {
-            if (v[0]) {
-                pins[i] = (int)strtol(v, NULL, 10);
-                any = true;
-            }
-        }
-    }
-    char pv[8] = "";
-    if (httpd_query_key_value(query, "power_pin", pv, sizeof pv) == ESP_OK ||
-        (body[0] && form_value(body, "power_pin", pv, sizeof pv))) {
-        if (pv[0]) {
-            pwr = (int)strtol(pv, NULL, 10);
-            any = true;
-        }
-    }
-    return !any || cjtag_task_set_sbl_pins(pins, pwr, msg, msg_cap);
-}
-
 static esp_err_t cjtag_get(httpd_req_t *req)
 {
     if (refused_station_disabled(req)) {
@@ -640,20 +609,16 @@ static esp_err_t cjtag_arm_post(httpd_req_t *req)
     if (!require_auth(req) || refused_station_disabled(req)) {
         return ESP_OK;
     }
-    char query[160] = "", body[160] = "", mode_s[16] = "", tr_s[16] = "", pa_s[8] = "", pb_s[8] = "";
+    char query[160] = "", body[160] = "", mode_s[16] = "", tr_s[16] = "";
     httpd_req_get_url_query_str(req, query, sizeof query);
     httpd_query_key_value(query, "mode", mode_s, sizeof mode_s);
     httpd_query_key_value(query, "transport", tr_s, sizeof tr_s);
-    httpd_query_key_value(query, "pin_a", pa_s, sizeof pa_s);
-    httpd_query_key_value(query, "pin_b", pb_s, sizeof pb_s);
     if (!mode_s[0] && req->content_len > 0 && req->content_len < (int)sizeof body) {
         int n = httpd_req_recv(req, body, req->content_len);
         if (n > 0) {
             body[n] = 0;
             form_value(body, "mode", mode_s, sizeof mode_s);
             form_value(body, "transport", tr_s, sizeof tr_s);
-            form_value(body, "pin_a", pa_s, sizeof pa_s);
-            form_value(body, "pin_b", pb_s, sizeof pb_s);
         }
     }
     cjtag_mode_t m = CJTAG_MODE_NONE;
@@ -663,11 +628,8 @@ static esp_err_t cjtag_arm_post(httpd_req_t *req)
         m = CJTAG_MODE_FLASH;
     }
     cjtag_transport_t tr = parse_transport(tr_s);
-    int pin_a = pa_s[0] ? (int)strtol(pa_s, NULL, 10) : -1;
-    int pin_b = pb_s[0] ? (int)strtol(pb_s, NULL, 10) : -1;
     char msg[160] = "";
-    if (!apply_sbl_query_or_form(query, body, msg, sizeof msg) ||
-        !cjtag_task_arm(m, tr, pin_a, pin_b, msg, sizeof msg)) {
+    if (!cjtag_task_arm(m, tr, msg, sizeof msg)) {
         return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, msg);
     }
     return httpd_resp_sendstr(req, msg);
@@ -682,23 +644,11 @@ static esp_err_t cjtag_stage_post(httpd_req_t *req)
         return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
                                    "an image for pages 0-29, a multiple of 4 bytes (a form field image, or the body)");
     }
-    char query[160] = "", empty_body[1] = "", nv[8] = "", tr_s[16] = "", pa_s[8] = "", pb_s[8] = "", msg[160] = "";
+    char query[160] = "", nv[8] = "", tr_s[16] = "", msg[160] = "";
     httpd_req_get_url_query_str(req, query, sizeof query);
     httpd_query_key_value(query, "nv", nv, sizeof nv);
     httpd_query_key_value(query, "transport", tr_s, sizeof tr_s);
-    httpd_query_key_value(query, "pin_a", pa_s, sizeof pa_s);
-    httpd_query_key_value(query, "pin_b", pb_s, sizeof pb_s);
     cjtag_transport_t tr = parse_transport(tr_s);
-    int pin_a = pa_s[0] ? (int)strtol(pa_s, NULL, 10) : -1;
-    int pin_b = pb_s[0] ? (int)strtol(pb_s, NULL, 10) : -1;
-    if (!apply_sbl_query_or_form(query, empty_body, msg, sizeof msg)) {
-        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, msg);
-    }
-    if (pin_a >= 0 || pin_b >= 0) {
-        if (!cjtag_task_arm(CJTAG_MODE_NONE, tr, pin_a, pin_b, msg, sizeof msg)) {
-            return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, msg);
-        }
-    }
     if (!cjtag_task_stage_begin(!strcmp(nv, "wipe"), msg, sizeof msg)) {
         return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, msg);
     }

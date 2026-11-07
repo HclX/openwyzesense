@@ -107,23 +107,15 @@ discovery. <code>Auto</code> tries cJTAG first, then SBL. Page 31 (CCFG + factor
 <dt>Progress</dt><dd id=cjpages>0 / 0 pages</dd>
 <dt>CCFG / Chip</dt><dd id=cjchip>–</dd>
 </dl>
-<p class=hint>Probes for <b>another</b> sensor held against them (dump, flash). Not the relay's own contact: that one
-is wired to its own M/C pins and updated at start-up.</p>
+<p class=hint>The sensor on the relay's harness (the same wires as a relay's contact): <b>+</b> supplied by the
+station, <b>M</b>/<b>C</b> for cJTAG; a sensor with 4 unmarked pads on <b>R</b>, <b>T</b>, <b>S</b>, <b>W</b> in any
+order for SBL (roles found).</p>
 <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-top:10px">
 <div><label style="margin-top:0">Transport</label><select id=cjtrans style="width:200px">
 <option value=cjtag>cJTAG (2-pin M &amp; C)</option>
 <option value=sbl>SBL (4-pad UART + power)</option>
 <option value=auto>Auto (cJTAG then SBL)</option></select></div>
-<div><label style="margin-top:0">Probe A GPIO</label><input type=text id=cjpina value=19 style="width:72px"></div>
-<div><label style="margin-top:0">Probe B GPIO</label><input type=text id=cjpinb value=21 style="width:72px"></div>
 <label class=check style="margin-top:0"><input type=checkbox id=cjsound checked>Audio cues (lock, page ticks, slip, done)</label>
-</div>
-<div id=sblpinrow style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:10px">
-<div><label style="margin-top:0">SBL Pad 0</label><input type=text id=sblp0 placeholder="GPIO" style="width:68px"></div>
-<div><label style="margin-top:0">SBL Pad 1</label><input type=text id=sblp1 placeholder="GPIO" style="width:68px"></div>
-<div><label style="margin-top:0">SBL Pad 2</label><input type=text id=sblp2 placeholder="GPIO" style="width:68px"></div>
-<div><label style="margin-top:0">SBL Pad 3</label><input type=text id=sblp3 placeholder="GPIO" style="width:68px"></div>
-<div><label style="margin-top:0">Target Power</label><input type=text id=sblpwr placeholder="GPIO" style="width:82px"></div>
 </div>
 <div class=btns style="margin-top:14px">
 <button class=btn id=cjarmdump>Arm Hands-Free Dump</button>
@@ -171,9 +163,8 @@ bootloader without reflashing the ESP.</p>
 <label>Admin password (protects setup &amp; updates)</label><input type=password name=admin_pass autocomplete=new-password placeholder="uses bridge token if unset">
 <label>Contact updates through</label><select name=contact_flash id=setcflash><option value=auto>Auto: debug port (M/C), else bootloader</option><option value=cjtag>Debug port (M/C) only</option><option value=sbl>Bootloader (R/T) only</option></select>
 <div id=rolewrap><label>Device role</label><select name=role id=setrole>
-<option value=0>Relay + provisioning station (both)</option>
-<option value=1>Relay only</option>
-<option value=2>Provisioning station only</option></select></div>
+<option value=0>Relay (its contact the gateway)</option>
+<option value=2>Provisioning station (a sensor on the same wires)</option></select></div>
 <button class=btn>Save and restart</button><div class=msg id=setupmsg></div></form></div></div></section>
 </main>
 <script>
@@ -198,7 +189,7 @@ x.bat_mv?(x.bat_mv/1000).toFixed(2)+' V ('+x.bat_mv+' mV)':'–',ago(x.seen_s)];
 vals.forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;if(i==2&&x.rssi<-85)td.className='weak';
 tr.appendChild(td)});tb.appendChild(tr)})}
 async function poll(){if(busy)return;try{const r=await fetch('/api/status',{cache:'no-store'});const s=await r.json();
-const role=s.role||0,relayOnly=role==1||s.chip=='ESP8266',stationOnly=role==2;
+const role=s.role==2?2:0,relayOnly=role!=2||s.chip=='ESP8266',stationOnly=role==2;
 $('probetab').hidden=relayOnly;$('rolewrap').hidden=s.chip=='ESP8266';
 if(relayOnly&&!$('probe').hidden)document.querySelector('nav button[data-tab=status]').click();
 $('name').textContent=s.name;document.title=s.name;
@@ -286,18 +277,10 @@ o.connect(g);g.connect(actx.destination);o.start(t0);o.stop(t0+ms/1000)}catch(_)
 function dlUrl(url,name){const a=document.createElement('a');a.href=url;if(name)a.download=name;
 document.body.appendChild(a);a.click();a.remove()}
 function cjQuery(){
-const q=['transport='+encodeURIComponent($('cjtrans').value),
-'pin_a='+encodeURIComponent($('cjpina').value.trim()),
-'pin_b='+encodeURIComponent($('cjpinb').value.trim())];
-['0','1','2','3'].forEach(i=>{const v=$('sblp'+i).value.trim();if(v!=='')q.push('sbl_'+i+'='+encodeURIComponent(v))});
-const pw=$('sblpwr').value.trim();if(pw!=='')q.push('power_pin='+encodeURIComponent(pw));
-return q.join('&')}
+return 'transport='+encodeURIComponent($('cjtrans').value)}
 async function pollCjtag(){if($('probe').hidden&&cjLastState=='idle')return;try{
 const r=await fetch('/api/cjtag',{cache:'no-store'});if(!r.ok)return;const c=await r.json();
-if(!cjPinsFilled&&c.pin_a>=0){cjPinsFilled=true;$('cjpina').value=c.pin_a;$('cjpinb').value=c.pin_b;
-if(c.transport)$('cjtrans').value=c.transport;
-if(c.sbl_pins)c.sbl_pins.forEach((p,i)=>{if(p>=0)$('sblp'+i).value=p});
-if(c.power_pin>=0)$('sblpwr').value=c.power_pin}
+if(!cjPinsFilled){cjPinsFilled=true;if(c.transport)$('cjtrans').value=c.transport}
 const tr=c.active_transport&&c.active_transport!='none'?c.active_transport:(c.transport||'cjtag');
 const labels={idle:'Disarmed',armed:'Armed ('+c.mode+' · '+tr+') — connect sensor',running:c.mode=='dump'?'Dumping…':'Flashing…',
 slipped:'Paused (probe slip) — reconnect sensor',done:'Complete!',error:'Error'};

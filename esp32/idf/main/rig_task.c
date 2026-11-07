@@ -15,6 +15,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "settings.h"
+#include "pins.h"
 
 #define HOLD_MAX_US \
     50000  // a hold ends after this even if the driven supply never reads above v_release_mv: near
@@ -33,10 +34,10 @@ static rig_t rig;  // written by the rig task only; read for the status (a torn 
 static void supply(bool on)
 {
     if (on) {
-        rtc_gpio_set_level(CONFIG_OWS_RIG_SUPPLY_GPIO, 1);
-        rtc_gpio_set_direction(CONFIG_OWS_RIG_SUPPLY_GPIO, RTC_GPIO_MODE_OUTPUT_ONLY);
+        rtc_gpio_set_level(OWS_PIN_RIG_SUPPLY, 1);
+        rtc_gpio_set_direction(OWS_PIN_RIG_SUPPLY, RTC_GPIO_MODE_OUTPUT_ONLY);
     } else {
-        rtc_gpio_set_direction(CONFIG_OWS_RIG_SUPPLY_GPIO, RTC_GPIO_MODE_DISABLED);  // high impedance: the ADC reads C
+        rtc_gpio_set_direction(OWS_PIN_RIG_SUPPLY, RTC_GPIO_MODE_DISABLED);  // high impedance: the ADC reads C
     }
 }
 
@@ -104,11 +105,11 @@ static void task(void *arg)
 void rig_task_start(void)
 {
     rig_default_cfg(&next_cfg);
-#if CONFIG_OWS_RIG_SUPPLY_GPIO >= 0
+#if OWS_PIN_RIG_SUPPLY >= 0
     if (!settings.rig) {
         return;
     }
-    const int gpio = CONFIG_OWS_RIG_SUPPLY_GPIO;
+    const int gpio = OWS_PIN_RIG_SUPPLY;
     adc_unit_t unit;
     adc_oneshot_unit_init_cfg_t ucfg = {.ulp_mode = ADC_ULP_MODE_DISABLE};
     if (adc_oneshot_io_to_channel(gpio, &unit, &chan) != ESP_OK || unit != ADC_UNIT_1) {  // ADC2 is Wi-Fi's

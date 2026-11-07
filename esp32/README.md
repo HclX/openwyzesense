@@ -31,16 +31,18 @@ Hardware bench test: `reference/tests/test_hw_esp32.py`, with the board wired as
 
 ## Wiring
 
-| Contact pad | ESP32-S3 (default GPIO; `tools/idf.sh menuconfig` -> OpenWyzeSense relay) |
+The GPIOs are fixed per chip (`esp32/idf/main/pins.h`; the user, 2026-11-06).
+
+| Contact pad | ESP32-S3 |
 |---|---|
-| `+` | GPIO7 (`OWS_CONTACT_POWER`, #81: a reset is a power cycle); or 3V3, as before (`-1`) |
+| `+` | GPIO7 (#81: a reset is a power cycle); or 3V3, as before |
 | `-` | GND |
 | `RX` (DIO1) | GPIO17 (UART1 TX) |
 | `TX` (DIO0) | GPIO18 (UART1 RX) |
-| `M` (TMSC) | GPIO15 (`OWS_CONTACT_TMS`, #81: updates through the debug port) |
-| `C` (TCKC) | GPIO16 (`OWS_CONTACT_TCK`) |
-| `S` (RESET_N) | GPIO4, open-drain; optional when `+` is on GPIO7 (`-1`) |
-| `W` (DIO10) | GPIO5, open-drain: low at a start = the ROM bootloader on units provisioned with backdoor `w` (`0xC5FE0AC5`, #14); optional otherwise |
+| `M` (TMSC) | GPIO15 (#81: updates through the debug port) |
+| `C` (TCKC) | GPIO16 |
+| `S` (RESET_N) | GPIO4, open-drain; optional when `+` is on GPIO7 |
+| `W` (DIO10) | GPIO5, open-drain: low at a start = the ROM bootloader on units provisioned with backdoor `w` (`0xC5FE0AC5`, #14); needed only for the bootloader fallback on such units |
 
 Since #81 the relay powers the contact from a GPIO and updates it through its 2-pin debug port (cJTAG on `M`/`C`),
 like the LaunchPad does: no bootloader backdoor needed. Setup page "Contact updates through" (`auto`, the default:
@@ -48,8 +50,17 @@ the debug port, else the ROM bootloader; `cjtag`; `sbl`). Into the bootloader, `
 the start, so stock units (backdoor on `R`/DIO1, `0xC5FE01C5`) and ours (`W`) both enter it. While the power is off,
 the relay drives no line high (`R` low, `T`'s pull-up off, `S`/`W` released), so nothing feeds the chip through its
 pins. A relay wired the old way (`+` on 3V3, `S`, `W`) keeps working: the power GPIO then does nothing and a debug
-port that does not answer falls back to the bootloader. Not yet tried on hardware: if the debug port or the power
-cycle does not work, wire `+` to 3V3 and `S` as before.
+port that does not answer falls back to the bootloader. Tried on the LOLIN32 (docs/TODO.md, bench checklist).
+
+### Relay or provisioning station
+
+One image, two roles, chosen on the setup page ("Device role"; one at a time, the ESP restarts to switch): the
+**relay** (the default) or the **provisioning station**, which dumps and flashes other sensors on the same harness (no
+relay meanwhile). On the station, a sensor's `+` hangs on the power GPIO, its `M`/`C` on the same two GPIOs (polarity
+found), and a sensor with four unmarked pads besides `+`/`-` (the v2 leak sensor) goes on `R`, `T`, `S`, `W` in any
+order: the station finds which is which through the TI ROM bootloader (`esp32/contact/sblprobe.c`). Probe tab:
+transport `cjtag`, `sbl` or `auto`; a dump of the unit, downloaded, before any flash of it; pages 0-29 (30 only for an
+NV wipe), every page verified, page 31 never.
 
 Provision the contact board once over JTAG (`docs/design/v1-contact.md`), backing up its stock flash first:
 `tools/uniflash.py provision --gateway --backup backups/contact_<MAC>` (or step by step:
@@ -133,7 +144,7 @@ tools/idf.sh -B build-esp32 -D SDKCONFIG=build-esp32/sdkconfig -p /dev/ttyUSB0 f
 
 | Contact pad | LOLIN32 |
 |---|---|
-| `+` | GPIO27 (`OWS_CONTACT_POWER`); or 3V3 |
+| `+` | GPIO27; or 3V3 |
 | `-` | GND |
 | `R` (the contact's input) | GPIO17 (UART1 TX) |
 | `T` (the contact's output) | GPIO18 (UART1 RX) |
@@ -153,7 +164,7 @@ start, it sets the flash to 1.8 V. The console is UART0, the board's USB serial 
 
 The LOLIN32 can be the contact's battery instead of its 3V3 pin, to measure the sensor's sleep current with no meter
 (`docs/design/low-battery.md` §3, Option B; core `esp32/rig/`, tests `test_rig`). Move one wire: the contact's `+` from
-**3V3** to **GPIO32** (`CONFIG_OWS_RIG_SUPPLY_GPIO`, ADC1 channel 4: ADC2 pins do not work with Wi-Fi on). Then:
+**3V3** to **GPIO32** (ADC1 channel 4: ADC2 pins do not work with Wi-Fi on). Then:
 
 ```
 curl -d enable=1 http://<ip>/rig            # kept in the settings; restarts; GPIO32 supplies the contact from boot
@@ -213,7 +224,7 @@ The pads' silkscreen is the contact's own side: T is its output, R its input (th
 1. The contact board: back up and provision our gateway + backdoor `w` (`tools/uniflash.py provision --gateway --backup
    backups/contact_<MAC>`, or `backup` -> `flash --backup ... build/fw/firmware/gateway-contact-v1-app.bin` ->
    `enable-bootloader w --backup ... --yes`); then unwire it from the LaunchPad.
-2. Wire it to the S3 (the table above); set the GPIOs if they differ (`tools/idf.sh menuconfig`).
+2. Wire it to the S3 (the table above); the GPIOs are fixed (`pins.h`).
 3. `tools/idf.sh -p /dev/ttyACM0 flash monitor`: the log shows `OpenWyzeSense relay OWS-relay-XXXX up` and the
    setup access point.
 4. Join `OWS-relay-XXXX`, http://192.168.4.1/setup: Wi-Fi, the bridge URL, optional token / `admin_pass`. After its

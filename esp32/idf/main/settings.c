@@ -52,8 +52,8 @@ void settings_load(void)
         settings.contact_flash = cflash;
     }
     uint8_t role = 0;
-    if (nvs_get_u8(h, "role", &role) == ESP_OK && role <= ROLE_STATION) {
-        settings.role = role;
+    if (nvs_get_u8(h, "role", &role) == ESP_OK) {
+        settings.role = role == ROLE_STATION ? ROLE_STATION : ROLE_RELAY;
     }
     nvs_close(h);
     trim(settings.ssid);

@@ -33,7 +33,7 @@ static void pin_init(int gpio)
 // The contact's + pad on a GPIO (#81): a reset is a power cycle. Not with the battery rig, which owns the supply.
 static bool power_ctl(void)
 {
-    return CONFIG_OWS_CONTACT_POWER >= 0 && !settings.rig;
+    return OWS_PIN_CONTACT_POWER >= 0 && !settings.rig;
 }
 
 static void line_free(int gpio)  // high impedance, no pull: nothing driven into the contact
@@ -49,19 +49,19 @@ static void line_free(int gpio)  // high impedance, no pull: nothing driven into
 void contact_init(void)
 {
     uart_lock = xSemaphoreCreateMutex();
-    if (CONFIG_OWS_CONTACT_RESET >= 0) {
-        pin_init(CONFIG_OWS_CONTACT_RESET);
+    if (OWS_PIN_CONTACT_RESET >= 0) {
+        pin_init(OWS_PIN_CONTACT_RESET);
     }
-    if (CONFIG_OWS_CONTACT_BOOT >= 0) {
-        pin_init(CONFIG_OWS_CONTACT_BOOT);
+    if (OWS_PIN_CONTACT_BOOT >= 0) {
+        pin_init(OWS_PIN_CONTACT_BOOT);
     }
-    line_free(CONFIG_OWS_CONTACT_TMS);  // the debug port (M, C) only when gwsync uses it
-    line_free(CONFIG_OWS_CONTACT_TCK);
+    line_free(OWS_PIN_CONTACT_TMS);  // the debug port (M, C) only when gwsync uses it
+    line_free(OWS_PIN_CONTACT_TCK);
     if (power_ctl()) {  // supplied from the start: the UART below sets R high (idle) before anything looks at it
-        gpio_reset_pin(CONFIG_OWS_CONTACT_POWER);
-        gpio_set_direction(CONFIG_OWS_CONTACT_POWER, GPIO_MODE_OUTPUT);
-        gpio_set_drive_capability(CONFIG_OWS_CONTACT_POWER, GPIO_DRIVE_CAP_3);
-        gpio_set_level(CONFIG_OWS_CONTACT_POWER, 1);
+        gpio_reset_pin(OWS_PIN_CONTACT_POWER);
+        gpio_set_direction(OWS_PIN_CONTACT_POWER, GPIO_MODE_OUTPUT);
+        gpio_set_drive_capability(OWS_PIN_CONTACT_POWER, GPIO_DRIVE_CAP_3);
+        gpio_set_level(OWS_PIN_CONTACT_POWER, 1);
     }
     uart_config_t u = {
         .baud_rate = 115200,
@@ -73,19 +73,18 @@ void contact_init(void)
     };
     ESP_ERROR_CHECK(uart_driver_install(UART, 4096, 0, 0, NULL, 0));
     ESP_ERROR_CHECK(uart_param_config(UART, &u));
-    ESP_ERROR_CHECK(uart_set_pin(UART, CONFIG_OWS_CONTACT_UART_TX, CONFIG_OWS_CONTACT_UART_RX, UART_PIN_NO_CHANGE,
-                                 UART_PIN_NO_CHANGE));
+    ESP_ERROR_CHECK(uart_set_pin(UART, OWS_PIN_CONTACT_TX, OWS_PIN_CONTACT_RX, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
     // the line idles high: a contact that does not drive its T pad (a half-written image, a chip that is starting)
     // leaves it floating, and noise came in as bytes (00 ff 00 fe ..., 2026-10-25)
-    gpio_pullup_en(CONFIG_OWS_CONTACT_UART_RX);
+    gpio_pullup_en(OWS_PIN_CONTACT_RX);
     if (settings.rig) {
         // the battery rig (#95, docs/design/low-battery.md §3.1): the contact's supply sits below 3.3 V and is measured, so
         // nothing may feed it through its pins: no pull-up on the line from T, and the line to R open-drain (the
         // contact pulls its R pin up itself, to its own supply)
-        gpio_pullup_dis(CONFIG_OWS_CONTACT_UART_RX);
+        gpio_pullup_dis(OWS_PIN_CONTACT_RX);
         // the pad's open-drain bit only: gpio_set_direction() would detach the UART and leave a plain output, low
         // (2026-11-01: R held low, the console dead and the contact's pull-up and UART drawing all the time)
-        gpio_od_enable(CONFIG_OWS_CONTACT_UART_TX);
+        gpio_od_enable(OWS_PIN_CONTACT_TX);
     }
 }
 
@@ -96,8 +95,8 @@ void contact_init(void)
 // off nothing may feed the chip through its pins: R low, the line from T unpulled, S and W released (open-drain).
 static void restart(bool bootloader)
 {
-    const int tx = CONFIG_OWS_CONTACT_UART_TX, rx = CONFIG_OWS_CONTACT_UART_RX;
-    const int s = CONFIG_OWS_CONTACT_RESET, w = CONFIG_OWS_CONTACT_BOOT;
+    const int tx = OWS_PIN_CONTACT_TX, rx = OWS_PIN_CONTACT_RX;
+    const int s = OWS_PIN_CONTACT_RESET, w = OWS_PIN_CONTACT_BOOT;
     bool cycle = power_ctl();
     if (!cycle && s < 0) {
         ESP_LOGW("contact", "no way to reset it: neither a power GPIO nor the S pad");
@@ -116,9 +115,9 @@ static void restart(bool bootloader)
     }
     if (cycle) {
         gpio_pullup_dis(rx);
-        gpio_set_level(CONFIG_OWS_CONTACT_POWER, 0);
+        gpio_set_level(OWS_PIN_CONTACT_POWER, 0);
         vTaskDelay(pdMS_TO_TICKS(OFF_MS));
-        gpio_set_level(CONFIG_OWS_CONTACT_POWER, 1);
+        gpio_set_level(OWS_PIN_CONTACT_POWER, 1);
         if (!bootloader) {
             // R high right after the power, not before (it would feed the unpowered chip, which then missed its
             // power-on reset without S: bench, #81), and long before the ROM looks at its backdoor pin
@@ -333,6 +332,7 @@ bool contact_flash(const uint8_t *image, size_t len, const char *expect_mac, boo
 #include "esp_timer.h"
 #include "gwsync.h"
 #include "settings.h"
+#include "pins.h"
 
 extern const uint8_t gw_image_start[] asm("_binary_gateway_contact_v1_app_bin_start");
 extern const uint8_t gw_image_end[] asm("_binary_gateway_contact_v1_app_bin_end");
@@ -434,7 +434,7 @@ static int cjtag_flash_now(uint32_t image_len, char *mac, char *err, size_t cap)
 {
     static cjtag_t cj;
     static uint8_t want[CJTAG_PAGE], have[CJTAG_PAGE];
-    const int tck = CONFIG_OWS_CONTACT_TCK, tms = CONFIG_OWS_CONTACT_TMS;
+    const int tck = OWS_PIN_CONTACT_TCK, tms = OWS_PIN_CONTACT_TMS;
     if (tck < 0 || tms < 0) {
         snprintf(err, cap, "no debug port wired (M, C)");
         return -1;

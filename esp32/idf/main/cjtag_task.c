@@ -16,46 +16,7 @@
 #include "sbl.h"
 #include "sblprobe.h"
 #include "settings.h"
-
-#ifndef OWS_STATION_SBL_PIN_0
-#ifdef CONFIG_OWS_STATION_SBL_PIN_0
-#define OWS_STATION_SBL_PIN_0 CONFIG_OWS_STATION_SBL_PIN_0
-#else
-#define OWS_STATION_SBL_PIN_0 (-1)
-#endif
-#endif
-
-#ifndef OWS_STATION_SBL_PIN_1
-#ifdef CONFIG_OWS_STATION_SBL_PIN_1
-#define OWS_STATION_SBL_PIN_1 CONFIG_OWS_STATION_SBL_PIN_1
-#else
-#define OWS_STATION_SBL_PIN_1 (-1)
-#endif
-#endif
-
-#ifndef OWS_STATION_SBL_PIN_2
-#ifdef CONFIG_OWS_STATION_SBL_PIN_2
-#define OWS_STATION_SBL_PIN_2 CONFIG_OWS_STATION_SBL_PIN_2
-#else
-#define OWS_STATION_SBL_PIN_2 (-1)
-#endif
-#endif
-
-#ifndef OWS_STATION_SBL_PIN_3
-#ifdef CONFIG_OWS_STATION_SBL_PIN_3
-#define OWS_STATION_SBL_PIN_3 CONFIG_OWS_STATION_SBL_PIN_3
-#else
-#define OWS_STATION_SBL_PIN_3 (-1)
-#endif
-#endif
-
-#ifndef OWS_STATION_POWER_GPIO
-#ifdef CONFIG_OWS_STATION_POWER_GPIO
-#define OWS_STATION_POWER_GPIO CONFIG_OWS_STATION_POWER_GPIO
-#else
-#define OWS_STATION_POWER_GPIO (-1)
-#endif
-#endif
+#include "pins.h"
 
 #define SBL_UART UART_NUM_2
 
@@ -85,18 +46,18 @@ static volatile cjtag_transport_t cfg_transport = CJTAG_TRANSPORT_CJTAG;
 static volatile uint8_t active_transport;  // 0 = none, 1 = cjtag, 2 = sbl
 static volatile bool task_busy;
 
-static int cfg_pin_a = CONFIG_OWS_CJTAG_PIN_A;
-static int cfg_pin_b = CONFIG_OWS_CJTAG_PIN_B;
+static const int cfg_pin_a = OWS_PIN_STATION_A;  // fixed: pins.h (the relay's harness)
+static const int cfg_pin_b = OWS_PIN_STATION_B;
 static int active_tck = -1;
 static int active_tms = -1;
 
-static int cfg_sbl_pins[SBLPROBE_PADS] = {
-    OWS_STATION_SBL_PIN_0,
-    OWS_STATION_SBL_PIN_1,
-    OWS_STATION_SBL_PIN_2,
-    OWS_STATION_SBL_PIN_3,
+static const int cfg_sbl_pins[SBLPROBE_PADS] = {
+    OWS_PIN_STATION_SBL_0,
+    OWS_PIN_STATION_SBL_1,
+    OWS_PIN_STATION_SBL_2,
+    OWS_PIN_STATION_SBL_3,
 };
-static int cfg_power_pin = OWS_STATION_POWER_GPIO;
+static const int cfg_power_pin = OWS_PIN_STATION_POWER;
 static bool sbl_uart_installed;
 static bool sbl_uart_is_open;
 static int sbl_active_rx_pad = -1;
@@ -144,91 +105,6 @@ static void json_str(char *out, size_t cap, const char *s)
     out[n] = 0;
 }
 
-static bool valid_station_pin(int pin, char *err, size_t err_cap)
-{
-    if (pin < 0 || !GPIO_IS_VALID_OUTPUT_GPIO(pin)) {
-        snprintf(err, err_cap, "GPIO%d is not a valid output-capable GPIO", pin);
-        return false;
-    }
-    if (pin == 1 || pin == 3) {
-        snprintf(err, err_cap, "GPIO%d is reserved for the console UART", pin);
-        return false;
-    }
-#if CONFIG_IDF_TARGET_ESP32
-    if (pin >= 6 && pin <= 11) {
-        snprintf(err, err_cap, "GPIO%d is reserved for the ESP32 SPI flash", pin);
-        return false;
-    }
-#elif CONFIG_IDF_TARGET_ESP32S3
-    if (pin == 19 || pin == 20) {
-        snprintf(err, err_cap, "GPIO%d is reserved for ESP32-S3 USB D-/D+", pin);
-        return false;
-    }
-    if (pin >= 26 && pin <= 32) {
-        snprintf(err, err_cap, "GPIO%d is reserved for the ESP32-S3 SPI flash/PSRAM", pin);
-        return false;
-    }
-#endif
-    if (CONFIG_OWS_STATUS_LED >= 0 && pin == CONFIG_OWS_STATUS_LED) {
-        snprintf(err, err_cap, "GPIO%d is already assigned to the status LED", pin);
-        return false;
-    }
-    if (settings.role != ROLE_STATION &&
-        (pin == CONFIG_OWS_CONTACT_UART_TX || pin == CONFIG_OWS_CONTACT_UART_RX || pin == CONFIG_OWS_CONTACT_RESET ||
-         pin == CONFIG_OWS_CONTACT_BOOT || (CONFIG_OWS_RIG_SUPPLY_GPIO >= 0 && pin == CONFIG_OWS_RIG_SUPPLY_GPIO) ||
-         (CONFIG_OWS_CONTACT_POWER >= 0 && pin == CONFIG_OWS_CONTACT_POWER) ||
-         (CONFIG_OWS_CONTACT_TMS >= 0 && pin == CONFIG_OWS_CONTACT_TMS) ||
-         (CONFIG_OWS_CONTACT_TCK >= 0 && pin == CONFIG_OWS_CONTACT_TCK))) {
-        snprintf(err, err_cap, "GPIO%d is already assigned to the gateway contact/rig", pin);
-        return false;
-    }
-    return true;
-}
-
-static bool sbl_pins_configured(void)
-{
-    if (cfg_power_pin < 0) {
-        return false;
-    }
-    for (int i = 0; i < SBLPROBE_PADS; i++) {
-        if (cfg_sbl_pins[i] < 0) {
-            return false;
-        }
-    }
-    return true;
-}
-
-static bool validate_sbl_pin_set(const int pins[SBLPROBE_PADS], int power_pin, char *err, size_t err_cap)
-{
-    if (power_pin < 0) {
-        snprintf(err, err_cap, "SBL power GPIO is not configured (OWS_STATION_POWER_GPIO)");
-        return false;
-    }
-    if (!valid_station_pin(power_pin, err, err_cap)) {
-        return false;
-    }
-    for (int i = 0; i < SBLPROBE_PADS; i++) {
-        if (pins[i] < 0) {
-            snprintf(err, err_cap, "SBL pad %d GPIO is not configured (OWS_STATION_SBL_PIN_%d)", i, i);
-            return false;
-        }
-        if (!valid_station_pin(pins[i], err, err_cap)) {
-            return false;
-        }
-        if (pins[i] == power_pin) {
-            snprintf(err, err_cap, "SBL pad %d and power GPIO must be different", i);
-            return false;
-        }
-        for (int j = 0; j < i; j++) {
-            if (pins[i] == pins[j]) {
-                snprintf(err, err_cap, "SBL pad %d and pad %d must be different GPIOs", j, i);
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
 static void free_page_bufs(void)
 {
     for (uint32_t i = 0; i < CJTAG_TOTAL_PAGES; i++) {
@@ -251,17 +127,18 @@ static bool ensure_page_bufs(void)
     return true;
 }
 
+// Released: floating, no pull-up, so a probed sensor whose supply the station switches off is never fed through them
 static void release_cjtag_pins(int pin_a, int pin_b)
 {
     if (pin_a >= 0) {
         gpio_reset_pin((gpio_num_t)pin_a);
         gpio_set_direction((gpio_num_t)pin_a, GPIO_MODE_INPUT);
-        gpio_set_pull_mode((gpio_num_t)pin_a, GPIO_PULLUP_ONLY);
+        gpio_set_pull_mode((gpio_num_t)pin_a, GPIO_FLOATING);
     }
     if (pin_b >= 0) {
         gpio_reset_pin((gpio_num_t)pin_b);
         gpio_set_direction((gpio_num_t)pin_b, GPIO_MODE_INPUT);
-        gpio_set_pull_mode((gpio_num_t)pin_b, GPIO_PULLUP_ONLY);
+        gpio_set_pull_mode((gpio_num_t)pin_b, GPIO_FLOATING);
     }
 }
 
@@ -381,6 +258,7 @@ static void sbl_power(void *ctx, bool on)
     }
     if (cfg_power_pin >= 0) {
         gpio_set_direction((gpio_num_t)cfg_power_pin, GPIO_MODE_OUTPUT);
+        gpio_set_drive_capability((gpio_num_t)cfg_power_pin, GPIO_DRIVE_CAP_3);  // a sensor's radio bursts
         gpio_set_level((gpio_num_t)cfg_power_pin, on ? 1 : 0);
     }
 }
@@ -969,13 +847,17 @@ static void task(void *arg)
         int pin_b = cfg_pin_b;
 
         if (tr == CJTAG_TRANSPORT_CJTAG || tr == CJTAG_TRANSPORT_AUTO) {
+            if (!sbl_powered) {  // a sensor on the harness gets its supply here (one with its own battery ignores it)
+                sbl_power(NULL, true);
+                vTaskDelay(pdMS_TO_TICKS(50));
+            }
             if (probe_with_polarity(&cj, &pctx, pin_a, pin_b)) {
                 run_cjtag_session(&cj, &pctx, pin_a, pin_b);
                 continue;
             }
         }
 
-        if ((tr == CJTAG_TRANSPORT_SBL || tr == CJTAG_TRANSPORT_AUTO) && sbl_pins_configured()) {
+        if (tr == CJTAG_TRANSPORT_SBL || tr == CJTAG_TRANSPORT_AUTO) {
             sblprobe_result_t found = {0};
             bool connected = false;
             if (have_sbl_map) {
@@ -1020,36 +902,6 @@ void cjtag_task_start(void)
         lock = xSemaphoreCreateMutex();
     }
     xTaskCreate(task, "cjtag", 8192, NULL, 6, NULL);
-}
-
-bool cjtag_task_set_sbl_pins(const int sbl_pins[4], int power_pin, char *msg, size_t msg_cap)
-{
-    if (!lock) {
-        lock = xSemaphoreCreateMutex();
-    }
-    xSemaphoreTake(lock, portMAX_DELAY);
-    int new_pins[SBLPROBE_PADS];
-    for (int i = 0; i < SBLPROBE_PADS; i++) {
-        new_pins[i] = (sbl_pins && sbl_pins[i] >= 0) ? sbl_pins[i] : cfg_sbl_pins[i];
-    }
-    int new_pwr = (power_pin >= 0) ? power_pin : cfg_power_pin;
-    if (!validate_sbl_pin_set(new_pins, new_pwr, msg, msg_cap)) {
-        xSemaphoreGive(lock);
-        return false;
-    }
-    bool changed = (new_pwr != cfg_power_pin);
-    for (int i = 0; i < SBLPROBE_PADS; i++) {
-        if (new_pins[i] != cfg_sbl_pins[i]) {
-            changed = true;
-        }
-        cfg_sbl_pins[i] = new_pins[i];
-    }
-    cfg_power_pin = new_pwr;
-    if (changed) {
-        have_sbl_map = false;
-    }
-    xSemaphoreGive(lock);
-    return true;
 }
 
 bool cjtag_task_stage_begin(bool wipe_nv, char *err, size_t err_cap)
@@ -1128,11 +980,6 @@ bool cjtag_task_stage_end(bool rx_ok, cjtag_transport_t transport, char *msg, si
         return false;
     }
 
-    if (transport == CJTAG_TRANSPORT_SBL && !validate_sbl_pin_set(cfg_sbl_pins, cfg_power_pin, msg, msg_cap)) {
-        xSemaphoreGive(lock);
-        return false;
-    }
-
     staged_pages = (uint32_t)((staged_bytes + CJTAG_PAGE - 1u) / CJTAG_PAGE);
     total_pages_target = staged_pages + (staged_wipe_nv ? 1u : 0u);
     pages_done_mask = 0;
@@ -1154,30 +1001,12 @@ bool cjtag_task_stage_end(bool rx_ok, cjtag_transport_t transport, char *msg, si
     return true;
 }
 
-bool cjtag_task_arm(cjtag_mode_t new_mode, cjtag_transport_t transport, int pin_a, int pin_b, char *msg, size_t msg_cap)
+bool cjtag_task_arm(cjtag_mode_t new_mode, cjtag_transport_t transport, char *msg, size_t msg_cap)
 {
     if (!lock) {
         lock = xSemaphoreCreateMutex();
     }
     xSemaphoreTake(lock, portMAX_DELAY);
-    if (pin_a >= 0 || pin_b >= 0) {
-        int na = (pin_a >= 0) ? pin_a : cfg_pin_a;
-        int nb = (pin_b >= 0) ? pin_b : cfg_pin_b;
-        if (na == nb) {
-            snprintf(msg, msg_cap, "probe A and probe B must be different GPIOs");
-            xSemaphoreGive(lock);
-            return false;
-        }
-        if (!valid_station_pin(na, msg, msg_cap) || !valid_station_pin(nb, msg, msg_cap)) {
-            xSemaphoreGive(lock);
-            return false;
-        }
-        if (state != STATE_IDLE) {
-            release_cjtag_pins(cfg_pin_a, cfg_pin_b);
-        }
-        cfg_pin_a = na;
-        cfg_pin_b = nb;
-    }
 
     if (new_mode == CJTAG_MODE_NONE) {
         state = STATE_IDLE;
@@ -1199,24 +1028,6 @@ bool cjtag_task_arm(cjtag_mode_t new_mode, cjtag_transport_t transport, int pin_
         snprintf(msg, msg_cap, "%s", status_msg);
         xSemaphoreGive(lock);
         return true;
-    }
-
-    if (transport == CJTAG_TRANSPORT_CJTAG || transport == CJTAG_TRANSPORT_AUTO) {
-        if (!valid_station_pin(cfg_pin_a, msg, msg_cap) || !valid_station_pin(cfg_pin_b, msg, msg_cap)) {
-            xSemaphoreGive(lock);
-            return false;
-        }
-    }
-    if (transport == CJTAG_TRANSPORT_SBL) {
-        if (!validate_sbl_pin_set(cfg_sbl_pins, cfg_power_pin, msg, msg_cap)) {
-            xSemaphoreGive(lock);
-            return false;
-        }
-    } else if (transport == CJTAG_TRANSPORT_AUTO && sbl_pins_configured()) {
-        if (!validate_sbl_pin_set(cfg_sbl_pins, cfg_power_pin, msg, msg_cap)) {
-            xSemaphoreGive(lock);
-            return false;
-        }
     }
 
     if (!ensure_page_bufs()) {

@@ -23,16 +23,13 @@ typedef enum {
 
 void cjtag_task_start(void);
 
-// Configure the 4 SBL probe GPIOs and switched power GPIO (-1 keeps current / Kconfig default).
-bool cjtag_task_set_sbl_pins(const int sbl_pins[4], int power_pin, char *msg, size_t msg_cap);
-
 // Stage a CC1310 image (up to 120 KB, pages 0-29) into the 4 KB page buffers for station flashing.
 bool cjtag_task_stage_begin(bool wipe_nv, char *err, size_t err_cap);
 bool cjtag_task_stage_feed(const uint8_t *data, size_t len);
 bool cjtag_task_stage_end(bool rx_ok, cjtag_transport_t transport, char *msg, size_t msg_cap);
 
-// Arm or disarm the station state machine (pin_a / pin_b < 0 keeps current cJTAG pins).
-bool cjtag_task_arm(cjtag_mode_t mode, cjtag_transport_t transport, int pin_a, int pin_b, char *msg, size_t msg_cap);
+// Arm or disarm the station state machine (its pins are fixed: pins.h).
+bool cjtag_task_arm(cjtag_mode_t mode, cjtag_transport_t transport, char *msg, size_t msg_cap);
 
 // Copy out a 4 KB page from the completed dump buffer, or the 1 KB FCFG1 buffer.
 bool cjtag_task_get_dump_page(uint32_t page_idx, uint8_t *out_4k);
