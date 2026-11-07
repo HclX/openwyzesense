@@ -103,7 +103,10 @@ static bool valid_cjtag_pin(int pin, char *err, size_t err_cap)
 #endif
     if (pin == CONFIG_OWS_CONTACT_UART_TX || pin == CONFIG_OWS_CONTACT_UART_RX || pin == CONFIG_OWS_CONTACT_RESET ||
         pin == CONFIG_OWS_CONTACT_BOOT || (CONFIG_OWS_RIG_SUPPLY_GPIO >= 0 && pin == CONFIG_OWS_RIG_SUPPLY_GPIO) ||
-        (CONFIG_OWS_STATUS_LED >= 0 && pin == CONFIG_OWS_STATUS_LED)) {
+        (CONFIG_OWS_STATUS_LED >= 0 && pin == CONFIG_OWS_STATUS_LED) ||
+        (CONFIG_OWS_CONTACT_POWER >= 0 && pin == CONFIG_OWS_CONTACT_POWER) ||
+        (CONFIG_OWS_CONTACT_TMS >= 0 && pin == CONFIG_OWS_CONTACT_TMS) ||
+        (CONFIG_OWS_CONTACT_TCK >= 0 && pin == CONFIG_OWS_CONTACT_TCK)) {
         snprintf(err, err_cap, "GPIO%d is already assigned to the gateway contact/rig/LED", pin);
         return false;
     }
