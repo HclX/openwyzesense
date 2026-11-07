@@ -641,7 +641,9 @@ bool gw_image(void *, uint32_t off, uint8_t *buf, size_t len)
 
 void gw_sync()
 {
-    gwsync_io_t io = {sbl_out, sbl_in, sbl_drain, gw_reset, gw_bootloader, gw_sleep, gw_image, gw_progress, nullptr, nullptr, GWSYNC_VIA_SBL};  // no debug port on the ESP8266 (#81)
+    gwsync_io_t io = {
+        sbl_out,  sbl_in,      sbl_drain, gw_reset, gw_bootloader, gw_sleep,
+        gw_image, gw_progress, nullptr,   nullptr,  GWSYNC_VIA_SBL};  // no debug port on the ESP8266 (#81)
     gw_busy = true;
     if (settings.skip_gwsync) {
         gwsync_probe(&io, kGatewayImageLen, sbl_page, &gw_report);

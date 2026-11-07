@@ -155,6 +155,7 @@ bootloader without reflashing the ESP.</p>
 <label>wyzesense2mqtt-rs bridge</label><input type=text name=url id=seturl placeholder=ws://host:8080/ws/bridge>
 <label>Bridge token</label><input type=password name=token autocomplete=new-password>
 <label>Admin password (protects setup &amp; updates)</label><input type=password name=admin_pass autocomplete=new-password placeholder="uses bridge token if unset">
+<label>Contact updates through</label><select name=contact_flash id=setcflash><option value=auto>Auto: debug port (M/C), else bootloader</option><option value=cjtag>Debug port (M/C) only</option><option value=sbl>Bootloader (R/T) only</option></select>
 <button class=btn>Save and restart</button><div class=msg id=setupmsg></div></form></div></div></section>
 </main>
 <script>
@@ -197,7 +198,7 @@ $('rssi').textContent=s.ip?s.rssi+' dBm':'–';$('up').textContent=dur(s.uptime)
 $('heap').textContent=(s.heap/1024).toFixed(1)+' KB';$('auth').textContent=s.auth?'password set':'open (set in Setup)';
 $('build').textContent=s.build;renderSensors(s.sensors||[]);
 document.querySelectorAll('.chip').forEach(e=>e.textContent=s.chip);$('fwhint').textContent=s.fw_file;
-if(!filled){filled=true;$('ssid').value=s.ssid;$('seturl').value=s.url}
+if(!filled){filled=true;$('ssid').value=s.ssid;$('seturl').value=s.url;if(s.contact_flash)$('setcflash').value=s.contact_flash}
 }catch(e){pill('bad','relay not answering')}}
 setInterval(poll,2000);poll();
 function upload(url,field,file,prog,msg,btn,done){

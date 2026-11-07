@@ -47,6 +47,10 @@ void settings_load(void)
     if (nvs_get_u8(h, "rig", &rig) == ESP_OK) {
         settings.rig = rig != 0;
     }
+    uint8_t cflash = 0;  // GWSYNC_VIA_AUTO when never set
+    if (nvs_get_u8(h, "cflash", &cflash) == ESP_OK && cflash <= 2) {
+        settings.contact_flash = cflash;
+    }
     nvs_close(h);
     trim(settings.ssid);
     trim(settings.url);
@@ -63,7 +67,8 @@ bool settings_save(void)
               nvs_set_str(h, "url", settings.url) == ESP_OK && nvs_set_str(h, "token", settings.token) == ESP_OK &&
               nvs_set_str(h, "admin_pass", settings.admin_pass) == ESP_OK &&
               nvs_set_u8(h, "skip_gwsync", settings.skip_gwsync ? 1 : 0) == ESP_OK &&
-              nvs_set_u8(h, "rig", settings.rig ? 1 : 0) == ESP_OK && nvs_commit(h) == ESP_OK;
+              nvs_set_u8(h, "rig", settings.rig ? 1 : 0) == ESP_OK &&
+              nvs_set_u8(h, "cflash", settings.contact_flash) == ESP_OK && nvs_commit(h) == ESP_OK;
     nvs_close(h);
     return ok;
 }
