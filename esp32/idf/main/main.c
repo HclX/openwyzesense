@@ -24,13 +24,21 @@ void app_main(void)
     }
     ESP_ERROR_CHECK(err);
     settings_load();
-    rig_task_start();  // first: when the rig is the contact's supply, power it before anything talks to it
-    cjtag_task_start();
-    contact_init();
-    contact_reset();  // a known start: the contact's firmware, W released
+    if (settings.role != ROLE_STATION) {
+        rig_task_start();  // first: when the rig is the contact's supply, power it before anything talks to it
+    }
+    if (settings.role != ROLE_RELAY) {
+        cjtag_task_start();
+    }
+    if (settings.role != ROLE_STATION) {
+        contact_init();
+        contact_reset();  // a known start: the contact's firmware, W released
+    }
     net_start();
     web_start();
-    relay_task_start();
+    if (settings.role != ROLE_STATION) {
+        relay_task_start();
+    }
     ESP_LOGI(TAG, "OpenWyzeSense relay %s up", net_name());
     // a new firmware from /ota stays only if it joins the configured Wi-Fi (or brings up the setup AP when
     // unprovisioned); otherwise the bootloader rolls back to the previous one at the next reset
