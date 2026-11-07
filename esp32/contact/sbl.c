@@ -146,14 +146,71 @@ bool sbl_chip_crc32(sbl_t *s, uint32_t addr, uint32_t len, uint32_t *crc)
     return true;
 }
 
-static bool read_mem(sbl_t *s, uint32_t addr, uint8_t *out, size_t len)
+bool sbl_get_chip_id(sbl_t *s, uint32_t *chip_id)
 {
+    uint8_t r[4];
+    if (!command(s, CMD_GET_CHIP_ID, NULL, 0, 1000) || response(s, r, 4) != 4) {
+        return fail(s, "no chip ID");
+    }
+    s->chip_id = (uint32_t)r[0] << 24 | (uint32_t)r[1] << 16 | (uint32_t)r[2] << 8 | r[3];
+    if (chip_id) {
+        *chip_id = s->chip_id;
+    }
+    return true;
+}
+
+bool sbl_read_memory(sbl_t *s, uint32_t addr, uint8_t *out, size_t len)
+{
+    if (!out || len == 0 || (addr & 3u) != 0 || (len & 3u) != 0) {
+        return fail(s, "memory read must be non-empty and 32-bit aligned");
+    }
     for (size_t off = 0; off < len; off += READ_BYTES) {
         size_t n = len - off < READ_BYTES ? len - off : READ_BYTES;
         uint8_t a[6];
         be32(a, addr + (uint32_t)off);
         a[4] = 1, a[5] = (uint8_t)(n / 4);  // 32-bit accesses
         if (!command(s, CMD_MEMORY_READ, a, sizeof a, 1000) || response(s, out + off, n) != n) {
+            return fail(s, "memory read failed");
+        }
+    }
+    return true;
+}
+
+bool sbl_verify_page(sbl_t *s, uint32_t page_idx, const uint8_t *expect_4k)
+{
+    if (page_idx >= 32u || !expect_4k) {
+        return fail(s, "page index out of range (0..31)");
+    }
+    uint8_t verify_buf[READ_BYTES];
+    uint32_t addr = page_idx * SBL_PAGE;
+    for (size_t off = 0; off < SBL_PAGE; off += READ_BYTES) {
+        size_t n = SBL_PAGE - off < READ_BYTES ? SBL_PAGE - off : READ_BYTES;
+        if (!sbl_read_memory(s, addr + (uint32_t)off, verify_buf, n)) {
+            return false;
+        }
+        if (memcmp(expect_4k + off, verify_buf, n) != 0) {
+            return fail(s, "page read mismatch between pass 1 and pass 2");
+        }
+    }
+    return true;
+}
+
+bool sbl_dump_page(sbl_t *s, uint32_t page_idx, uint8_t *out_4k)
+{
+    if (page_idx >= 32u || !out_4k) {
+        return fail(s, "page index out of range (0..31)");
+    }
+    uint32_t addr = page_idx * SBL_PAGE;
+    return sbl_read_memory(s, addr, out_4k, SBL_PAGE) && sbl_verify_page(s, page_idx, out_4k);
+}
+
+bool sbl_dump_flash(sbl_t *s, uint8_t *out_128k)
+{
+    if (!out_128k) {
+        return fail(s, "invalid output buffer");
+    }
+    for (uint32_t p = 0; p < 32u; p++) {
+        if (!sbl_dump_page(s, p, out_128k + (size_t)p * SBL_PAGE)) {
             return false;
         }
     }
@@ -207,7 +264,6 @@ bool sbl_connect(sbl_t *s, const char *expect_mac)
     static const uint8_t soft_sbl[19] = {
         0xAA, 0x55, 0x53, 0x08, 0xF0, 0x05, 'O', 'S', 'B', 'L', 0x03, 0x7F, '\r', '\n', 's', 'b', 'l', '\r', '\n',
     };
-    uint8_t r[4];
     s->error[0] = 0;
     if (!try_sync(s, 300)) {
         if (s->error[0]) {
@@ -222,12 +278,11 @@ bool sbl_connect(sbl_t *s, const char *expect_mac)
                               "no bootloader (no ACK to the sync or a ping): W held low at the reset? bootloader on?");
         }
     }
-    if (!command(s, CMD_GET_CHIP_ID, NULL, 0, 1000) || response(s, r, 4) != 4) {
-        return fail(s, "no chip ID");
+    if (!sbl_get_chip_id(s, NULL)) {
+        return false;
     }
-    s->chip_id = (uint32_t)r[0] << 24 | (uint32_t)r[1] << 16 | (uint32_t)r[2] << 8 | r[3];
     static uint8_t page31[SBL_PAGE];
-    if (!read_mem(s, SBL_PAGE31, page31, sizeof page31)) {
+    if (!sbl_read_memory(s, SBL_PAGE31, page31, sizeof page31)) {
         return fail(s, "reading page 31 failed");
     }
     const uint8_t *ccfg = page31 + (SBL_CCFG - SBL_PAGE31), *mac = ccfg + 0x24;

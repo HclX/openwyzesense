@@ -34,7 +34,7 @@ dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px}
 dt{color:var(--mute)}dd{margin:0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
 .big{font-size:26px;font-weight:650;font-variant-numeric:tabular-nums}
 label{display:block;margin:10px 0 4px;color:var(--mute);font-size:13px}
-input[type=text],input[type=password]{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;
+input[type=text],input[type=password],select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;
 background:var(--bg);color:var(--fg);font:inherit}
 input[type=file]{width:100%;font:inherit;color:var(--mute)}
 .check{display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--fg);font-size:14px;cursor:pointer}
@@ -59,7 +59,7 @@ tr:last-child td{border-bottom:0}
 <header><div class=wrap>
 <div class=top><div><h1 id=name>OpenWyzeSense relay</h1><div class=sub id=where>&nbsp;</div></div>
 <span class=pill id=pill><span class=dot></span><span id=pilltext>loading</span></span></div>
-<nav><button data-tab=status class=on>Status</button><button data-tab=probe>Probe (M/C)</button><button data-tab=update>Update</button>
+<nav><button data-tab=status class=on>Status</button><button data-tab=probe id=probetab>Probe (M/C &amp; SBL)</button><button data-tab=update>Update</button>
 <button data-tab=setup>Setup</button></nav></div></header>
 <main class=wrap>
 
@@ -92,24 +92,36 @@ tr:last-child td{border-bottom:0}
 </div></section>
 
 <section id=probe hidden><div class=grid>
-<div class="card wide"><h2>Hands-free 2-pin cJTAG probe (M &amp; C pads)</h2>
-<p class=note>Arm <b>Dump</b> or <b>Flash</b> below, then pick up the two GPIO probes and hold them against the sensor's
-<code>M</code> (TMSC) and <code>C</code> (TCKC) pads. Polarity is auto-detected on contact, audio tones announce lock
-and page progress, and if a probe slips mid-operation you can simply re-touch the pads to resume from the last verified
-4 KB page. Page 31 (CCFG + factory MAC) is never erased or written.</p>
+<div class="card wide"><h2>Hands-free provisioning station (2-pin cJTAG &amp; 4-pad SBL)</h2>
+<p class=note>Arm <b>Dump</b> or <b>Flash</b> below. In <code>cJTAG</code> mode, touch two GPIO probes against the sensor's
+<code>M</code> (TMSC) and <code>C</code> (TCKC) pads (polarity auto-detected). In <code>SBL</code> mode, connect 4 probe
+GPIOs + switched power GPIO to unmarked <code>S, W, R, T</code> pads (e.g. Wyze v2 leak sensor) for automatic RX/TX/backdoor
+discovery. <code>Auto</code> tries cJTAG first, then SBL. Page 31 (CCFG + factory MAC) is never erased or written.</p>
 <div class=big id=cjstate style="margin-top:8px">Disarmed</div>
 <div class=prog id=cjprog style="display:block;height:12px"><i id=cjbar></i></div>
 <div class=msg id=cjmsg>Select Dump or Flash below to arm hands-free probing.</div>
 <dl style="margin-top:10px">
 <dt>Sensor MAC</dt><dd id=cjmac>–</dd>
-<dt>Detected pins</dt><dd id=cjpins>–</dd>
+<dt>Transport / Pins</dt><dd id=cjpins>–</dd>
+<dt>SBL pad map</dt><dd id=cjsblmap>–</dd>
 <dt>Progress</dt><dd id=cjpages>0 / 0 pages</dd>
 <dt>CCFG / Chip</dt><dd id=cjchip>–</dd>
 </dl>
 <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-top:10px">
-<div><label style="margin-top:0">Probe A GPIO</label><input type=text id=cjpina value=19 style="width:80px"></div>
-<div><label style="margin-top:0">Probe B GPIO</label><input type=text id=cjpinb value=21 style="width:80px"></div>
+<div><label style="margin-top:0">Transport</label><select id=cjtrans style="width:200px">
+<option value=cjtag>cJTAG (2-pin M &amp; C)</option>
+<option value=sbl>SBL (4-pad UART + power)</option>
+<option value=auto>Auto (cJTAG then SBL)</option></select></div>
+<div><label style="margin-top:0">Probe A GPIO</label><input type=text id=cjpina value=19 style="width:72px"></div>
+<div><label style="margin-top:0">Probe B GPIO</label><input type=text id=cjpinb value=21 style="width:72px"></div>
 <label class=check style="margin-top:0"><input type=checkbox id=cjsound checked>Audio cues (lock, page ticks, slip, done)</label>
+</div>
+<div id=sblpinrow style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:10px">
+<div><label style="margin-top:0">SBL Pad 0</label><input type=text id=sblp0 placeholder="GPIO" style="width:68px"></div>
+<div><label style="margin-top:0">SBL Pad 1</label><input type=text id=sblp1 placeholder="GPIO" style="width:68px"></div>
+<div><label style="margin-top:0">SBL Pad 2</label><input type=text id=sblp2 placeholder="GPIO" style="width:68px"></div>
+<div><label style="margin-top:0">SBL Pad 3</label><input type=text id=sblp3 placeholder="GPIO" style="width:68px"></div>
+<div><label style="margin-top:0">Target Power</label><input type=text id=sblpwr placeholder="GPIO" style="width:82px"></div>
 </div>
 <div class=btns style="margin-top:14px">
 <button class=btn id=cjarmdump>Arm Hands-Free Dump</button>
@@ -118,9 +130,9 @@ and page progress, and if a probe slips mid-operation you can simply re-touch th
 <button class="btn ghost" id=cjdlfcfg1 hidden>Download fcfg1.bin (1 KB)</button>
 </div></div>
 
-<div class="card wide"><h2>Hands-free cJTAG flash (pages 0–29)</h2>
-<p class=note>Stage a CC1310 binary (up to 120 KB, pages 0–29) and arm hands-free flashing. Once armed, touch the two
-probes to <code>M</code> and <code>C</code> to erase, program, and verify page by page via the CC1310 ROM Hard-API.</p>
+<div class="card wide"><h2>Hands-free station flash (pages 0–29)</h2>
+<p class=note>Stage a CC1310 binary (up to 120 KB, pages 0–29) and arm hands-free flashing over the selected transport
+(cJTAG, SBL, or Auto). Requires a completed and downloaded stock flash dump for that sensor MAC first.</p>
 <label>CC1310 image (.bin)</label><input type=file id=cjfile accept=".bin">
 <label class=check><input type=checkbox id=cjwipe>Wipe NV page 30 (0x1E000)</label>
 <button class=btn id=cjarmflash>Stage &amp; Arm Hands-Free Flash</button>
@@ -156,6 +168,10 @@ bootloader without reflashing the ESP.</p>
 <label>Bridge token</label><input type=password name=token autocomplete=new-password>
 <label>Admin password (protects setup &amp; updates)</label><input type=password name=admin_pass autocomplete=new-password placeholder="uses bridge token if unset">
 <label>Contact updates through</label><select name=contact_flash id=setcflash><option value=auto>Auto: debug port (M/C), else bootloader</option><option value=cjtag>Debug port (M/C) only</option><option value=sbl>Bootloader (R/T) only</option></select>
+<div id=rolewrap><label>Device role</label><select name=role id=setrole>
+<option value=0>Relay + provisioning station (both)</option>
+<option value=1>Relay only</option>
+<option value=2>Provisioning station only</option></select></div>
 <button class=btn>Save and restart</button><div class=msg id=setupmsg></div></form></div></div></section>
 </main>
 <script>
@@ -180,25 +196,30 @@ x.bat_mv?(x.bat_mv/1000).toFixed(2)+' V ('+x.bat_mv+' mV)':'–',ago(x.seen_s)];
 vals.forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;if(i==2&&x.rssi<-85)td.className='weak';
 tr.appendChild(td)});tb.appendChild(tr)})}
 async function poll(){if(busy)return;try{const r=await fetch('/api/status',{cache:'no-store'});const s=await r.json();
+const role=s.role||0,relayOnly=role==1||s.chip=='ESP8266',stationOnly=role==2;
+$('probetab').hidden=relayOnly;$('rolewrap').hidden=s.chip=='ESP8266';
+if(relayOnly&&!$('probe').hidden)document.querySelector('nav button[data-tab=status]').click();
 $('name').textContent=s.name;document.title=s.name;
 $('where').textContent=(s.ip?s.ip+(s.mdns?' · '+s.mdns:''):'not on Wi-Fi')+(s.ap?' · setup access point '+s.name+' up':'');
-const st={connected:['ok','connected'],handshake:['warn','connecting'],down:['bad','not connected']}[s.relay];
+if(stationOnly){pill(s.ip?'ok':'warn',s.ip?'station ready':'not on Wi-Fi');$('relay').textContent='disabled (station only)'}
+else{const st={connected:['ok','connected'],handshake:['warn','connecting'],down:['bad','not connected']}[s.relay];
 pill(s.url?st[0]:'warn',s.url?'gateway link '+st[1]:'no bridge set up');
-$('relay').textContent=s.url?st[1]:'not set up';$('url').textContent=s.url||'(not set)';
+$('relay').textContent=s.url?st[1]:'not set up'}
+$('url').textContent=s.url||'(not set)';
 $('connects').textContent=s.connects;$('log').textContent=s.log||'–';
 $('uart').textContent=s.uart_tx==null?'–':s.uart_tx+' B out · '+s.uart_rx+' B in';
 $('flashlast').textContent=s.flash||'–';$('skipgw').checked=!!s.skip_gwsync;
 const g=s.gw||{},v=x=>x?x.version+' · '+x.id.slice(0,8):'unknown';$('gwrun').textContent=v(g.running);
 $('gwcar').textContent=v(g.carried);$('gwmsg').textContent=g.checked?g.msg:'checking…';
 $('gwsteps').textContent=(g.steps||'').trim()||'–';if(!g.checked)$('gwdet').open=true;
-$('gwmsg').className=g.result=='failed'||g.result=='refused'?'msg bad':'';$('mac').textContent=s.contact_mac||'–';
+$('gwmsg').className=!stationOnly&&(g.result=='failed'||g.result=='refused')?'msg bad':'';$('mac').textContent=s.contact_mac||'–';
 $('queued').textContent=s.queued+' alarms';$('replayed').textContent=s.replayed;$('dropped').textContent=s.dropped;
 $('waiting').textContent=s.waiting;$('wifi').textContent=s.ssid||'(not set)';
 $('rssi').textContent=s.ip?s.rssi+' dBm':'–';$('up').textContent=dur(s.uptime);
 $('heap').textContent=(s.heap/1024).toFixed(1)+' KB';$('auth').textContent=s.auth?'password set':'open (set in Setup)';
 $('build').textContent=s.build;renderSensors(s.sensors||[]);
 document.querySelectorAll('.chip').forEach(e=>e.textContent=s.chip);$('fwhint').textContent=s.fw_file;
-if(!filled){filled=true;$('ssid').value=s.ssid;$('seturl').value=s.url;if(s.contact_flash)$('setcflash').value=s.contact_flash}
+if(!filled){filled=true;$('ssid').value=s.ssid;$('seturl').value=s.url;$('setrole').value=String(role);if(s.contact_flash)$('setcflash').value=s.contact_flash}
 }catch(e){pill('bad','relay not answering')}}
 setInterval(poll,2000);poll();
 function upload(url,field,file,prog,msg,btn,done){
@@ -262,21 +283,35 @@ g.gain.setValueAtTime(0.15,t0);g.gain.exponentialRampToValueAtTime(0.001,t0+ms/1
 o.connect(g);g.connect(actx.destination);o.start(t0);o.stop(t0+ms/1000)}catch(_){}}
 function dlUrl(url,name){const a=document.createElement('a');a.href=url;if(name)a.download=name;
 document.body.appendChild(a);a.click();a.remove()}
+function cjQuery(){
+const q=['transport='+encodeURIComponent($('cjtrans').value),
+'pin_a='+encodeURIComponent($('cjpina').value.trim()),
+'pin_b='+encodeURIComponent($('cjpinb').value.trim())];
+['0','1','2','3'].forEach(i=>{const v=$('sblp'+i).value.trim();if(v!=='')q.push('sbl_'+i+'='+encodeURIComponent(v))});
+const pw=$('sblpwr').value.trim();if(pw!=='')q.push('power_pin='+encodeURIComponent(pw));
+return q.join('&')}
 async function pollCjtag(){if($('probe').hidden&&cjLastState=='idle')return;try{
 const r=await fetch('/api/cjtag',{cache:'no-store'});if(!r.ok)return;const c=await r.json();
-if(!cjPinsFilled&&c.pin_a>=0){cjPinsFilled=true;$('cjpina').value=c.pin_a;$('cjpinb').value=c.pin_b}
-const labels={idle:'Disarmed',armed:'Armed ('+c.mode+') — touch M & C',running:c.mode=='dump'?'Dumping…':'Flashing…',
-slipped:'Paused (probe slip) — re-touch M & C',done:'Complete!',error:'Error'};
+if(!cjPinsFilled&&c.pin_a>=0){cjPinsFilled=true;$('cjpina').value=c.pin_a;$('cjpinb').value=c.pin_b;
+if(c.transport)$('cjtrans').value=c.transport;
+if(c.sbl_pins)c.sbl_pins.forEach((p,i)=>{if(p>=0)$('sblp'+i).value=p});
+if(c.power_pin>=0)$('sblpwr').value=c.power_pin}
+const tr=c.active_transport&&c.active_transport!='none'?c.active_transport:(c.transport||'cjtag');
+const labels={idle:'Disarmed',armed:'Armed ('+c.mode+' · '+tr+') — connect sensor',running:c.mode=='dump'?'Dumping…':'Flashing…',
+slipped:'Paused (probe slip) — reconnect sensor',done:'Complete!',error:'Error'};
 $('cjstate').textContent=labels[c.state]||c.state;
 const pct=c.total_pages?Math.round(100*c.pages_done/c.total_pages):0;
 $('cjbar').style.width=pct+'%';
 $('cjmsg').className='msg '+(c.state=='done'?'ok':c.state=='error'||c.state=='slipped'?'bad':'');
 $('cjmsg').textContent=c.msg||'';
 $('cjmac').textContent=c.mac||'–';
-$('cjpins').textContent=c.tck_pin>=0?'TCKC (C) = GPIO'+c.tck_pin+' · TMSC (M) = GPIO'+c.tms_pin:'GPIO'+c.pin_a+' / GPIO'+c.pin_b+' (auto-polarity)';
+$('cjpins').textContent=c.tck_pin>=0?'cJTAG: TCKC (C) = GPIO'+c.tck_pin+' · TMSC (M) = GPIO'+c.tms_pin:
+(tr=='sbl'?'SBL 4-pad + power GPIO':'cJTAG GPIO'+c.pin_a+' / GPIO'+c.pin_b+' (auto-polarity)');
+const m=c.sbl_map;
+$('cjsblmap').textContent=m&&m.found?('R=pad '+m.r_pad+' (GPIO'+m.r_gpio+') · T=pad '+m.t_pad+' (GPIO'+m.t_gpio+') · backdoor=pad '+m.backdoor_pad+' (GPIO'+m.backdoor_gpio+') · chip '+m.chip_id):'–';
 $('cjpages').textContent=c.pages_done+' / '+c.total_pages+' pages ('+pct+'%)'+(c.slips?' · '+c.slips+' slip(s)':'');
 $('cjchip').textContent=c.mac?('USER_ID '+c.user_id+' · BL_CONFIG '+c.bl_config+' · IEEE '+c.ieee_mac):'–';
-$('cjdlflash').hidden=!c.dump_ready;$('cjdlfcfg1').hidden=!c.dump_ready;
+$('cjdlflash').hidden=!c.dump_ready;$('cjdlfcfg1').hidden=!(c.fcfg1_ready||c.dump_ready);
 if(c.state=='running'&&cjLastState!='running'){tone(660,90,0,'triangle');tone(880,120,100,'triangle')}
 if(c.state=='running'&&c.pages_done>cjLastPage){tone(900+c.pages_done*22,30,0,'sine')}
 if(c.state=='slipped'&&cjLastState!='slipped'){tone(330,140,0,'sawtooth');tone(260,180,160,'sawtooth')}
@@ -287,15 +322,14 @@ setTimeout(()=>dlUrl('/cjtag/fcfg1.bin','sensor_'+c.mac+'_fcfg1.bin'),600)}}
 cjLastState=c.state;cjLastPage=c.pages_done}catch(_){}}
 setInterval(pollCjtag,350);
 $('cjarmdump').onclick=async()=>{tone(520,60,0,'sine');
-const q='mode=dump&pin_a='+encodeURIComponent($('cjpina').value.trim())+'&pin_b='+encodeURIComponent($('cjpinb').value.trim());
-const r=await fetch('/cjtag/arm?'+q,{method:'POST'});const t=(await r.text()).trim();
+const r=await fetch('/cjtag/arm?mode=dump&'+cjQuery(),{method:'POST'});const t=(await r.text()).trim();
 showMsg($('cjmsg'),r.ok,t);cjLastState='armed';cjLastPage=0;pollCjtag()};
 $('cjdisarm').onclick=async()=>{const r=await fetch('/cjtag/arm?mode=none',{method:'POST'});
 showMsg($('cjmsg'),r.ok,(await r.text()).trim());cjLastState='idle';pollCjtag()};
 $('cjarmflash').onclick=()=>{const f=$('cjfile').files[0];
 if(!f){showMsg($('cjmsg'),false,'Pick a CC1310 .bin file first.');return}
 tone(520,60,0,'sine');
-const q='pin_a='+encodeURIComponent($('cjpina').value.trim())+'&pin_b='+encodeURIComponent($('cjpinb').value.trim())+($('cjwipe').checked?'&nv=wipe':'');
+const q=cjQuery()+($('cjwipe').checked?'&nv=wipe':'');
 upload('/cjtag/stage?'+q,'image',f,$('cjprog'),$('cjmsg'),$('cjarmflash'),()=>{cjLastState='armed';cjLastPage=0;pollCjtag()})};
 $('cjdlflash').onclick=()=>dlUrl('/cjtag/dump.bin');
 $('cjdlfcfg1').onclick=()=>dlUrl('/cjtag/fcfg1.bin');

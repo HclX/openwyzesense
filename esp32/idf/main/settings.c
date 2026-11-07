@@ -51,6 +51,10 @@ void settings_load(void)
     if (nvs_get_u8(h, "cflash", &cflash) == ESP_OK && cflash <= 2) {
         settings.contact_flash = cflash;
     }
+    uint8_t role = 0;
+    if (nvs_get_u8(h, "role", &role) == ESP_OK && role <= ROLE_STATION) {
+        settings.role = role;
+    }
     nvs_close(h);
     trim(settings.ssid);
     trim(settings.url);
@@ -67,7 +71,7 @@ bool settings_save(void)
               nvs_set_str(h, "url", settings.url) == ESP_OK && nvs_set_str(h, "token", settings.token) == ESP_OK &&
               nvs_set_str(h, "admin_pass", settings.admin_pass) == ESP_OK &&
               nvs_set_u8(h, "skip_gwsync", settings.skip_gwsync ? 1 : 0) == ESP_OK &&
-              nvs_set_u8(h, "rig", settings.rig ? 1 : 0) == ESP_OK &&
+              nvs_set_u8(h, "rig", settings.rig ? 1 : 0) == ESP_OK && nvs_set_u8(h, "role", settings.role) == ESP_OK &&
               nvs_set_u8(h, "cflash", settings.contact_flash) == ESP_OK && nvs_commit(h) == ESP_OK;
     nvs_close(h);
     return ok;

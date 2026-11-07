@@ -6,13 +6,60 @@
 #include <string.h>
 
 #include "driver/gpio.h"
+#include "driver/uart.h"
 #include "esp_log.h"
+#include "esp_private/gpio.h"
 #include "esp_rom_sys.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
+#include "sbl.h"
+#include "sblprobe.h"
+#include "settings.h"
 
-static const char *TAG = "cjtag";
+#ifndef OWS_STATION_SBL_PIN_0
+#ifdef CONFIG_OWS_STATION_SBL_PIN_0
+#define OWS_STATION_SBL_PIN_0 CONFIG_OWS_STATION_SBL_PIN_0
+#else
+#define OWS_STATION_SBL_PIN_0 (-1)
+#endif
+#endif
+
+#ifndef OWS_STATION_SBL_PIN_1
+#ifdef CONFIG_OWS_STATION_SBL_PIN_1
+#define OWS_STATION_SBL_PIN_1 CONFIG_OWS_STATION_SBL_PIN_1
+#else
+#define OWS_STATION_SBL_PIN_1 (-1)
+#endif
+#endif
+
+#ifndef OWS_STATION_SBL_PIN_2
+#ifdef CONFIG_OWS_STATION_SBL_PIN_2
+#define OWS_STATION_SBL_PIN_2 CONFIG_OWS_STATION_SBL_PIN_2
+#else
+#define OWS_STATION_SBL_PIN_2 (-1)
+#endif
+#endif
+
+#ifndef OWS_STATION_SBL_PIN_3
+#ifdef CONFIG_OWS_STATION_SBL_PIN_3
+#define OWS_STATION_SBL_PIN_3 CONFIG_OWS_STATION_SBL_PIN_3
+#else
+#define OWS_STATION_SBL_PIN_3 (-1)
+#endif
+#endif
+
+#ifndef OWS_STATION_POWER_GPIO
+#ifdef CONFIG_OWS_STATION_POWER_GPIO
+#define OWS_STATION_POWER_GPIO CONFIG_OWS_STATION_POWER_GPIO
+#else
+#define OWS_STATION_POWER_GPIO (-1)
+#endif
+#endif
+
+#define SBL_UART UART_NUM_2
+
+static const char *TAG = "station";
 
 typedef enum {
     STATE_IDLE = 0,
@@ -34,10 +81,30 @@ static uint8_t fcfg1_buf[CJTAG_FCFG1_SIZE];
 
 static volatile task_state_t state = STATE_IDLE;
 static volatile cjtag_mode_t mode = CJTAG_MODE_NONE;
+static volatile cjtag_transport_t cfg_transport = CJTAG_TRANSPORT_CJTAG;
+static volatile uint8_t active_transport;  // 0 = none, 1 = cjtag, 2 = sbl
+static volatile bool task_busy;
+
 static int cfg_pin_a = CONFIG_OWS_CJTAG_PIN_A;
 static int cfg_pin_b = CONFIG_OWS_CJTAG_PIN_B;
 static int active_tck = -1;
 static int active_tms = -1;
+
+static int cfg_sbl_pins[SBLPROBE_PADS] = {
+    OWS_STATION_SBL_PIN_0,
+    OWS_STATION_SBL_PIN_1,
+    OWS_STATION_SBL_PIN_2,
+    OWS_STATION_SBL_PIN_3,
+};
+static int cfg_power_pin = OWS_STATION_POWER_GPIO;
+static bool sbl_uart_installed;
+static bool sbl_uart_is_open;
+static int sbl_active_rx_pad = -1;
+static int sbl_active_tx_pad = -1;
+static bool sbl_powered;
+static bool sbl_pad_released[SBLPROBE_PADS] = {true, true, true, true};
+static bool have_sbl_map;
+static sblprobe_result_t saved_sbl_map;
 
 static size_t staged_bytes;
 static uint32_t staged_pages;
@@ -50,13 +117,14 @@ static uint32_t current_page;
 static uint32_t slip_count;
 static uint32_t done_seq;
 static bool dump_ready;
+static bool fcfg1_ready;
 
 static char active_mac[9];
 static char backed_up_mac[9];
 static uint32_t active_user_id;
 static uint32_t active_bl_config;
 static uint64_t active_ieee_mac;
-static char status_msg[224] = "Disarmed — select Dump or Flash to arm hands-free probing.";
+static char status_msg[256] = "Disarmed — select Dump or Flash to arm hands-free probing.";
 
 static void json_str(char *out, size_t cap, const char *s)
 {
@@ -76,7 +144,7 @@ static void json_str(char *out, size_t cap, const char *s)
     out[n] = 0;
 }
 
-static bool valid_cjtag_pin(int pin, char *err, size_t err_cap)
+static bool valid_station_pin(int pin, char *err, size_t err_cap)
 {
     if (pin < 0 || !GPIO_IS_VALID_OUTPUT_GPIO(pin)) {
         snprintf(err, err_cap, "GPIO%d is not a valid output-capable GPIO", pin);
@@ -101,16 +169,72 @@ static bool valid_cjtag_pin(int pin, char *err, size_t err_cap)
         return false;
     }
 #endif
-    if (pin == CONFIG_OWS_CONTACT_UART_TX || pin == CONFIG_OWS_CONTACT_UART_RX || pin == CONFIG_OWS_CONTACT_RESET ||
-        pin == CONFIG_OWS_CONTACT_BOOT || (CONFIG_OWS_RIG_SUPPLY_GPIO >= 0 && pin == CONFIG_OWS_RIG_SUPPLY_GPIO) ||
-        (CONFIG_OWS_STATUS_LED >= 0 && pin == CONFIG_OWS_STATUS_LED) ||
-        (CONFIG_OWS_CONTACT_POWER >= 0 && pin == CONFIG_OWS_CONTACT_POWER) ||
-        (CONFIG_OWS_CONTACT_TMS >= 0 && pin == CONFIG_OWS_CONTACT_TMS) ||
-        (CONFIG_OWS_CONTACT_TCK >= 0 && pin == CONFIG_OWS_CONTACT_TCK)) {
-        snprintf(err, err_cap, "GPIO%d is already assigned to the gateway contact/rig/LED", pin);
+    if (CONFIG_OWS_STATUS_LED >= 0 && pin == CONFIG_OWS_STATUS_LED) {
+        snprintf(err, err_cap, "GPIO%d is already assigned to the status LED", pin);
+        return false;
+    }
+    if (settings.role != ROLE_STATION &&
+        (pin == CONFIG_OWS_CONTACT_UART_TX || pin == CONFIG_OWS_CONTACT_UART_RX || pin == CONFIG_OWS_CONTACT_RESET ||
+         pin == CONFIG_OWS_CONTACT_BOOT || (CONFIG_OWS_RIG_SUPPLY_GPIO >= 0 && pin == CONFIG_OWS_RIG_SUPPLY_GPIO) ||
+         (CONFIG_OWS_CONTACT_POWER >= 0 && pin == CONFIG_OWS_CONTACT_POWER) ||
+         (CONFIG_OWS_CONTACT_TMS >= 0 && pin == CONFIG_OWS_CONTACT_TMS) ||
+         (CONFIG_OWS_CONTACT_TCK >= 0 && pin == CONFIG_OWS_CONTACT_TCK))) {
+        snprintf(err, err_cap, "GPIO%d is already assigned to the gateway contact/rig", pin);
         return false;
     }
     return true;
+}
+
+static bool sbl_pins_configured(void)
+{
+    if (cfg_power_pin < 0) {
+        return false;
+    }
+    for (int i = 0; i < SBLPROBE_PADS; i++) {
+        if (cfg_sbl_pins[i] < 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool validate_sbl_pin_set(const int pins[SBLPROBE_PADS], int power_pin, char *err, size_t err_cap)
+{
+    if (power_pin < 0) {
+        snprintf(err, err_cap, "SBL power GPIO is not configured (OWS_STATION_POWER_GPIO)");
+        return false;
+    }
+    if (!valid_station_pin(power_pin, err, err_cap)) {
+        return false;
+    }
+    for (int i = 0; i < SBLPROBE_PADS; i++) {
+        if (pins[i] < 0) {
+            snprintf(err, err_cap, "SBL pad %d GPIO is not configured (OWS_STATION_SBL_PIN_%d)", i, i);
+            return false;
+        }
+        if (!valid_station_pin(pins[i], err, err_cap)) {
+            return false;
+        }
+        if (pins[i] == power_pin) {
+            snprintf(err, err_cap, "SBL pad %d and power GPIO must be different", i);
+            return false;
+        }
+        for (int j = 0; j < i; j++) {
+            if (pins[i] == pins[j]) {
+                snprintf(err, err_cap, "SBL pad %d and pad %d must be different GPIOs", j, i);
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+static void free_page_bufs(void)
+{
+    for (uint32_t i = 0; i < CJTAG_TOTAL_PAGES; i++) {
+        free(page_bufs[i]);
+        page_bufs[i] = NULL;
+    }
 }
 
 static bool ensure_page_bufs(void)
@@ -119,6 +243,7 @@ static bool ensure_page_bufs(void)
         if (!page_bufs[i]) {
             page_bufs[i] = malloc(CJTAG_PAGE);
             if (!page_bufs[i]) {
+                free_page_bufs();
                 return false;
             }
         }
@@ -126,7 +251,7 @@ static bool ensure_page_bufs(void)
     return true;
 }
 
-static void release_pins(int pin_a, int pin_b)
+static void release_cjtag_pins(int pin_a, int pin_b)
 {
     if (pin_a >= 0) {
         gpio_reset_pin((gpio_num_t)pin_a);
@@ -140,7 +265,7 @@ static void release_pins(int pin_a, int pin_b)
     }
 }
 
-static void prepare_pins(int tck_pin, int tms_pin)
+static void prepare_cjtag_pins(int tck_pin, int tms_pin)
 {
     gpio_reset_pin((gpio_num_t)tck_pin);
     gpio_set_direction((gpio_num_t)tck_pin, GPIO_MODE_OUTPUT);
@@ -184,6 +309,196 @@ static void io_delay_us(void *ctx, uint32_t us)
     }
 }
 
+// --- SBL station hardware callbacks ---
+
+static bool ensure_sbl_uart(void)
+{
+    if (sbl_uart_installed) {
+        return true;
+    }
+    uart_config_t u = {
+        .baud_rate = 115200,
+        .data_bits = UART_DATA_8_BITS,
+        .parity = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+        .source_clk = UART_SCLK_DEFAULT,
+    };
+    if (uart_driver_install(SBL_UART, 2048, 0, 0, NULL, 0) != ESP_OK) {
+        return false;
+    }
+    if (uart_param_config(SBL_UART, &u) != ESP_OK) {
+        return false;
+    }
+    sbl_uart_installed = true;
+    return true;
+}
+
+static void sbl_pin_low(void *ctx, int pad)
+{
+    (void)ctx;
+    if (pad < 0 || pad >= SBLPROBE_PADS || cfg_sbl_pins[pad] < 0) {
+        return;
+    }
+    sbl_pad_released[pad] = false;
+    gpio_num_t pin = (gpio_num_t)cfg_sbl_pins[pad];
+    gpio_reset_pin(pin);
+    gpio_set_level(pin, 0);
+    gpio_set_direction(pin, GPIO_MODE_INPUT_OUTPUT_OD);
+    gpio_set_pull_mode(pin, sbl_powered ? GPIO_PULLUP_ONLY : GPIO_FLOATING);
+}
+
+static void sbl_pin_release(void *ctx, int pad)
+{
+    (void)ctx;
+    if (pad < 0 || pad >= SBLPROBE_PADS || cfg_sbl_pins[pad] < 0) {
+        return;
+    }
+    sbl_pad_released[pad] = true;
+    gpio_num_t pin = (gpio_num_t)cfg_sbl_pins[pad];
+    gpio_reset_pin(pin);
+    gpio_set_direction(pin, GPIO_MODE_INPUT);
+    gpio_set_pull_mode(pin, sbl_powered ? GPIO_PULLUP_ONLY : GPIO_FLOATING);
+}
+
+static bool sbl_pin_read(void *ctx, int pad)
+{
+    (void)ctx;
+    if (pad < 0 || pad >= SBLPROBE_PADS || cfg_sbl_pins[pad] < 0) {
+        return false;
+    }
+    return gpio_get_level((gpio_num_t)cfg_sbl_pins[pad]) != 0;
+}
+
+static void sbl_power(void *ctx, bool on)
+{
+    (void)ctx;
+    sbl_powered = on;
+    for (int i = 0; i < SBLPROBE_PADS; i++) {
+        if (cfg_sbl_pins[i] >= 0 && sbl_pad_released[i]) {
+            gpio_set_pull_mode((gpio_num_t)cfg_sbl_pins[i], on ? GPIO_PULLUP_ONLY : GPIO_FLOATING);
+        }
+    }
+    if (cfg_power_pin >= 0) {
+        gpio_set_direction((gpio_num_t)cfg_power_pin, GPIO_MODE_OUTPUT);
+        gpio_set_level((gpio_num_t)cfg_power_pin, on ? 1 : 0);
+    }
+}
+
+static void sbl_uart_close(void *ctx)
+{
+    (void)ctx;
+    if (!sbl_uart_is_open) {
+        return;
+    }
+    uart_set_pin(SBL_UART, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    int rx = sbl_active_rx_pad;
+    int tx = sbl_active_tx_pad;
+    sbl_uart_is_open = false;
+    sbl_active_rx_pad = -1;
+    sbl_active_tx_pad = -1;
+    if (rx >= 0) {
+        sbl_pin_release(NULL, rx);
+    }
+    if (tx >= 0) {
+        sbl_pin_release(NULL, tx);
+    }
+}
+
+static bool sbl_uart_open(void *ctx, int rx_pad, int tx_pad, bool tx_open_drain)
+{
+    (void)ctx;
+    if (state != STATE_ARMED && state != STATE_SLIPPED && state != STATE_RUNNING) {
+        return false;
+    }
+    if (rx_pad < 0 || rx_pad >= SBLPROBE_PADS || tx_pad < 0 || tx_pad >= SBLPROBE_PADS || rx_pad == tx_pad) {
+        return false;
+    }
+    int rx_gpio = cfg_sbl_pins[rx_pad];
+    int tx_gpio = cfg_sbl_pins[tx_pad];
+    if (rx_gpio < 0 || tx_gpio < 0 || !ensure_sbl_uart()) {
+        return false;
+    }
+    gpio_reset_pin((gpio_num_t)rx_gpio);
+    gpio_reset_pin((gpio_num_t)tx_gpio);
+    if (uart_set_pin(SBL_UART, tx_gpio, rx_gpio, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE) != ESP_OK) {
+        return false;
+    }
+    gpio_pullup_en((gpio_num_t)rx_gpio);
+    if (tx_open_drain) {
+        gpio_pullup_en((gpio_num_t)tx_gpio);
+        gpio_od_enable((gpio_num_t)tx_gpio);
+    }
+    sbl_uart_is_open = true;
+    sbl_active_rx_pad = rx_pad;
+    sbl_active_tx_pad = tx_pad;
+    sbl_pad_released[rx_pad] = false;
+    sbl_pad_released[tx_pad] = false;
+    return true;
+}
+
+static bool sbl_uart_write(void *ctx, const uint8_t *data, size_t len)
+{
+    (void)ctx;
+    if (!sbl_uart_is_open) {
+        return false;
+    }
+    int n = uart_write_bytes(SBL_UART, data, len);
+    return n == (int)len && uart_wait_tx_done(SBL_UART, pdMS_TO_TICKS(1000)) == ESP_OK;
+}
+
+static size_t sbl_uart_read(void *ctx, uint8_t *buf, size_t cap, uint32_t timeout_ms)
+{
+    (void)ctx;
+    if (!sbl_uart_is_open || !cap || uart_read_bytes(SBL_UART, buf, 1, pdMS_TO_TICKS(timeout_ms)) != 1) {
+        return 0;
+    }
+    size_t n = 1;
+    while (n < cap) {
+        size_t more = 0;
+        uart_get_buffered_data_len(SBL_UART, &more);
+        if (more > 0) {
+            more = more < cap - n ? more : cap - n;
+            int k = uart_read_bytes(SBL_UART, buf + n, more, 0);
+            if (k > 0) {
+                n += (size_t)k;
+                continue;
+            }
+        }
+        if (uart_read_bytes(SBL_UART, buf + n, 1, pdMS_TO_TICKS(15)) == 1) {
+            n++;
+        } else {
+            break;
+        }
+    }
+    return n;
+}
+
+static void sbl_uart_flush(void *ctx)
+{
+    (void)ctx;
+    if (sbl_uart_is_open) {
+        uart_flush_input(SBL_UART);
+    }
+}
+
+static void sbl_sleep_ms(void *ctx, uint32_t ms)
+{
+    (void)ctx;
+    vTaskDelay(pdMS_TO_TICKS(ms));
+}
+
+static void release_sbl_pins(bool power_off)
+{
+    sbl_uart_close(NULL);
+    for (int i = 0; i < SBLPROBE_PADS; i++) {
+        sbl_pin_release(NULL, i);
+    }
+    if (power_off) {
+        sbl_power(NULL, false);
+    }
+}
+
 static uint32_t popcount32(uint32_t x)
 {
     uint32_t c = 0;
@@ -194,13 +509,31 @@ static uint32_t popcount32(uint32_t x)
     return c;
 }
 
+static bool is_ascii_hex_mac(const uint8_t *p)
+{
+    for (int i = 0; i < 8; i++) {
+        if (!((p[i] >= '0' && p[i] <= '9') || (p[i] >= 'A' && p[i] <= 'F'))) {
+            return false;
+        }
+    }
+    return memcmp(p, "00000000", 8) != 0;
+}
+
+static uint32_t le32(const uint8_t *p)
+{
+    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+}
+
 static bool probe_with_polarity(cjtag_t *cj, esp_pin_ctx_t *pctx, int pin_a, int pin_b)
 {
+    if (pin_a < 0 || pin_b < 0) {
+        return false;
+    }
     int pairs[2][2] = {{pin_a, pin_b}, {pin_b, pin_a}};
     for (int i = 0; i < 2; i++) {
         pctx->tck_pin = pairs[i][0];
         pctx->tms_pin = pairs[i][1];
-        prepare_pins(pctx->tck_pin, pctx->tms_pin);
+        prepare_cjtag_pins(pctx->tck_pin, pctx->tms_pin);
         cjtag_io_t io = {
             .set_pins = io_set_pins,
             .set_tms_dir = io_set_tms_dir,
@@ -216,9 +549,394 @@ static bool probe_with_polarity(cjtag_t *cj, esp_pin_ctx_t *pctx, int pin_a, int
                 return true;
             }
         }
-        release_pins(pin_a, pin_b);
+        release_cjtag_pins(pin_a, pin_b);
     }
     return false;
+}
+
+static void run_cjtag_session(cjtag_t *cj, const esp_pin_ctx_t *pctx, int pin_a, int pin_b)
+{
+    xSemaphoreTake(lock, portMAX_DELAY);
+    if (state != STATE_ARMED && state != STATE_SLIPPED) {
+        xSemaphoreGive(lock);
+        cjtag_release_and_reset(cj);
+        release_cjtag_pins(pin_a, pin_b);
+        return;
+    }
+
+    // If resuming from a slip, ensure the user re-touched the same sensor MAC
+    if (state == STATE_SLIPPED && active_mac[0] != '\0' && strcmp(active_mac, cj->mac) != 0) {
+        snprintf(status_msg, sizeof status_msg, "Sensor MAC changed (%s != %s) — re-touch %s or re-arm", cj->mac,
+                 active_mac, active_mac);
+        xSemaphoreGive(lock);
+        cjtag_release_and_reset(cj);
+        release_cjtag_pins(pin_a, pin_b);
+        vTaskDelay(pdMS_TO_TICKS(500));
+        return;
+    }
+
+    active_transport = 1;
+    active_tck = pctx->tck_pin;
+    active_tms = pctx->tms_pin;
+    memcpy(active_mac, cj->mac, sizeof active_mac);
+    active_user_id = cj->user_id;
+    active_bl_config = cj->bl_config;
+    active_ieee_mac = cj->ieee_mac;
+
+    if (mode == CJTAG_MODE_FLASH && !cj->has_ccfg_mac) {
+        state = STATE_ERROR;
+        snprintf(status_msg, sizeof status_msg, "Refused: sensor %s has no factory MAC in CCFG (page 31)", cj->mac);
+        xSemaphoreGive(lock);
+        cjtag_release_and_reset(cj);
+        release_cjtag_pins(pin_a, pin_b);
+        return;
+    }
+
+    if (mode == CJTAG_MODE_FLASH && strcmp(backed_up_mac, cj->mac) != 0) {
+        state = STATE_ERROR;
+        snprintf(status_msg, sizeof status_msg,
+                 "Refused: dump & download %s's stock flash first before flashing (CLAUDE.md backup rule)", cj->mac);
+        xSemaphoreGive(lock);
+        cjtag_release_and_reset(cj);
+        release_cjtag_pins(pin_a, pin_b);
+        return;
+    }
+
+    if (!ensure_page_bufs()) {
+        state = STATE_ERROR;
+        snprintf(status_msg, sizeof status_msg, "out of memory allocating 128 KB page buffers");
+        xSemaphoreGive(lock);
+        cjtag_release_and_reset(cj);
+        release_cjtag_pins(pin_a, pin_b);
+        return;
+    }
+
+    state = STATE_RUNNING;
+    task_busy = true;
+    snprintf(status_msg, sizeof status_msg, "Locked %s (TCKC=GPIO%d, TMSC=GPIO%d) — %s…", active_mac, active_tck,
+             active_tms, mode == CJTAG_MODE_DUMP ? "dumping" : "flashing");
+    xSemaphoreGive(lock);
+    ESP_LOGI(TAG, "%s", status_msg);
+
+    bool slipped = false;
+    if (mode == CJTAG_MODE_DUMP) {
+        if (!cjtag_dump_fcfg1(cj, fcfg1_buf)) {
+            slipped = true;
+        }
+        for (uint32_t p = 0; !slipped && p < CJTAG_TOTAL_PAGES; p++) {
+            if (state != STATE_RUNNING) {
+                break;
+            }
+            if ((pages_done_mask & (1u << p)) != 0) {
+                continue;
+            }
+            current_page = p;
+            if (!cjtag_dump_page(cj, p, page_bufs[p])) {
+                slipped = true;
+                break;
+            }
+            xSemaphoreTake(lock, portMAX_DELAY);
+            pages_done_mask |= (1u << p);
+            pages_done_count = popcount32(pages_done_mask);
+            snprintf(status_msg, sizeof status_msg, "Dumping %s: page %" PRIu32 " / 32 verified", active_mac,
+                     pages_done_count);
+            xSemaphoreGive(lock);
+            ESP_LOGI(TAG, "%s", status_msg);
+            vTaskDelay(1);
+        }
+    } else if (mode == CJTAG_MODE_FLASH) {
+        for (uint32_t p = 0; p < total_pages_target; p++) {
+            if (state != STATE_RUNNING) {
+                break;
+            }
+            if ((pages_done_mask & (1u << p)) != 0) {
+                continue;
+            }
+            uint32_t page_idx = (p == staged_pages) ? CJTAG_NV_PAGE_IDX : p;
+            current_page = page_idx;
+            bool allow_nv = (page_idx == CJTAG_NV_PAGE_IDX);
+            if (!cjtag_flash_page(cj, page_idx, page_bufs[page_idx], allow_nv)) {
+                slipped = true;
+                break;
+            }
+            xSemaphoreTake(lock, portMAX_DELAY);
+            pages_done_mask |= (1u << p);
+            pages_done_count = popcount32(pages_done_mask);
+            snprintf(status_msg, sizeof status_msg, "Flashing %s: page %" PRIu32 " / %" PRIu32 " verified", active_mac,
+                     pages_done_count, total_pages_target);
+            xSemaphoreGive(lock);
+            ESP_LOGI(TAG, "%s", status_msg);
+            vTaskDelay(1);
+        }
+    }
+
+    cjtag_release_and_reset(cj);
+    release_cjtag_pins(pin_a, pin_b);
+
+    xSemaphoreTake(lock, portMAX_DELAY);
+    task_busy = false;
+    if (state != STATE_RUNNING) {
+        xSemaphoreGive(lock);
+        return;
+    }
+
+    if (slipped) {
+        slip_count++;
+        state = STATE_SLIPPED;
+        snprintf(status_msg, sizeof status_msg,
+                 "Probe slipped at page %" PRIu32 " (%s) — touch M/C again to resume (%" PRIu32 "/%" PRIu32 " done)",
+                 current_page, cj->error, pages_done_count, total_pages_target);
+        xSemaphoreGive(lock);
+        ESP_LOGW(TAG, "%s", status_msg);
+        vTaskDelay(pdMS_TO_TICKS(250));
+        return;
+    }
+
+    if (mode == CJTAG_MODE_DUMP) {
+        dump_ready = true;
+        fcfg1_ready = true;
+        snprintf(status_msg, sizeof status_msg,
+                 "Dump complete for %s (128 KB flash + 1 KB FCFG1 verified). Lift probes!", active_mac);
+    } else {
+        staged_bytes = 0;
+        staged_pages = 0;
+        free_page_bufs();
+        snprintf(status_msg, sizeof status_msg,
+                 "Flash complete for %s (%" PRIu32 " pages verified, page 31 intact). Lift probes!", active_mac,
+                 pages_done_count);
+    }
+    done_seq++;
+    state = STATE_DONE;
+    xSemaphoreGive(lock);
+    ESP_LOGI(TAG, "%s", status_msg);
+}
+
+static bool sbl_dump_fcfg1(sbl_t *sbl, uint8_t *out_1k)
+{
+    uint8_t verify_buf[256];
+    if (!sbl_read_memory(sbl, CJTAG_FCFG1_ADDR, out_1k, CJTAG_FCFG1_SIZE)) {
+        return false;
+    }
+    for (size_t off = 0; off < CJTAG_FCFG1_SIZE; off += sizeof verify_buf) {
+        if (!sbl_read_memory(sbl, CJTAG_FCFG1_ADDR + (uint32_t)off, verify_buf, sizeof verify_buf) ||
+            memcmp(out_1k + off, verify_buf, sizeof verify_buf) != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static void run_sbl_session(const sblprobe_result_t *map)
+{
+    sbl_t sbl;
+    sbl_io_t sio = {
+        .write = sbl_uart_write,
+        .read = sbl_uart_read,
+        .flush_input = sbl_uart_flush,
+        .ctx = NULL,
+    };
+    sbl_init(&sbl, &sio);
+    sbl.chip_id = map->chip_id;
+
+    xSemaphoreTake(lock, portMAX_DELAY);
+    if ((state != STATE_ARMED && state != STATE_SLIPPED) || !ensure_page_bufs()) {
+        if (state == STATE_ARMED || state == STATE_SLIPPED) {
+            state = STATE_ERROR;
+            snprintf(status_msg, sizeof status_msg, "out of memory allocating 128 KB page buffers");
+        }
+        xSemaphoreGive(lock);
+        release_sbl_pins(true);
+        return;
+    }
+    task_busy = true;
+    xSemaphoreGive(lock);
+
+    // Read FCFG1 USER_ID (0x50001294) and 64-bit IEEE MAC (0x500012F0) + Page 31 (CCFG, read twice and compared)
+    uint8_t id_buf[12] = {0};
+    uint8_t *p31 = page_bufs[CJTAG_CCFG_PAGE_IDX];
+    if (!sbl_read_memory(&sbl, 0x50001294u, id_buf, 4) || !sbl_read_memory(&sbl, 0x500012F0u, id_buf + 4, 8) ||
+        !sbl_dump_page(&sbl, CJTAG_CCFG_PAGE_IDX, p31)) {
+        xSemaphoreTake(lock, portMAX_DELAY);
+        task_busy = false;
+        state = STATE_ERROR;
+        snprintf(status_msg, sizeof status_msg, "SBL failed reading FCFG1/CCFG: %s", sbl.error);
+        xSemaphoreGive(lock);
+        release_sbl_pins(true);
+        return;
+    }
+
+    uint32_t user_id = le32(id_buf);
+    uint32_t mac_lo = le32(id_buf + 4);
+    uint32_t mac_hi = le32(id_buf + 8);
+    uint64_t ieee_mac = ((uint64_t)mac_hi << 32) | mac_lo;
+
+    const uint8_t *ccfg = p31 + (CJTAG_CCFG_ADDR - (CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE));
+    uint32_t bl_config = le32(ccfg + 0x30);
+    const uint8_t *ccfg_mac = ccfg + 0x24;
+    bool has_ccfg_mac = false;
+    char found_mac[9] = {0};
+    if (is_ascii_hex_mac(ccfg_mac)) {
+        memcpy(found_mac, ccfg_mac, 8);
+        found_mac[8] = '\0';
+        has_ccfg_mac = true;
+    } else {
+        uint8_t p29_mac[8] = {0};
+        if (sbl_read_memory(&sbl, 0x0001D000u, p29_mac, sizeof p29_mac) && is_ascii_hex_mac(p29_mac)) {
+            memcpy(found_mac, p29_mac, 8);
+            found_mac[8] = '\0';
+        } else {
+            snprintf(found_mac, sizeof found_mac, "%08X", (unsigned)mac_lo);
+        }
+    }
+
+    xSemaphoreTake(lock, portMAX_DELAY);
+    if (state != STATE_ARMED && state != STATE_SLIPPED) {
+        task_busy = false;
+        xSemaphoreGive(lock);
+        release_sbl_pins(true);
+        return;
+    }
+
+    active_transport = 2;
+    memcpy(active_mac, found_mac, sizeof active_mac);
+    active_user_id = user_id;
+    active_bl_config = bl_config;
+    active_ieee_mac = ieee_mac;
+
+    if (mode == CJTAG_MODE_FLASH && !has_ccfg_mac) {
+        task_busy = false;
+        state = STATE_ERROR;
+        snprintf(status_msg, sizeof status_msg, "Refused: sensor %s has no factory MAC in CCFG (page 31)", found_mac);
+        xSemaphoreGive(lock);
+        release_sbl_pins(true);
+        return;
+    }
+
+    if (mode == CJTAG_MODE_FLASH && strcmp(backed_up_mac, found_mac) != 0) {
+        task_busy = false;
+        state = STATE_ERROR;
+        snprintf(status_msg, sizeof status_msg,
+                 "Refused: dump & download %s's stock flash first before flashing (CLAUDE.md backup rule)", found_mac);
+        xSemaphoreGive(lock);
+        release_sbl_pins(true);
+        return;
+    }
+
+    state = STATE_RUNNING;
+    snprintf(status_msg, sizeof status_msg,
+             "Locked %s over SBL (R=pad %d/GPIO%d, T=pad %d/GPIO%d, BD=pad %d/GPIO%d, chip 0x%08" PRIX32 ") — %s…",
+             active_mac, map->r_pad, cfg_sbl_pins[map->r_pad], map->t_pad, cfg_sbl_pins[map->t_pad], map->backdoor_pad,
+             cfg_sbl_pins[map->backdoor_pad], map->chip_id, mode == CJTAG_MODE_DUMP ? "dumping" : "flashing");
+    xSemaphoreGive(lock);
+    ESP_LOGI(TAG, "%s", status_msg);
+
+    bool ok = true;
+    if (mode == CJTAG_MODE_DUMP) {
+        if (!sbl_dump_fcfg1(&sbl, fcfg1_buf)) {
+            ok = false;
+        }
+        for (uint32_t p = 0; ok && p < CJTAG_TOTAL_PAGES; p++) {
+            if (state != STATE_RUNNING) {
+                break;
+            }
+            if ((pages_done_mask & (1u << p)) != 0) {
+                continue;
+            }
+            current_page = p;
+            if (p != CJTAG_CCFG_PAGE_IDX && !sbl_dump_page(&sbl, p, page_bufs[p])) {
+                ok = false;
+                break;
+            }
+            xSemaphoreTake(lock, portMAX_DELAY);
+            pages_done_mask |= (1u << p);
+            pages_done_count = popcount32(pages_done_mask);
+            snprintf(status_msg, sizeof status_msg, "Dumping %s (SBL): page %" PRIu32 " / 32 verified", active_mac,
+                     pages_done_count);
+            xSemaphoreGive(lock);
+            ESP_LOGI(TAG, "%s", status_msg);
+            vTaskDelay(1);
+        }
+    } else if (mode == CJTAG_MODE_FLASH) {
+        if (!sbl_stream_begin(&sbl)) {
+            ok = false;
+        }
+        for (uint32_t p = 0; ok && p < staged_pages; p++) {
+            if (state != STATE_RUNNING) {
+                ok = false;
+                break;
+            }
+            current_page = p;
+            if (!sbl_stream_page(&sbl, page_bufs[p], CJTAG_PAGE) || !sbl_verify_page(&sbl, p, page_bufs[p])) {
+                ok = false;
+                break;
+            }
+            xSemaphoreTake(lock, portMAX_DELAY);
+            pages_done_mask |= (1u << p);
+            pages_done_count = popcount32(pages_done_mask);
+            snprintf(status_msg, sizeof status_msg, "Flashing %s (SBL): page %" PRIu32 " / %" PRIu32 " verified",
+                     active_mac, pages_done_count, total_pages_target);
+            xSemaphoreGive(lock);
+            ESP_LOGI(TAG, "%s", status_msg);
+            vTaskDelay(1);
+        }
+        if (ok && !sbl_stream_end(&sbl)) {
+            ok = false;
+        }
+        if (ok && staged_wipe_nv) {
+            current_page = CJTAG_NV_PAGE_IDX;
+            if (!sbl_write_nv(&sbl, page_bufs[CJTAG_NV_PAGE_IDX]) ||
+                !sbl_verify_page(&sbl, CJTAG_NV_PAGE_IDX, page_bufs[CJTAG_NV_PAGE_IDX])) {
+                ok = false;
+            } else {
+                xSemaphoreTake(lock, portMAX_DELAY);
+                pages_done_mask |= (1u << staged_pages);
+                pages_done_count = popcount32(pages_done_mask);
+                snprintf(status_msg, sizeof status_msg, "Flashing %s (SBL): page %" PRIu32 " / %" PRIu32 " verified",
+                         active_mac, pages_done_count, total_pages_target);
+                xSemaphoreGive(lock);
+            }
+        }
+    }
+
+    // Power-cycle cleanly into the sensor firmware
+    release_sbl_pins(true);
+    vTaskDelay(pdMS_TO_TICKS(50));
+    sbl_power(NULL, true);
+
+    xSemaphoreTake(lock, portMAX_DELAY);
+    task_busy = false;
+    if (state != STATE_RUNNING) {
+        xSemaphoreGive(lock);
+        return;
+    }
+    if (!ok) {
+        state = STATE_ERROR;
+        snprintf(status_msg, sizeof status_msg, "SBL %s failed at page %" PRIu32 ": %s",
+                 mode == CJTAG_MODE_DUMP ? "dump" : "flash", current_page,
+                 sbl.error[0] ? sbl.error : "verification error");
+        xSemaphoreGive(lock);
+        ESP_LOGW(TAG, "%s", status_msg);
+        return;
+    }
+
+    if (mode == CJTAG_MODE_DUMP) {
+        dump_ready = true;
+        fcfg1_ready = true;
+        snprintf(status_msg, sizeof status_msg,
+                 "SBL dump complete for %s (128 KB flash + 1 KB FCFG1 verified; R=pad %d, T=pad %d, BD=pad %d).",
+                 active_mac, map->r_pad, map->t_pad, map->backdoor_pad);
+    } else {
+        staged_bytes = 0;
+        staged_pages = 0;
+        free_page_bufs();
+        snprintf(status_msg, sizeof status_msg,
+                 "SBL flash complete for %s (%" PRIu32 " pages verified, page 31 intact).", active_mac,
+                 pages_done_count);
+    }
+    done_seq++;
+    state = STATE_DONE;
+    xSemaphoreGive(lock);
+    ESP_LOGI(TAG, "%s", status_msg);
 }
 
 static void task(void *arg)
@@ -226,6 +944,19 @@ static void task(void *arg)
     (void)arg;
     static cjtag_t cj;
     esp_pin_ctx_t pctx = {0};
+    sblprobe_io_t sbl_io = {
+        .pin_low = sbl_pin_low,
+        .pin_release = sbl_pin_release,
+        .pin_read = sbl_pin_read,
+        .power = sbl_power,
+        .uart_open = sbl_uart_open,
+        .uart_close = sbl_uart_close,
+        .uart_write = sbl_uart_write,
+        .uart_read = sbl_uart_read,
+        .uart_flush = sbl_uart_flush,
+        .sleep_ms = sbl_sleep_ms,
+        .ctx = NULL,
+    };
 
     for (;;) {
         if (state != STATE_ARMED && state != STATE_SLIPPED) {
@@ -233,168 +964,102 @@ static void task(void *arg)
             continue;
         }
 
+        cjtag_transport_t tr = cfg_transport;
         int pin_a = cfg_pin_a;
         int pin_b = cfg_pin_b;
-        if (!probe_with_polarity(&cj, &pctx, pin_a, pin_b)) {
-            vTaskDelay(pdMS_TO_TICKS(150));
-            continue;
-        }
 
-        xSemaphoreTake(lock, portMAX_DELAY);
-        if (state != STATE_ARMED && state != STATE_SLIPPED) {
-            xSemaphoreGive(lock);
-            cjtag_release_and_reset(&cj);
-            release_pins(pin_a, pin_b);
-            continue;
-        }
-
-        // If resuming from a slip, ensure the user re-touched the same sensor MAC
-        if (state == STATE_SLIPPED && active_mac[0] != '\0' && strcmp(active_mac, cj.mac) != 0) {
-            snprintf(status_msg, sizeof status_msg, "Sensor MAC changed (%s != %s) — re-touch %s or re-arm", cj.mac,
-                     active_mac, active_mac);
-            xSemaphoreGive(lock);
-            cjtag_release_and_reset(&cj);
-            release_pins(pin_a, pin_b);
-            vTaskDelay(pdMS_TO_TICKS(500));
-            continue;
-        }
-
-        active_tck = pctx.tck_pin;
-        active_tms = pctx.tms_pin;
-        memcpy(active_mac, cj.mac, sizeof active_mac);
-        active_user_id = cj.user_id;
-        active_bl_config = cj.bl_config;
-        active_ieee_mac = cj.ieee_mac;
-
-        if (mode == CJTAG_MODE_FLASH && !cj.has_ccfg_mac) {
-            state = STATE_ERROR;
-            snprintf(status_msg, sizeof status_msg, "Refused: sensor %s has no factory MAC in CCFG (page 31)", cj.mac);
-            xSemaphoreGive(lock);
-            cjtag_release_and_reset(&cj);
-            release_pins(pin_a, pin_b);
-            continue;
-        }
-
-        if (mode == CJTAG_MODE_FLASH && strcmp(backed_up_mac, cj.mac) != 0) {
-            state = STATE_ERROR;
-            snprintf(status_msg, sizeof status_msg,
-                     "Refused: dump & download %s's stock flash first before flashing (CLAUDE.md backup rule)", cj.mac);
-            xSemaphoreGive(lock);
-            cjtag_release_and_reset(&cj);
-            release_pins(pin_a, pin_b);
-            continue;
-        }
-
-        state = STATE_RUNNING;
-        snprintf(status_msg, sizeof status_msg, "Locked %s (TCKC=GPIO%d, TMSC=GPIO%d) — %s…", active_mac, active_tck,
-                 active_tms, mode == CJTAG_MODE_DUMP ? "dumping" : "flashing");
-        xSemaphoreGive(lock);
-        ESP_LOGI(TAG, "%s", status_msg);
-
-        bool slipped = false;
-        if (mode == CJTAG_MODE_DUMP) {
-            if (!cjtag_dump_fcfg1(&cj, fcfg1_buf)) {
-                slipped = true;
+        if (tr == CJTAG_TRANSPORT_CJTAG || tr == CJTAG_TRANSPORT_AUTO) {
+            if (probe_with_polarity(&cj, &pctx, pin_a, pin_b)) {
+                run_cjtag_session(&cj, &pctx, pin_a, pin_b);
+                continue;
             }
-            for (uint32_t p = 0; !slipped && p < CJTAG_TOTAL_PAGES; p++) {
-                if (state != STATE_RUNNING) {
-                    break;
+        }
+
+        if ((tr == CJTAG_TRANSPORT_SBL || tr == CJTAG_TRANSPORT_AUTO) && sbl_pins_configured()) {
+            sblprobe_result_t found = {0};
+            bool connected = false;
+            if (have_sbl_map) {
+                uint32_t cid = 0;
+                if (sblprobe_enter(&sbl_io, &saved_sbl_map, &cid, found.error, sizeof found.error)) {
+                    saved_sbl_map.chip_id = cid;
+                    found = saved_sbl_map;
+                    connected = true;
                 }
-                if ((pages_done_mask & (1u << p)) != 0) {
-                    continue;
+            }
+            if (!connected && (state == STATE_ARMED || state == STATE_SLIPPED)) {
+                if (sblprobe_find(&sbl_io, &found)) {
+                    xSemaphoreTake(lock, portMAX_DELAY);
+                    saved_sbl_map = found;
+                    have_sbl_map = true;
+                    xSemaphoreGive(lock);
+                    connected = true;
                 }
-                current_page = p;
-                if (!cjtag_dump_page(&cj, p, page_bufs[p])) {
-                    slipped = true;
-                    break;
-                }
+            }
+            if (connected) {
+                run_sbl_session(&found);
+                continue;
+            }
+            release_sbl_pins(true);
+            if (state == STATE_ARMED && tr == CJTAG_TRANSPORT_SBL) {
                 xSemaphoreTake(lock, portMAX_DELAY);
-                pages_done_mask |= (1u << p);
-                pages_done_count = popcount32(pages_done_mask);
-                snprintf(status_msg, sizeof status_msg, "Dumping %s: page %" PRIu32 " / 32 verified", active_mac,
-                         pages_done_count);
+                state = STATE_ERROR;
+                snprintf(status_msg, sizeof status_msg, "%s", found.error);
                 xSemaphoreGive(lock);
-                ESP_LOGI(TAG, "%s", status_msg);
-                vTaskDelay(1);
-            }
-        } else if (mode == CJTAG_MODE_FLASH) {
-            for (uint32_t p = 0; p < total_pages_target; p++) {
-                if (state != STATE_RUNNING) {
-                    break;
-                }
-                if ((pages_done_mask & (1u << p)) != 0) {
-                    continue;
-                }
-                uint32_t page_idx = (p == staged_pages) ? CJTAG_NV_PAGE_IDX : p;
-                current_page = page_idx;
-                bool allow_nv = (page_idx == CJTAG_NV_PAGE_IDX);
-                if (!cjtag_flash_page(&cj, page_idx, page_bufs[page_idx], allow_nv)) {
-                    slipped = true;
-                    break;
-                }
-                xSemaphoreTake(lock, portMAX_DELAY);
-                pages_done_mask |= (1u << p);
-                pages_done_count = popcount32(pages_done_mask);
-                snprintf(status_msg, sizeof status_msg, "Flashing %s: page %" PRIu32 " / %" PRIu32 " verified",
-                         active_mac, pages_done_count, total_pages_target);
-                xSemaphoreGive(lock);
-                ESP_LOGI(TAG, "%s", status_msg);
-                vTaskDelay(1);
+                ESP_LOGW(TAG, "%s", status_msg);
+                continue;
             }
         }
 
-        if (state != STATE_RUNNING) {
-            cjtag_release_and_reset(&cj);
-            release_pins(pin_a, pin_b);
-            continue;
-        }
-
-        if (slipped) {
-            xSemaphoreTake(lock, portMAX_DELAY);
-            slip_count++;
-            state = STATE_SLIPPED;
-            snprintf(status_msg, sizeof status_msg,
-                     "Probe slipped at page %" PRIu32 " (%s) — touch M/C again to resume (%" PRIu32 "/%" PRIu32
-                     " done)",
-                     current_page, cj.error, pages_done_count, total_pages_target);
-            xSemaphoreGive(lock);
-            ESP_LOGW(TAG, "%s", status_msg);
-            release_pins(pin_a, pin_b);
-            vTaskDelay(pdMS_TO_TICKS(250));
-            continue;
-        }
-
-        cjtag_release_and_reset(&cj);
-        release_pins(pin_a, pin_b);
-
-        xSemaphoreTake(lock, portMAX_DELAY);
-        if (mode == CJTAG_MODE_DUMP) {
-            dump_ready = true;
-            snprintf(status_msg, sizeof status_msg,
-                     "Dump complete for %s (128 KB flash + 1 KB FCFG1 verified). Lift probes!", active_mac);
-        } else {
-            snprintf(status_msg, sizeof status_msg,
-                     "Flash complete for %s (%" PRIu32 " pages verified, page 31 intact). Lift probes!", active_mac,
-                     pages_done_count);
-        }
-        done_seq++;
-        state = STATE_DONE;
-        xSemaphoreGive(lock);
-        ESP_LOGI(TAG, "%s", status_msg);
+        vTaskDelay(pdMS_TO_TICKS(150));
     }
 }
 
 void cjtag_task_start(void)
 {
-    lock = xSemaphoreCreateMutex();
+    if (!lock) {
+        lock = xSemaphoreCreateMutex();
+    }
     xTaskCreate(task, "cjtag", 8192, NULL, 6, NULL);
+}
+
+bool cjtag_task_set_sbl_pins(const int sbl_pins[4], int power_pin, char *msg, size_t msg_cap)
+{
+    if (!lock) {
+        lock = xSemaphoreCreateMutex();
+    }
+    xSemaphoreTake(lock, portMAX_DELAY);
+    int new_pins[SBLPROBE_PADS];
+    for (int i = 0; i < SBLPROBE_PADS; i++) {
+        new_pins[i] = (sbl_pins && sbl_pins[i] >= 0) ? sbl_pins[i] : cfg_sbl_pins[i];
+    }
+    int new_pwr = (power_pin >= 0) ? power_pin : cfg_power_pin;
+    if (!validate_sbl_pin_set(new_pins, new_pwr, msg, msg_cap)) {
+        xSemaphoreGive(lock);
+        return false;
+    }
+    bool changed = (new_pwr != cfg_power_pin);
+    for (int i = 0; i < SBLPROBE_PADS; i++) {
+        if (new_pins[i] != cfg_sbl_pins[i]) {
+            changed = true;
+        }
+        cfg_sbl_pins[i] = new_pins[i];
+    }
+    cfg_power_pin = new_pwr;
+    if (changed) {
+        have_sbl_map = false;
+    }
+    xSemaphoreGive(lock);
+    return true;
 }
 
 bool cjtag_task_stage_begin(bool wipe_nv, char *err, size_t err_cap)
 {
+    if (!lock) {
+        lock = xSemaphoreCreateMutex();
+    }
     xSemaphoreTake(lock, portMAX_DELAY);
-    if (state == STATE_RUNNING) {
-        snprintf(err, err_cap, "cJTAG operation in progress");
+    if (state == STATE_RUNNING || task_busy) {
+        snprintf(err, err_cap, "station operation in progress");
         xSemaphoreGive(lock);
         return false;
     }
@@ -406,6 +1071,7 @@ bool cjtag_task_stage_begin(bool wipe_nv, char *err, size_t err_cap)
     state = STATE_IDLE;
     mode = CJTAG_MODE_NONE;
     dump_ready = false;
+    fcfg1_ready = false;
     staged_bytes = 0;
     staged_pages = 0;
     staged_wipe_nv = wipe_nv;
@@ -427,6 +1093,9 @@ bool cjtag_task_stage_feed(const uint8_t *data, size_t len)
         uint32_t pg = (uint32_t)(staged_bytes / CJTAG_PAGE);
         size_t off = staged_bytes % CJTAG_PAGE;
         size_t chunk = (rem < CJTAG_PAGE - off) ? rem : (CJTAG_PAGE - off);
+        if (!page_bufs[pg]) {
+            return false;
+        }
         memcpy(page_bufs[pg] + off, p, chunk);
         staged_bytes += chunk;
         p += chunk;
@@ -435,24 +1104,31 @@ bool cjtag_task_stage_feed(const uint8_t *data, size_t len)
     return true;
 }
 
-bool cjtag_task_stage_end(bool rx_ok, char *msg, size_t msg_cap)
+bool cjtag_task_stage_end(bool rx_ok, cjtag_transport_t transport, char *msg, size_t msg_cap)
 {
     xSemaphoreTake(lock, portMAX_DELAY);
-    if (!rx_ok || staged_bytes == 0 || (staged_bytes % 4u) != 0) {
+    if (!rx_ok || staged_bytes == 0 || (staged_bytes % 4u) != 0 || !page_bufs[0]) {
         staged_bytes = 0;
         staged_pages = 0;
+        free_page_bufs();
         snprintf(msg, msg_cap, "invalid CC1310 image (must be 1..122880 bytes, multiple of 4)");
         xSemaphoreGive(lock);
         return false;
     }
     // Verify Cortex-M3 vector table at start of page 0
     const uint8_t *p0 = page_bufs[0];
-    uint32_t sp = (uint32_t)p0[0] | ((uint32_t)p0[1] << 8) | ((uint32_t)p0[2] << 16) | ((uint32_t)p0[3] << 24);
-    uint32_t reset = (uint32_t)p0[4] | ((uint32_t)p0[5] << 8) | ((uint32_t)p0[6] << 16) | ((uint32_t)p0[7] << 24);
+    uint32_t sp = le32(p0);
+    uint32_t reset = le32(p0 + 4);
     if (!(sp > 0x20000000u && sp <= 0x20005000u && (reset & 1u) != 0 && reset < CJTAG_APP_END)) {
         staged_bytes = 0;
         staged_pages = 0;
+        free_page_bufs();
         snprintf(msg, msg_cap, "refused: not a CC1310 image (invalid vector table in page 0)");
+        xSemaphoreGive(lock);
+        return false;
+    }
+
+    if (transport == CJTAG_TRANSPORT_SBL && !validate_sbl_pin_set(cfg_sbl_pins, cfg_power_pin, msg, msg_cap)) {
         xSemaphoreGive(lock);
         return false;
     }
@@ -464,47 +1140,83 @@ bool cjtag_task_stage_end(bool rx_ok, char *msg, size_t msg_cap)
     current_page = 0;
     slip_count = 0;
     active_mac[0] = '\0';
+    active_transport = 0;
+    cfg_transport = transport;
     mode = CJTAG_MODE_FLASH;
     state = STATE_ARMED;
-    snprintf(status_msg, sizeof status_msg,
-             "Armed Hands-Free Flash (%u B, %" PRIu32 " pages%s) — touch probes to M & C pads!", (unsigned)staged_bytes,
-             staged_pages, staged_wipe_nv ? " + NV wipe" : "");
+    const char *tr_label = (transport == CJTAG_TRANSPORT_SBL)    ? "SBL 4-pad"
+                           : (transport == CJTAG_TRANSPORT_AUTO) ? "Auto cJTAG+SBL"
+                                                                 : "cJTAG M/C";
+    snprintf(status_msg, sizeof status_msg, "Armed Station Flash [%s] (%u B, %" PRIu32 " pages%s) — connect sensor!",
+             tr_label, (unsigned)staged_bytes, staged_pages, staged_wipe_nv ? " + NV wipe" : "");
     snprintf(msg, msg_cap, "%s", status_msg);
     xSemaphoreGive(lock);
     return true;
 }
 
-bool cjtag_task_arm(cjtag_mode_t new_mode, int pin_a, int pin_b, char *msg, size_t msg_cap)
+bool cjtag_task_arm(cjtag_mode_t new_mode, cjtag_transport_t transport, int pin_a, int pin_b, char *msg, size_t msg_cap)
 {
+    if (!lock) {
+        lock = xSemaphoreCreateMutex();
+    }
     xSemaphoreTake(lock, portMAX_DELAY);
     if (pin_a >= 0 || pin_b >= 0) {
-        if (pin_a == pin_b) {
+        int na = (pin_a >= 0) ? pin_a : cfg_pin_a;
+        int nb = (pin_b >= 0) ? pin_b : cfg_pin_b;
+        if (na == nb) {
             snprintf(msg, msg_cap, "probe A and probe B must be different GPIOs");
             xSemaphoreGive(lock);
             return false;
         }
-        if (!valid_cjtag_pin(pin_a, msg, msg_cap) || !valid_cjtag_pin(pin_b, msg, msg_cap)) {
+        if (!valid_station_pin(na, msg, msg_cap) || !valid_station_pin(nb, msg, msg_cap)) {
             xSemaphoreGive(lock);
             return false;
         }
         if (state != STATE_IDLE) {
-            release_pins(cfg_pin_a, cfg_pin_b);
+            release_cjtag_pins(cfg_pin_a, cfg_pin_b);
         }
-        cfg_pin_a = pin_a;
-        cfg_pin_b = pin_b;
-    } else if (!valid_cjtag_pin(cfg_pin_a, msg, msg_cap) || !valid_cjtag_pin(cfg_pin_b, msg, msg_cap)) {
-        xSemaphoreGive(lock);
-        return false;
+        cfg_pin_a = na;
+        cfg_pin_b = nb;
     }
 
     if (new_mode == CJTAG_MODE_NONE) {
         state = STATE_IDLE;
         mode = CJTAG_MODE_NONE;
-        release_pins(cfg_pin_a, cfg_pin_b);
+        active_transport = 0;
+        xSemaphoreGive(lock);
+        while (task_busy) {
+            vTaskDelay(pdMS_TO_TICKS(10));
+        }
+        xSemaphoreTake(lock, portMAX_DELAY);
+        release_cjtag_pins(cfg_pin_a, cfg_pin_b);
+        release_sbl_pins(true);
+        dump_ready = false;
+        fcfg1_ready = false;
+        staged_bytes = 0;
+        staged_pages = 0;
+        free_page_bufs();
         snprintf(status_msg, sizeof status_msg, "Disarmed.");
         snprintf(msg, msg_cap, "%s", status_msg);
         xSemaphoreGive(lock);
         return true;
+    }
+
+    if (transport == CJTAG_TRANSPORT_CJTAG || transport == CJTAG_TRANSPORT_AUTO) {
+        if (!valid_station_pin(cfg_pin_a, msg, msg_cap) || !valid_station_pin(cfg_pin_b, msg, msg_cap)) {
+            xSemaphoreGive(lock);
+            return false;
+        }
+    }
+    if (transport == CJTAG_TRANSPORT_SBL) {
+        if (!validate_sbl_pin_set(cfg_sbl_pins, cfg_power_pin, msg, msg_cap)) {
+            xSemaphoreGive(lock);
+            return false;
+        }
+    } else if (transport == CJTAG_TRANSPORT_AUTO && sbl_pins_configured()) {
+        if (!validate_sbl_pin_set(cfg_sbl_pins, cfg_power_pin, msg, msg_cap)) {
+            xSemaphoreGive(lock);
+            return false;
+        }
     }
 
     if (!ensure_page_bufs()) {
@@ -526,21 +1238,24 @@ bool cjtag_task_arm(cjtag_mode_t new_mode, int pin_a, int pin_b, char *msg, size
     active_mac[0] = '\0';
     active_tck = -1;
     active_tms = -1;
+    active_transport = 0;
+    cfg_transport = transport;
     mode = new_mode;
 
+    const char *tr_label = (transport == CJTAG_TRANSPORT_SBL)    ? "SBL 4-pad"
+                           : (transport == CJTAG_TRANSPORT_AUTO) ? "Auto cJTAG+SBL"
+                                                                 : "cJTAG M/C";
     if (new_mode == CJTAG_MODE_DUMP) {
         dump_ready = false;
+        fcfg1_ready = false;
         staged_bytes = 0;
         staged_pages = 0;
         total_pages_target = CJTAG_TOTAL_PAGES;
-        snprintf(status_msg, sizeof status_msg,
-                 "Armed Hands-Free Dump (GPIO%d / GPIO%d, auto-polarity) — touch probes to M & C pads!", cfg_pin_a,
-                 cfg_pin_b);
+        snprintf(status_msg, sizeof status_msg, "Armed Station Dump [%s] — connect sensor!", tr_label);
     } else {
         total_pages_target = staged_pages + (staged_wipe_nv ? 1u : 0u);
-        snprintf(status_msg, sizeof status_msg,
-                 "Armed Hands-Free Flash (%" PRIu32 " pages on GPIO%d / GPIO%d) — touch probes to M & C pads!",
-                 total_pages_target, cfg_pin_a, cfg_pin_b);
+        snprintf(status_msg, sizeof status_msg, "Armed Station Flash [%s] (%" PRIu32 " pages) — connect sensor!",
+                 tr_label, total_pages_target);
     }
     state = STATE_ARMED;
     snprintf(msg, msg_cap, "%s", status_msg);
@@ -550,7 +1265,7 @@ bool cjtag_task_arm(cjtag_mode_t new_mode, int pin_a, int pin_b, char *msg, size
 
 bool cjtag_task_get_dump_page(uint32_t page_idx, uint8_t *out_4k)
 {
-    if (page_idx >= CJTAG_TOTAL_PAGES) {
+    if (page_idx >= CJTAG_TOTAL_PAGES || !lock) {
         return false;
     }
     xSemaphoreTake(lock, portMAX_DELAY);
@@ -564,8 +1279,11 @@ bool cjtag_task_get_dump_page(uint32_t page_idx, uint8_t *out_4k)
 
 bool cjtag_task_get_fcfg1(uint8_t *out_1k)
 {
+    if (!lock) {
+        return false;
+    }
     xSemaphoreTake(lock, portMAX_DELAY);
-    bool ok = dump_ready;
+    bool ok = fcfg1_ready;
     if (ok) {
         memcpy(out_1k, fcfg1_buf, CJTAG_FCFG1_SIZE);
     }
@@ -575,10 +1293,15 @@ bool cjtag_task_get_fcfg1(uint8_t *out_1k)
 
 void cjtag_task_note_dump_downloaded(void)
 {
+    if (!lock) {
+        return;
+    }
     xSemaphoreTake(lock, portMAX_DELAY);
     if (dump_ready && active_mac[0] != '\0') {
         memcpy(backed_up_mac, active_mac, sizeof backed_up_mac);
     }
+    dump_ready = false;
+    free_page_bufs();
     xSemaphoreGive(lock);
 }
 
@@ -591,20 +1314,37 @@ size_t cjtag_task_json(char *out, size_t cap)
 {
     static const char *state_names[] = {"idle", "armed", "running", "slipped", "done", "error"};
     static const char *mode_names[] = {"none", "dump", "flash"};
+    static const char *tr_names[] = {"cjtag", "sbl", "auto"};
+    static const char *act_tr_names[] = {"none", "cjtag", "sbl"};
 
+    if (!lock) {
+        lock = xSemaphoreCreateMutex();
+    }
     xSemaphoreTake(lock, portMAX_DELAY);
     char mac_js[24], msg_js[480];
     json_str(mac_js, sizeof mac_js, active_mac);
     json_str(msg_js, sizeof msg_js, status_msg);
+    int r_gpio = (have_sbl_map && saved_sbl_map.r_pad >= 0) ? cfg_sbl_pins[saved_sbl_map.r_pad] : -1;
+    int t_gpio = (have_sbl_map && saved_sbl_map.t_pad >= 0) ? cfg_sbl_pins[saved_sbl_map.t_pad] : -1;
+    int bd_gpio = (have_sbl_map && saved_sbl_map.backdoor_pad >= 0) ? cfg_sbl_pins[saved_sbl_map.backdoor_pad] : -1;
     int n = snprintf(out, cap,
-                     "{\"state\":\"%s\",\"mode\":\"%s\",\"pin_a\":%d,\"pin_b\":%d,\"tck_pin\":%d,\"tms_pin\":%d,"
+                     "{\"state\":\"%s\",\"mode\":\"%s\",\"transport\":\"%s\",\"active_transport\":\"%s\","
+                     "\"pin_a\":%d,\"pin_b\":%d,\"tck_pin\":%d,\"tms_pin\":%d,"
+                     "\"sbl_pins\":[%d,%d,%d,%d],\"power_pin\":%d,"
+                     "\"sbl_map\":{\"found\":%s,\"r_pad\":%d,\"t_pad\":%d,\"backdoor_pad\":%d,"
+                     "\"r_gpio\":%d,\"t_gpio\":%d,\"backdoor_gpio\":%d,\"chip_id\":\"0x%08" PRIX32 "\"},"
                      "\"mac\":%s,\"user_id\":\"0x%08" PRIX32 "\",\"bl_config\":\"0x%08" PRIX32 "\","
                      "\"ieee_mac\":\"%016" PRIX64 "\",\"pages_done\":%" PRIu32 ",\"total_pages\":%" PRIu32 ","
                      "\"current_page\":%" PRIu32 ",\"slips\":%" PRIu32 ",\"done_seq\":%" PRIu32 ",\"dump_ready\":%s,"
-                     "\"staged_bytes\":%u,\"msg\":%s}",
-                     state_names[state], mode_names[mode], cfg_pin_a, cfg_pin_b, active_tck, active_tms, mac_js,
-                     active_user_id, active_bl_config, active_ieee_mac, pages_done_count, total_pages_target,
-                     current_page, slip_count, done_seq, dump_ready ? "true" : "false", (unsigned)staged_bytes, msg_js);
+                     "\"fcfg1_ready\":%s,\"staged_bytes\":%u,\"msg\":%s}",
+                     state_names[state], mode_names[mode], tr_names[cfg_transport], act_tr_names[active_transport],
+                     cfg_pin_a, cfg_pin_b, active_tck, active_tms, cfg_sbl_pins[0], cfg_sbl_pins[1], cfg_sbl_pins[2],
+                     cfg_sbl_pins[3], cfg_power_pin, have_sbl_map ? "true" : "false",
+                     have_sbl_map ? saved_sbl_map.r_pad : -1, have_sbl_map ? saved_sbl_map.t_pad : -1,
+                     have_sbl_map ? saved_sbl_map.backdoor_pad : -1, r_gpio, t_gpio, bd_gpio,
+                     have_sbl_map ? saved_sbl_map.chip_id : 0u, mac_js, active_user_id, active_bl_config,
+                     active_ieee_mac, pages_done_count, total_pages_target, current_page, slip_count, done_seq,
+                     dump_ready ? "true" : "false", fcfg1_ready ? "true" : "false", (unsigned)staged_bytes, msg_js);
     xSemaphoreGive(lock);
     return n < 0 ? 0 : ((size_t)n < cap ? (size_t)n : cap - 1);
 }

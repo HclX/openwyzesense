@@ -49,4 +49,19 @@ config OWS_CJTAG_PIN_B
     default 21 if IDF_TARGET_ESP32
     default 14
 
+config OWS_STATION_SBL_PIN_0
+    int "Station: GPIO to unmarked sensor pad 0 (SBL pad probing, #81), -1 for none"
+    default -1
+config OWS_STATION_SBL_PIN_1
+    int "Station: GPIO to unmarked sensor pad 1 (SBL pad probing, #81), -1 for none"
+    default -1
+config OWS_STATION_SBL_PIN_2
+    int "Station: GPIO to unmarked sensor pad 2 (SBL pad probing, #81), -1 for none"
+    default -1
+config OWS_STATION_SBL_PIN_3
+    int "Station: GPIO to unmarked sensor pad 3 (SBL pad probing, #81), -1 for none"
+    default -1
+config OWS_STATION_POWER_GPIO
+    int "Station: GPIO that supplies the probed sensor (SBL pad probing, #81), -1 for none"
+    default -1
 endmenu

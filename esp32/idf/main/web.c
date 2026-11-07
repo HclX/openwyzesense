@@ -74,24 +74,30 @@ static esp_err_t api_status(httpd_req_t *req)
         return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "out of memory");
     }
     char name[48], mdns[48], ssid[80], url[300], ip[40], flash[340], build[80], gwmsg[340], carried[120], running[120];
-    char log_raw[128], log_js[280], gw_mac[9], cmac_js[24];
-    const gwsync_report_t *g = contact_gwsync_report();
-    char steps_raw[760], steps[900];
-    contact_gwsync_steps(steps_raw, sizeof steps_raw);
+    char log_raw[128] = "", log_js[280], gw_mac[9] = "", cmac_js[24];
+    const gwsync_report_t *g = (settings.role == ROLE_STATION) ? NULL : contact_gwsync_report();
+    char steps_raw[760] = "", steps[900];
+    if (settings.role != ROLE_STATION) {
+        contact_gwsync_steps(steps_raw, sizeof steps_raw);
+    }
     js(steps, sizeof steps, steps_raw);
     const esp_partition_t *run = esp_ota_get_running_partition();
     wifi_ap_record_t ap;
     int rssi = net_connected() && esp_wifi_sta_get_ap_info(&ap) == ESP_OK ? ap.rssi : 0;
-    uint32_t queued, replayed, dropped, sns_now = 0, uart_tx = 0, uart_rx = 0;
-    unsigned waiting;
+    uint32_t queued = 0, replayed = 0, dropped = 0, sns_now = 0, uart_tx = 0, uart_rx = 0;
+    unsigned waiting = 0, n_sns = 0;
     buffer_sensor_t sns[BUFFER_SENSORS];
-    unsigned n_sns = relay_task_sensors(sns, BUFFER_SENSORS, &sns_now);
-    relay_task_buffer(&queued, &replayed, &dropped, &waiting);
-    contact_uart_counts(&uart_tx, &uart_rx);
-    relay_task_last_log(log_raw, sizeof log_raw);
-    relay_task_gateway_mac(gw_mac);
+    if (settings.role != ROLE_STATION) {
+        n_sns = relay_task_sensors(sns, BUFFER_SENSORS, &sns_now);
+        relay_task_buffer(&queued, &replayed, &dropped, &waiting);
+        contact_uart_counts(&uart_tx, &uart_rx);
+        relay_task_last_log(log_raw, sizeof log_raw);
+        relay_task_gateway_mac(gw_mac);
+    } else {
+        snprintf(log_raw, sizeof log_raw, "station-only mode");
+    }
     snprintf(build, sizeof build, "%s (%s)", relay_tag + 18, run ? run->label : "?");
-    js(gwmsg, sizeof gwmsg, g ? g->msg : "");
+    js(gwmsg, sizeof gwmsg, g ? g->msg : (settings.role == ROLE_STATION ? "station-only mode (relay disabled)" : ""));
     carried[0] = running[0] = 0;
     if (g) {
         char v[96];
@@ -113,23 +119,27 @@ static esp_err_t api_status(httpd_req_t *req)
     js(flash, sizeof flash, last_flash);
     js(cmac_js, sizeof cmac_js, g && g->mac[0] ? g->mac : gw_mac);
     static const char *vias[] = {"auto", "cjtag", "sbl"};  // GWSYNC_VIA_*
-    int len = snprintf(
-        body, 6144,
-        "{\"name\":%s,\"mdns\":%s,\"ssid\":%s,\"url\":%s,\"ip\":%s,\"ap\":%s,\"auth\":%s,"
-        "\"skip_gwsync\":%s,\"contact_flash\":\"%s\",\"rssi\":%d,\"relay\":\"%s\",\"connects\":%lu,\"queued\":%lu,"
-        "\"replayed\":%lu,\"dropped\":%lu,\"waiting\":%u,\"uart_tx\":%lu,\"uart_rx\":%lu,"
-        "\"uptime\":%lu,\"heap\":%lu,\"log\":%s,\"flash\":%s,\"contact_mac\":%s,"
-        "\"build\":\"%s\",\"chip\":\"" CHIP "\",\"fw_file\":\"" FW_FILE "\","
-        "\"gw\":{\"checked\":%s,\"result\":\"%s\",\"via_cjtag\":%s,\"msg\":%s,\"steps\":%s,\"carried\":%s,"
-        "\"running\":%s},\"sensors\":[",
-        name, mdns, ssid, url, ip, net_setup_ap() ? "true" : "false",
-        http_auth_secret(settings.admin_pass, settings.token) ? "true" : "false",
-        settings.skip_gwsync ? "true" : "false", vias[settings.contact_flash % 3], rssi, states[relay_task_state()],
-        (unsigned long)relay_task_connects(), (unsigned long)queued, (unsigned long)replayed, (unsigned long)dropped,
-        waiting, (unsigned long)uart_tx, (unsigned long)uart_rx, (unsigned long)(esp_timer_get_time() / 1000000),
-        (unsigned long)esp_get_free_heap_size(), log_js, flash, cmac_js, build, g ? "true" : "false",
-        g ? results[g->result] : "same", g && g->via_cjtag ? "true" : "false", gwmsg, steps, g ? carried : "null",
-        g && (g->answered || g->result == GWSYNC_UPDATED) ? running : "null");
+    bool gw_checked = (g != NULL) || (settings.role == ROLE_STATION);
+    const char *relay_state = (settings.role == ROLE_STATION) ? "down" : states[relay_task_state()];
+    int len =
+        snprintf(body, 6144,
+                 "{\"name\":%s,\"mdns\":%s,\"ssid\":%s,\"url\":%s,\"ip\":%s,\"ap\":%s,\"auth\":%s,"
+                 "\"role\":%u,\"skip_gwsync\":%s,\"contact_flash\":\"%s\",\"rssi\":%d,\"relay\":\"%s\",\"connects\":%"
+                 "lu,\"queued\":%lu,"
+                 "\"replayed\":%lu,\"dropped\":%lu,\"waiting\":%u,\"uart_tx\":%lu,\"uart_rx\":%lu,"
+                 "\"uptime\":%lu,\"heap\":%lu,\"log\":%s,\"flash\":%s,\"contact_mac\":%s,"
+                 "\"build\":\"%s\",\"chip\":\"" CHIP "\",\"fw_file\":\"" FW_FILE "\","
+                 "\"gw\":{\"checked\":%s,\"result\":\"%s\",\"via_cjtag\":%s,\"msg\":%s,\"steps\":%s,\"carried\":%s,"
+                 "\"running\":%s},\"sensors\":[",
+                 name, mdns, ssid, url, ip, net_setup_ap() ? "true" : "false",
+                 http_auth_secret(settings.admin_pass, settings.token) ? "true" : "false", (unsigned)settings.role,
+                 settings.skip_gwsync ? "true" : "false", vias[settings.contact_flash % 3], rssi, relay_state,
+                 (unsigned long)(settings.role == ROLE_STATION ? 0 : relay_task_connects()), (unsigned long)queued,
+                 (unsigned long)replayed, (unsigned long)dropped, waiting, (unsigned long)uart_tx,
+                 (unsigned long)uart_rx, (unsigned long)(esp_timer_get_time() / 1000000),
+                 (unsigned long)esp_get_free_heap_size(), log_js, flash, cmac_js, build, gw_checked ? "true" : "false",
+                 g ? results[g->result] : "same", g && g->via_cjtag ? "true" : "false", gwmsg, steps,
+                 g ? carried : "null", g && (g->answered || g->result == GWSYNC_UPDATED) ? running : "null");
     size_t pos = len > 0 && len < 6140 ? (size_t)len : 0;
     for (unsigned i = 0; i < n_sns && pos + 96 < 6144; i++) {
         uint32_t seen_s = (uint32_t)(sns_now - sns[i].last_seen_ms) / 1000u;
@@ -203,11 +213,29 @@ static void set_field(const char *body, const char *key, char *field, size_t cap
 // while the start-up gateway check runs (it may be writing the contact), nothing that restarts the relay
 static bool refused_busy(httpd_req_t *req)
 {
-    if (contact_gwsync_report()) {
+    if (settings.role == ROLE_STATION || contact_gwsync_report()) {
         return false;
     }
     httpd_resp_set_status(req, "503 Service Unavailable");
     httpd_resp_sendstr(req, "the start-up gateway check is running: try again in a moment");
+    return true;
+}
+
+static bool refused_relay_disabled(httpd_req_t *req)
+{
+    if (settings.role != ROLE_STATION) {
+        return false;
+    }
+    httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "relay disabled in station-only role");
+    return true;
+}
+
+static bool refused_station_disabled(httpd_req_t *req)
+{
+    if (settings.role != ROLE_RELAY) {
+        return false;
+    }
+    httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "station disabled in relay-only role");
     return true;
 }
 
@@ -249,6 +277,16 @@ static esp_err_t setup_post(httpd_req_t *req)
                                  : !strcmp(via, "sbl") ? GWSYNC_VIA_SBL
                                                        : GWSYNC_VIA_AUTO;
     }
+    char role_s[16] = "";
+    if (form_value(body, "role", role_s, sizeof role_s) && role_s[0]) {
+        if (!strcmp(role_s, "0") || !strcmp(role_s, "both")) {
+            settings.role = ROLE_BOTH;
+        } else if (!strcmp(role_s, "1") || !strcmp(role_s, "relay")) {
+            settings.role = ROLE_RELAY;
+        } else if (!strcmp(role_s, "2") || !strcmp(role_s, "station")) {
+            settings.role = ROLE_STATION;
+        }
+    }
     if (!settings_save()) {
         return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "saving failed");
     }
@@ -259,7 +297,7 @@ static esp_err_t setup_post(httpd_req_t *req)
 
 static esp_err_t contact_gwsync_post(httpd_req_t *req)
 {
-    if (!require_auth(req)) {
+    if (!require_auth(req) || refused_relay_disabled(req)) {
         return ESP_OK;
     }
     char query[64] = "", body[64] = "", skip[16] = "";
@@ -300,7 +338,7 @@ static void rig_field(const char *body, const char *key, uint32_t *v)
 
 static esp_err_t rig_post(httpd_req_t *req)
 {
-    if (!require_auth(req)) {
+    if (!require_auth(req) || refused_relay_disabled(req)) {
         return ESP_OK;
     }
     char body[400];
@@ -355,7 +393,7 @@ static esp_err_t rig_post(httpd_req_t *req)
 // sensor whose console window ended wakes on the first byte and may drop it.
 static esp_err_t contact_console_post(httpd_req_t *req)
 {
-    if (!require_auth(req) || refused_busy(req)) {
+    if (!require_auth(req) || refused_relay_disabled(req) || refused_busy(req)) {
         return ESP_OK;
     }
     char query[32] = "", w[8] = "";
@@ -395,7 +433,7 @@ static esp_err_t contact_console_post(httpd_req_t *req)
 
 static esp_err_t contact_reset_post(httpd_req_t *req)
 {
-    if (!require_auth(req)) {
+    if (!require_auth(req) || refused_relay_disabled(req)) {
         return ESP_OK;
     }
     if (!contact_uart_take(2000)) {
@@ -441,7 +479,7 @@ static bool to_contact_flash(void *ctx, const uint8_t *data, size_t len)
 
 static esp_err_t contact_flash_post(httpd_req_t *req)
 {
-    if (!require_auth(req) || refused_busy(req)) {
+    if (!require_auth(req) || refused_relay_disabled(req) || refused_busy(req)) {
         return ESP_OK;
     }
     if (req->content_len <= 0 || req->content_len > MAX_CONTACT_IMAGE + 2048) {
@@ -490,7 +528,7 @@ static bool to_mem(void *ctx, const uint8_t *data, size_t len)
 
 static esp_err_t contact_nv_get(httpd_req_t *req)
 {
-    if (!require_auth(req) || refused_busy(req)) {
+    if (!require_auth(req) || refused_relay_disabled(req) || refused_busy(req)) {
         return ESP_OK;
     }
     char msg[128] = "";
@@ -511,7 +549,7 @@ static esp_err_t contact_nv_get(httpd_req_t *req)
 
 static esp_err_t contact_nv_post(httpd_req_t *req)
 {
-    if (!require_auth(req) || refused_busy(req)) {
+    if (!require_auth(req) || refused_relay_disabled(req) || refused_busy(req)) {
         return ESP_OK;
     }
     if (req->content_len <= 0 || req->content_len > 12288) {
@@ -548,9 +586,50 @@ static bool to_cjtag_stage(void *ctx, const uint8_t *data, size_t len)
     return cjtag_task_stage_feed(data, len);
 }
 
+static cjtag_transport_t parse_transport(const char *s)
+{
+    if (!strcmp(s, "sbl")) {
+        return CJTAG_TRANSPORT_SBL;
+    }
+    if (!strcmp(s, "auto")) {
+        return CJTAG_TRANSPORT_AUTO;
+    }
+    return CJTAG_TRANSPORT_CJTAG;
+}
+
+static bool apply_sbl_query_or_form(const char *query, const char *body, char *msg, size_t msg_cap)
+{
+    static const char *keys[4] = {"sbl_0", "sbl_1", "sbl_2", "sbl_3"};
+    int pins[4] = {-1, -1, -1, -1};
+    int pwr = -1;
+    bool any = false;
+    for (int i = 0; i < 4; i++) {
+        char v[8] = "";
+        if (httpd_query_key_value(query, keys[i], v, sizeof v) == ESP_OK ||
+            (body[0] && form_value(body, keys[i], v, sizeof v))) {
+            if (v[0]) {
+                pins[i] = (int)strtol(v, NULL, 10);
+                any = true;
+            }
+        }
+    }
+    char pv[8] = "";
+    if (httpd_query_key_value(query, "power_pin", pv, sizeof pv) == ESP_OK ||
+        (body[0] && form_value(body, "power_pin", pv, sizeof pv))) {
+        if (pv[0]) {
+            pwr = (int)strtol(pv, NULL, 10);
+            any = true;
+        }
+    }
+    return !any || cjtag_task_set_sbl_pins(pins, pwr, msg, msg_cap);
+}
+
 static esp_err_t cjtag_get(httpd_req_t *req)
 {
-    char out[768];
+    if (refused_station_disabled(req)) {
+        return ESP_OK;
+    }
+    char out[1024];
     size_t n = cjtag_task_json(out, sizeof out);
     httpd_resp_set_type(req, "application/json");
     return httpd_resp_send(req, out, (ssize_t)n);
@@ -558,12 +637,13 @@ static esp_err_t cjtag_get(httpd_req_t *req)
 
 static esp_err_t cjtag_arm_post(httpd_req_t *req)
 {
-    if (!require_auth(req)) {
+    if (!require_auth(req) || refused_station_disabled(req)) {
         return ESP_OK;
     }
-    char query[96] = "", body[96] = "", mode_s[16] = "", pa_s[8] = "", pb_s[8] = "";
+    char query[160] = "", body[160] = "", mode_s[16] = "", tr_s[16] = "", pa_s[8] = "", pb_s[8] = "";
     httpd_req_get_url_query_str(req, query, sizeof query);
     httpd_query_key_value(query, "mode", mode_s, sizeof mode_s);
+    httpd_query_key_value(query, "transport", tr_s, sizeof tr_s);
     httpd_query_key_value(query, "pin_a", pa_s, sizeof pa_s);
     httpd_query_key_value(query, "pin_b", pb_s, sizeof pb_s);
     if (!mode_s[0] && req->content_len > 0 && req->content_len < (int)sizeof body) {
@@ -571,6 +651,7 @@ static esp_err_t cjtag_arm_post(httpd_req_t *req)
         if (n > 0) {
             body[n] = 0;
             form_value(body, "mode", mode_s, sizeof mode_s);
+            form_value(body, "transport", tr_s, sizeof tr_s);
             form_value(body, "pin_a", pa_s, sizeof pa_s);
             form_value(body, "pin_b", pb_s, sizeof pb_s);
         }
@@ -581,10 +662,12 @@ static esp_err_t cjtag_arm_post(httpd_req_t *req)
     } else if (!strcmp(mode_s, "flash")) {
         m = CJTAG_MODE_FLASH;
     }
+    cjtag_transport_t tr = parse_transport(tr_s);
     int pin_a = pa_s[0] ? (int)strtol(pa_s, NULL, 10) : -1;
     int pin_b = pb_s[0] ? (int)strtol(pb_s, NULL, 10) : -1;
-    char msg[128] = "";
-    if (!cjtag_task_arm(m, pin_a, pin_b, msg, sizeof msg)) {
+    char msg[160] = "";
+    if (!apply_sbl_query_or_form(query, body, msg, sizeof msg) ||
+        !cjtag_task_arm(m, tr, pin_a, pin_b, msg, sizeof msg)) {
         return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, msg);
     }
     return httpd_resp_sendstr(req, msg);
@@ -592,22 +675,27 @@ static esp_err_t cjtag_arm_post(httpd_req_t *req)
 
 static esp_err_t cjtag_stage_post(httpd_req_t *req)
 {
-    if (!require_auth(req)) {
+    if (!require_auth(req) || refused_station_disabled(req)) {
         return ESP_OK;
     }
     if (req->content_len <= 0 || req->content_len > MAX_CONTACT_IMAGE + 2048) {
         return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
                                    "an image for pages 0-29, a multiple of 4 bytes (a form field image, or the body)");
     }
-    char query[96] = "", nv[8] = "", pa_s[8] = "", pb_s[8] = "", msg[128] = "";
+    char query[160] = "", empty_body[1] = "", nv[8] = "", tr_s[16] = "", pa_s[8] = "", pb_s[8] = "", msg[160] = "";
     httpd_req_get_url_query_str(req, query, sizeof query);
     httpd_query_key_value(query, "nv", nv, sizeof nv);
+    httpd_query_key_value(query, "transport", tr_s, sizeof tr_s);
     httpd_query_key_value(query, "pin_a", pa_s, sizeof pa_s);
     httpd_query_key_value(query, "pin_b", pb_s, sizeof pb_s);
+    cjtag_transport_t tr = parse_transport(tr_s);
     int pin_a = pa_s[0] ? (int)strtol(pa_s, NULL, 10) : -1;
     int pin_b = pb_s[0] ? (int)strtol(pb_s, NULL, 10) : -1;
+    if (!apply_sbl_query_or_form(query, empty_body, msg, sizeof msg)) {
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, msg);
+    }
     if (pin_a >= 0 || pin_b >= 0) {
-        if (!cjtag_task_arm(CJTAG_MODE_NONE, pin_a, pin_b, msg, sizeof msg)) {
+        if (!cjtag_task_arm(CJTAG_MODE_NONE, tr, pin_a, pin_b, msg, sizeof msg)) {
             return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, msg);
         }
     }
@@ -615,7 +703,7 @@ static esp_err_t cjtag_stage_post(httpd_req_t *req)
         return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, msg);
     }
     bool rx_ok = receive(req, "image", to_cjtag_stage, NULL);
-    if (!cjtag_task_stage_end(rx_ok, msg, sizeof msg)) {
+    if (!cjtag_task_stage_end(rx_ok, tr, msg, sizeof msg)) {
         return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, msg);
     }
     return httpd_resp_sendstr(req, msg);
@@ -623,7 +711,7 @@ static esp_err_t cjtag_stage_post(httpd_req_t *req)
 
 static esp_err_t cjtag_dump_get(httpd_req_t *req)
 {
-    if (!require_auth(req)) {
+    if (!require_auth(req) || refused_station_disabled(req)) {
         return ESP_OK;
     }
     uint8_t *page = malloc(CJTAG_PAGE);
@@ -632,7 +720,7 @@ static esp_err_t cjtag_dump_get(httpd_req_t *req)
     }
     if (!cjtag_task_get_dump_page(0, page)) {
         free(page);
-        return httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "no completed cJTAG flash dump available");
+        return httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "no completed station flash dump available");
     }
     char disp[80];
     snprintf(disp, sizeof disp, "attachment; filename=\"sensor_%s_flash.bin\"", cjtag_task_mac());
@@ -652,7 +740,7 @@ static esp_err_t cjtag_dump_get(httpd_req_t *req)
 
 static esp_err_t cjtag_fcfg1_get(httpd_req_t *req)
 {
-    if (!require_auth(req)) {
+    if (!require_auth(req) || refused_station_disabled(req)) {
         return ESP_OK;
     }
     uint8_t *fcfg1 = malloc(CJTAG_FCFG1_SIZE);
