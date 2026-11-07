@@ -15,7 +15,7 @@ With the flag on (`OWS_SUB_FLAGS`; like every flag, not kept across a reset):
 
 | Frame from a sensor | Owner (in its table, or joining it) | Any other gateway |
 |---|---|---|
-| Report (data frame, ACK requested) | ACKs it, forwards it as `0x5319` (as now) | **no ACK**; forwards A1 / A2 / E8 / AB as `OWS_SUB_OVERHEARD` |
+| Report (data frame, ACK requested) | ACKs it, forwards it as `0x5319` (as now) | **no ACK**; forwards A1 / A2 / E8 / AB as `OWS_SUB_OVERHEARD`, a sealed one (#28) as `OWS_SUB_OVERHEARD_SEALED` |
 | Data request (poll) | ACKs it, sends what is pending (or the B0 time) | **silent** |
 | Association request | the gateway that is pairing (`0x531C` on) ACKs and answers it | **silent** |
 | Beacon request | every gateway answers (after its random delay, #84) | (same) |
@@ -38,11 +38,30 @@ Moving a sensor (a handover) uses commands that exist:
 
 - **drop** at the old owner: `0x5325` Delete Sensor (stock command). Ours sends nothing to the sensor; it only forgets
   it, with whatever was queued or learned for its address.
-- **add** at the new owner: `OWS_SUB_NV_IMPORT` `ADD_SENSOR` (`0x53F0 0x06 0x03`: MAC, short address, type), with the
-  sensor's short address unchanged. The type lets the new owner send the B0 time on its next poll at once.
+- **add** at the new owner: `OWS_SUB_NV_IMPORT` `ADD_SENSOR` (`0x53F0 0x06 0x03`: MAC, short address, type, and
+  optionally sub-ID and a flags byte), with the sensor's short address unchanged. The type lets the new owner send the
+  B0 time on its next poll at once. For a secured sensor (#28) the host passes the old owner's secured mark in the
+  flags byte (`OWS_NV_SENSOR_SECURE`, read with `GET_SENSOR [0x04, index, 1]`, whose reply then ends in the flags), so
+  the new owner refuses unsealed reports under its name from the start.
 
 Drop first, then add, so that two gateways never own it at once. The sensor notices nothing: same coordinator, same
 address.
+
+### Secured sensors (#28, [security.md](security.md))
+
+Every gateway gets the one network key `K_net` from the host, so any of them can check a sensor's hello. Sessions are
+per gateway: after a handover the new owner has none with the sensor, does not ACK its next sealed report and asks
+for a new session (`SL_RESYNC`); the sensor says hello, gets a session and sends the report again (one extra round
+trip, nothing lost; `test_roam.c` `test_secured`). The other gateways cannot open a sealed report (no session with
+that sensor), so they pass it on whole as `OWS_SUB_OVERHEARD_SEALED` (`0x53F1` sub-ID `0x21`, gateway → host):
+`[0x21, short_le16, RSSI as -dBm, the SL_FRAME 4F 04 len ctr ct tag]`, sent once like `OWS_SUB_OVERHEARD`, deduplicated
+with `GW_FLAG_DEDUP`. The host needs only the RSSI from it for handover decisions; a host that learns the session's
+nonces could also open it (not done: the owner would have to tell it, a later step). Hellos and session frames are
+the owner's business and are not passed on.
+
+The host's rule (wyzesense2mqtt-rs, #96): for a sensor it knows is secured, it takes only the RSSI from
+`OWS_SUB_OVERHEARD`, never the content: a non-owner does not hold the sensor in its table, cannot know it is secured,
+and passes on an unsealed (forged) report under its name.
 
 New sensors: only one gateway pairs at a time, and each hands out addresses from its own range, so two gateways never
 give the same address to two sensors. The host sets the range right before it turns pairing on at a gateway:

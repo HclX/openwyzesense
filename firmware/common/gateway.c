@@ -1262,6 +1262,23 @@ static void overheard(gateway_t *gw, uint16_t src, const uint8_t *pt, size_t n, 
     static const uint8_t zero[8];
     uint8_t buf[OWS_MAX_PAYLOAD], pkt[HOST_MAX_PACKET];
     size_t len;
+    if (n >= SL_FRAME_HDR && pt[0] == APP_OURS && pt[1] == SL_FRAME) {
+        // a secured sensor's report: sealed under its session with its owner, so passed on whole, for the signal
+        // strength (and for a host that knows the session key). Hellos and the rest are the owner's business.
+        len = SL_OVERHEAD + (size_t)pt[2];
+        if (len > n || 4 + len > sizeof buf || ((gw->flags & GW_FLAG_DEDUP) && seen_lately(gw, src, pt, len))) {
+            return;
+        }
+        buf[0] = OWS_SUB_OVERHEARD_SEALED;
+        put_le16(buf + 1, src);
+        buf[3] = (uint8_t)-rssi;
+        memcpy(buf + 4, pt, len);
+        len = host_build(pkt, HOST_OWS_RSP, buf, 4 + len, true);
+        if (len) {
+            gw->io.host(gw->io.ctx, pkt, len);
+        }
+        return;
+    }
     if (pt[0] != APP_STATUS && pt[0] != APP_EVENT && pt[0] != APP_CLIMATE && pt[0] != APP_MOTION_SUMMARY) {
         return;
     }
@@ -1616,7 +1633,7 @@ static void nv_import_command(gateway_t *gw, const uint8_t *payload, size_t len)
     }
     if (op == OWS_NV_ADD_SENSOR) {
         uint8_t mac[8];
-        if ((len != 12 && len != 14) || !normalize_mac(payload + 1, mac)) {
+        if (len < 12 || len > 15 || !normalize_mac(payload + 1, mac)) {
             out[1] = GW_CCFG_REFUSED;
             out[2] = (uint8_t)gw->n_sensors;
             ows_send(gw, OWS_SUB_NV_IMPORT, out, 3);
@@ -1624,7 +1641,8 @@ static void nv_import_command(gateway_t *gw, const uint8_t *payload, size_t len)
         }
         uint16_t addr = (uint16_t)(payload[9] | payload[10] << 8);
         uint8_t type = payload[11];
-        bool have_sub = len == 14;
+        bool have_sub = len == 14 || len == 15;
+        bool have_flags = len == 13 || len == 15;  // the secured mark carried over in a handover (#28)
         uint16_t sub = have_sub ? (uint16_t)(payload[12] | payload[13] << 8) : 0;
         if (addr == 0x0000 || addr >= 0xFFFE || addr == gw->short_addr) {
             out[1] = GW_CCFG_REFUSED;
@@ -1667,6 +1685,9 @@ static void nv_import_command(gateway_t *gw, const uint8_t *payload, size_t len)
             s->nv_sub = sub;
         }
         s->short_addr = addr;
+        if (have_flags) {
+            s->secure = (payload[len - 1] & OWS_NV_SENSOR_SECURE) != 0;
+        }
         bool ok = nv_save_sensor(gw, s) && (!added || nv_save_count(gw));
         sort_sensors(gw);
         if (type) {
@@ -1680,7 +1701,7 @@ static void nv_import_command(gateway_t *gw, const uint8_t *payload, size_t len)
         return;
     }
     if (op == OWS_NV_GET_SENSOR) {
-        if (len != 2 || payload[1] >= gw->n_sensors) {
+        if ((len != 2 && len != 3) || payload[1] >= gw->n_sensors) {
             out[1] = GW_CCFG_REFUSED;
             out[2] = (uint8_t)gw->n_sensors;
             out[3] = len >= 2 ? payload[1] : 0;
@@ -1699,7 +1720,8 @@ static void nv_import_command(gateway_t *gw, const uint8_t *payload, size_t len)
         out[14] = (uint8_t)s->short_addr;
         out[15] = (uint8_t)(s->short_addr >> 8);
         out[16] = t >= 0 ? (uint8_t)t : 0;
-        ows_send(gw, OWS_SUB_NV_IMPORT, out, 17);
+        out[17] = s->secure ? OWS_NV_SENSOR_SECURE : 0;  // only when asked: older hosts expect 17 bytes
+        ows_send(gw, OWS_SUB_NV_IMPORT, out, len == 3 ? 18 : 17);
         return;
     }
     out[1] = GW_CCFG_REFUSED;

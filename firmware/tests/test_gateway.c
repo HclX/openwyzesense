@@ -1031,6 +1031,28 @@ static void test_network_and_nv_import(void)
           h.payload[4] == 1 && h.payload[5] == 5 && !memcmp(h.payload + 7, "77ABCDEF", 8) && h.payload[15] == 0x05 &&
           h.payload[17] == SENSOR_CONTACT_V2);
 
+    // The secured mark (#28): ADD_SENSOR's optional flags byte (after the sub-ID, or alone) sets it, GET_SENSOR
+    // [.., 1] reports it; without the flags byte an existing entry keeps its mark
+    uint8_t add5f[16];
+    memcpy(add5f, add5, sizeof add5);
+    add5f[15] = OWS_NV_SENSOR_SECURE;
+    call_ows(&gw, add5f, sizeof add5f, &h);
+    CHECK(h.len == 4 && h.payload[2] == 0x00 && gw.sensors[1].secure);
+    call_ows(&gw, add5, sizeof add5, &h);
+    CHECK(h.payload[2] == 0x00 && gw.sensors[1].secure && gw.sensors[1].nv_sub == 5);
+    uint8_t get1f[4] = {OWS_SUB_NV_IMPORT, OWS_NV_GET_SENSOR, 1, 1};
+    call_ows(&gw, get1f, sizeof get1f, &h);
+    CHECK(h.len == 19 && h.payload[17] == SENSOR_CONTACT_V2 && h.payload[18] == OWS_NV_SENSOR_SECURE);
+    uint8_t add2f[14];
+    memcpy(add2f, add2, 12);
+    add2f[12] = SENSOR_MOTION_V1;
+    add2f[13] = OWS_NV_SENSOR_SECURE;
+    call_ows(&gw, add2f, 14, &h);  // 13 bytes after the sub-command: mac, short, type, flags
+    CHECK(h.payload[2] == 0x00 && gw.sensors[0].secure && gw.sensors[0].nv_sub == 2);
+    add2f[13] = 0;
+    call_ows(&gw, add2f, 14, &h);
+    CHECK(h.payload[2] == 0x00 && !gw.sensors[0].secure);
+
     // Reload from Page 30 OWNV into a fresh gateway_t: network + sorted sensor table survive intact.
     gateway_t reloaded;
     nvstore_t nv2 = {page, mem_nv_prog, mem_nv_erase, page, 0};
@@ -1040,6 +1062,7 @@ static void test_network_and_nv_import(void)
     CHECK(reloaded.pan == 0x4242 && reloaded.short_addr == 0x0010 && reloaded.ext == 0x0012FFEEDDCCBBAAull);
     CHECK(reloaded.n_sensors == 2 && !memcmp(reloaded.sensors[0].mac, "77123456", 8) &&
           !memcmp(reloaded.sensors[1].mac, "77ABCDEF", 8));
+    CHECK(!reloaded.sensors[0].secure && reloaded.sensors[1].secure);
 }
 
 static void put_be64_test(uint8_t *p, uint64_t v)

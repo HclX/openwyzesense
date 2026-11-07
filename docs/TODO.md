@@ -16,8 +16,11 @@ On 2026-11-03 (#67) this file took over what was open in `tasks.md` (the TASK-01
 - **Battery** (`TASK-25`, [low-battery.md](design/low-battery.md), #40): reports under load and the low-battery flag
   are done (archive #75). Left: a run on the battery rig with a simulated weak cell, the `< 2.50 V` guard on `OWNV`
   writes, an RF-silent `load <ms>` console command, and a battery-life estimate per sensor (#40).
-- **Radio link security** (#28, [security.md](design/security.md)): the design proposal is up for discussion, with
-  alternatives per decision area and questions for the user; nothing to build until they are answered.
+- **Radio link security** (#28, [security.md](design/security.md)): prototype on PR #78, verified on the LaunchPad
+  and the spare dongle (§7). Left: roaming with two of our gateways on the air (the LaunchPad as a second gateway);
+  wyzesense2mqtt-rs pushing `K_net`, carrying the secured mark in handovers and taking only the RSSI from
+  `OWS_SUB_OVERHEARD` for secured sensors ([roaming.md](design/roaming.md)); the ESP relay's `gwnv.c` carrying
+  `secure` in `nv.json` (`GET_SENSOR [.., 1]`, `ADD_SENSOR` flags); a plain B0 still accepted by a secured sensor.
 - **For discussion with the user, nothing to build yet**: #63 (a sensor's LED on trigger), #64 (recovering a dongle
   left in update mode, see `TASK-20` below).
 - **`ows-flash` on the bench**: `ows-flash ota` (LaunchPad sensor through the spare dongle) and `ows-flash v1

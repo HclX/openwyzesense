@@ -8,6 +8,7 @@
 #include "gateway.h"
 #include "host_proto.h"
 #include "mac154.h"
+#include "seclink.h"
 #include "sensor.h"
 #include "wyze_app.h"
 
@@ -43,11 +44,14 @@ static size_t n_air;
 static struct {
     bool hears[N_SN];  // in range of sensor i (both ways)
     int8_t rssi[N_SN];
-    int acks, beacons, other_tx;     // what it sent on the air
-    int alarms[256];                 // 0x5319 by message type
-    int overheard[256];              // OWS_SUB_OVERHEARD by message type
-    uint16_t overheard_short;        // the last one's
-    uint8_t overheard_rssi;          // ... and its RSSI byte
+    int acks, beacons, other_tx;  // what it sent on the air
+    int alarms[256];              // 0x5319 by message type
+    int overheard[256];           // OWS_SUB_OVERHEARD by message type
+    uint16_t overheard_short;     // the last one's
+    uint8_t overheard_rssi;       // ... and its RSSI byte
+    int sealed;                   // OWS_SUB_OVERHEARD_SEALED
+    uint16_t sealed_short;
+    uint8_t sealed_rssi, sealed_len;
     uint8_t last_rsp[64], last_len;  // the last 0x53F1 that was not OVERHEARD
 } st[N_GW];
 
@@ -130,6 +134,13 @@ static void host_reply(int g, const host_pkt_t *h)
         st[g].overheard[h->payload[3 + 8]]++;
         st[g].overheard_short = (uint16_t)(h->payload[1] | h->payload[2] << 8);
         st[g].overheard_rssi = h->payload[h->len - 1];
+    } else if (h->cmd == HOST_OWS_RSP && h->len >= 4 + SL_OVERHEAD && h->payload[0] == OWS_SUB_OVERHEARD_SEALED) {
+        st[g].sealed++;
+        st[g].sealed_short = (uint16_t)(h->payload[1] | h->payload[2] << 8);
+        st[g].sealed_rssi = h->payload[3];
+        st[g].sealed_len = (uint8_t)h->len;
+        CHECK(h->payload[4] == APP_OURS && h->payload[5] == SL_FRAME &&
+              h->len == 4 + SL_OVERHEAD + (size_t)h->payload[6]);
     } else if (h->cmd == HOST_OWS_RSP && h->len <= sizeof st[g].last_rsp) {
         memcpy(st[g].last_rsp, h->payload, h->len);
         st[g].last_len = (uint8_t)h->len;
@@ -165,6 +176,16 @@ static void add_sensor(int g, const char *mac, uint16_t addr)
     uint8_t b[12] = {OWS_NV_ADD_SENSOR};
     memcpy(b + 1, mac, 8);
     b[9] = (uint8_t)addr, b[10] = (uint8_t)(addr >> 8);
+    ows(g, OWS_SUB_NV_IMPORT, b, sizeof b);
+}
+
+// ADD_SENSOR with its flags byte (no sub-ID), as a host does in a handover
+static void add_sensor_flags(int g, const char *mac, uint16_t addr, uint8_t flags)
+{
+    uint8_t b[13] = {OWS_NV_ADD_SENSOR};
+    memcpy(b + 1, mac, 8);
+    b[9] = (uint8_t)addr, b[10] = (uint8_t)(addr >> 8);
+    b[12] = flags;
     ows(g, OWS_SUB_NV_IMPORT, b, sizeof b);
 }
 
@@ -417,6 +438,46 @@ static void test_addr_range_command(void)
     CHECK(sns[1].state == SENSOR_JOINED && sns[1].short_addr == 0x0010);
 }
 
+// A secured sensor (#28) under roaming: every gateway has the network key; the others pass its sealed reports on
+// whole (signal strength for the host); after a handover with the secured mark carried over, the new owner, which
+// has no session with it, gets a hello first and then the report, and nothing is lost
+static void test_secured(void)
+{
+    static const uint8_t net_key[16] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+    uint32_t now;
+    world(2, GW_FLAG_ROAM, &now);
+    for (int g = 0; g < 2; g++) {
+        ows(g, OWS_SUB_NET_KEY, net_key, 16);
+        CHECK(st[g].last_len == 2 && st[g].last_rsp[1] == 1);
+    }
+    add_sensor_flags(0, MACS[0], 0x0003, OWS_NV_SENSOR_SECURE);
+    CHECK(gws[0].n_sensors == 1 && gws[0].sensors[0].secure);
+    sns[0].gw_ours = true;  // as after pairing with an A6 saying "ours, secured" and the key that followed
+    sns[0].gw_features = A6_OURS_SECURE;
+    sl_sensor_key(net_key, (const uint8_t *)MACS[0], sns[0].sl.key);
+    sns[0].sl.have_key = true;
+
+    sensor_event(&sns[0], true, now);
+    run(&now, 5000);
+    CHECK(sns[0].sl.session && total(0, APP_EVENT) == 1 && collisions == 0);
+    CHECK(st[1].acks == 0 && st[1].other_tx == 0 && total(1, APP_EVENT) == 0 && st[1].overheard[APP_EVENT] == 0);
+    CHECK(st[1].sealed == 1 && st[1].sealed_short == 0x0003 && st[1].sealed_rssi == 60);  // the event, not the hello
+    CHECK(st[0].sealed == 0);
+
+    // the host reads the mark at the old owner (GET_SENSOR with flags) and carries it over
+    const uint8_t get[3] = {OWS_NV_GET_SENSOR, 0, 1};
+    ows(0, OWS_SUB_NV_IMPORT, get, 3);
+    CHECK(st[0].last_len == 19 && st[0].last_rsp[18] == OWS_NV_SENSOR_SECURE);
+    drop_sensor(0, MACS[0]);
+    add_sensor_flags(1, MACS[0], 0x0003, OWS_NV_SENSOR_SECURE);
+    CHECK(gws[1].n_sensors == 1 && gws[1].sensors[0].secure);
+
+    sensor_event(&sns[0], false, now);
+    run(&now, 10000);
+    CHECK(total(1, APP_EVENT) == 1 && sns[0].sl.session && sns[0].n_queued == 0 && collisions == 0);
+    CHECK(st[0].sealed >= 1 && total(0, APP_EVENT) == 1);  // gateway 0 now only overhears it
+}
+
 int main(void)
 {
     test_flag_supported();
@@ -427,6 +488,7 @@ int main(void)
     test_unowned();
     test_pairing_with_ranges();
     test_addr_range_command();
+    test_secured();
     printf("%d checks, %d failed\n", checks, failures);
     return failures != 0;
 }

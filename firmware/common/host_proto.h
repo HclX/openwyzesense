@@ -58,15 +58,20 @@ enum {
     OWS_SUB_OTA_DATA = 0x12,    // host -> gw: [0x12, off_be32(4), data(<=32)] (<= 37 B, ACK only)
     OWS_SUB_OTA_DONE = 0x13,    // gw -> host: [0x13, mac(8), status(1), version_be32(4)] (14 B)
     OWS_SUB_OVERHEARD = 0x20,   // gw -> host (GW_FLAG_ROAM): [0x20, short_le16, <0x5319 payload>], not resent
-    OWS_SUB_ADDR_RANGE = 0x23,  // [] or [first_le16, last_le16] -> [0x23, status, first_le16, last_le16]
+    OWS_SUB_OVERHEARD_SEALED = 0x21,  // gw -> host (GW_FLAG_ROAM): [0x21, short_le16, -rssi(1), SL_FRAME], not resent
+    OWS_SUB_ADDR_RANGE = 0x23,        // [] or [first_le16, last_le16] -> [0x23, status, first_le16, last_le16]
 };
 
 enum {
-    OWS_NV_CLEAR = 0x01,       // [0x01] -> [0x06, 0x01, status]
-    OWS_NV_SET_NET = 0x02,     // [0x02, pan_le16(2), short_le16(2), ext_le64(8)] -> [0x06, 0x02, status]
-    OWS_NV_ADD_SENSOR = 0x03,  // [0x03, mac(8), short_le16(2), type(1)[, sub_le16(2)]] -> [0x06, 0x03, status, count]
-    OWS_NV_GET_SENSOR = 0x04,  // [0x04, index(1)] -> [0x06, 0x04, status, count, index, sub_le16, mac(8), short, type]
+    OWS_NV_CLEAR = 0x01,    // [0x01] -> [0x06, 0x01, status]
+    OWS_NV_SET_NET = 0x02,  // [0x02, pan_le16(2), short_le16(2), ext_le64(8)] -> [0x06, 0x02, status]
+    OWS_NV_ADD_SENSOR =
+        0x03,  // [0x03, mac(8), short_le16(2), type(1)[, sub_le16(2)][, flags(1)]] -> [0x06, 0x03, status, count]
+    OWS_NV_GET_SENSOR =
+        0x04,  // [0x04, index(1)[, 1]] -> [0x06, 0x04, status, count, index, sub_le16, mac(8), short, type[, flags]]
 };
+
+enum { OWS_NV_SENSOR_SECURE = 0x01 };  // ADD_SENSOR / GET_SENSOR flags: the sensor's link is secured (#28)
 
 #define OWS_MAX_PAYLOAD       56  // CH554 single-report USB-HID limit: 63 protocol bytes - 7 framing bytes
 #define OWS_BUILD_INFO_P0_LEN 53  // [0x02, header(8), id(8), product(24), app(12)]

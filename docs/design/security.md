@@ -284,7 +284,11 @@ Built on the host board and tested end to end (`test_secure_link` in `firmware/t
   sealed block fits one frame (a 9 KB update: 48 s instead of ~43 s in the simulation).
 - **Host library:** `HostLink.net_key` (`tools/host_link.py`) and `host::Link::net_key` (`crates/ows-host`) query or
   push `K_net` over `OWS_SUB_NET_KEY`.
-- **Not yet:** a plain B0 still accepted by a secured sensor; wyzesense2mqtt-rs pushing `K_net` at every start; the ESP relay keeping `K_net`.
+- **Roaming** ([roaming.md](roaming.md)): any gateway checks a hello (one `K_net`); after a handover the new owner
+  renews the session by the resync path; the others pass sealed reports on whole (`OWS_SUB_OVERHEARD_SEALED`) for the
+  RSSI; a handover carries the secured mark (`ADD_SENSOR`'s flags byte). Host-board tested (`test_roam.c`), not yet on
+  two gateways on the air.
+- **Not yet:** a plain B0 still accepted by a secured sensor; wyzesense2mqtt-rs pushing `K_net` at every start; the ESP relay keeping `K_net`. The host's overheard rule and the handover's flags (wyzesense2mqtt-rs); the ESP relay's `nv.json` (`gwnv.c`) carrying `secure`.
 
 ## 8. Questions for the user
 
