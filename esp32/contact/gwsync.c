@@ -293,9 +293,11 @@ static bool flash(const gwsync_io_t *io, uint32_t len, sbl_t *sbl, uint8_t *page
     return sbl_stream_end(sbl);
 }
 
+static gwsync_result_t check_new(const gwsync_io_t *io, gwsync_report_t *r, const char *want);
+
 gwsync_result_t gwsync_run(const gwsync_io_t *io, uint32_t image_len, sbl_t *sbl, uint8_t *page, gwsync_report_t *r)
 {
-    char want[17], have[17];
+    char want[17];
     memset(r, 0, sizeof *r);
     size_t head = image_len < SEARCH ? image_len : SEARCH;
     if (!image_len || image_len % 4 || image_len > SBL_APP_END || !io->image(io->ctx, 0, page, head) ||
@@ -326,6 +328,31 @@ gwsync_result_t gwsync_run(const gwsync_io_t *io, uint32_t image_len, sbl_t *sbl
             snprintf(r->msg, sizeof r->msg, "runs the carried gateway %s (%s)", r->carried.version, want);
         }
         return done(io, r, GWSYNC_SAME, false);
+    }
+
+    // the debug port first (#81): it does not depend on the contact's firmware or on a bootloader backdoor
+    if (io->transport != GWSYNC_VIA_SBL && io->cjtag_flash) {
+        char err[96] = "";
+        step(io, "%s: through its debug port (cJTAG)", r->answered ? "another gateway" : "no answer");
+        int written = io->cjtag_flash(io->ctx, image_len, r->mac, err, sizeof err);
+        if (written == 0) {
+            r->via_cjtag = true;
+            snprintf(r->msg, sizeof r->msg, "the carried gateway %s (%s) is there (cJTAG), but it did not answer",
+                     r->carried.version, want);
+            return done(io, r, GWSYNC_SAME, false);
+        }
+        if (written > 0) {
+            r->via_cjtag = true;
+            return check_new(io, r, want);
+        }
+        step(io, "debug port: %s", err);
+        if (io->transport == GWSYNC_VIA_CJTAG) {
+            snprintf(r->msg, sizeof r->msg, "not flashed through the debug port: %s", err);
+            return done(io, r, GWSYNC_FAILED, false);
+        }
+    } else if (io->transport == GWSYNC_VIA_CJTAG) {
+        snprintf(r->msg, sizeof r->msg, "transport cjtag, but no debug port is wired");
+        return done(io, r, GWSYNC_REFUSED, false);
     }
 
     sbl_io_t sio = {io->write, io->read, io->flush_input, io->ctx};
@@ -368,6 +395,13 @@ gwsync_result_t gwsync_run(const gwsync_io_t *io, uint32_t image_len, sbl_t *sbl
         return done(io, r, GWSYNC_FAILED, true);
     }
     io->reset(io->ctx);
+    return check_new(io, r, want);
+}
+
+// After a reflash (and a reset into it): the new gateway must answer with the carried image's ID
+static gwsync_result_t check_new(const gwsync_io_t *io, gwsync_report_t *r, const char *want)
+{
+    char have[17];
     io->sleep_ms(io->ctx, BOOT_MS);
     step(io, "written: asking the new gateway");
     uint32_t junk = 0;
@@ -382,7 +416,8 @@ gwsync_result_t gwsync_run(const gwsync_io_t *io, uint32_t image_len, sbl_t *sbl
     }
     memcpy(r->running.board, r->carried.board, sizeof r->running.board);
     memcpy(r->running.version, r->carried.version, sizeof r->running.version);
-    snprintf(r->msg, sizeof r->msg, "updated to the carried gateway %s (%s)", r->carried.version, want);
+    snprintf(r->msg, sizeof r->msg, "updated to the carried gateway %s (%s)%s", r->carried.version, want,
+             r->via_cjtag ? " through the debug port" : "");
     return done(io, r, GWSYNC_UPDATED, false);
 }
 

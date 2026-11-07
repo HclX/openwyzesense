@@ -268,7 +268,8 @@ static void test_gwsync_probe_safe_mode(void)
 
     uint8_t scratch[SBL_PAGE];
     gwsync_report_t rep;
-    gwsync_io_t io = {esp_write, esp_read, esp_flush, probe_reset, probe_bl, probe_sleep, probe_img, NULL, &p};
+    gwsync_io_t io = {esp_write, esp_read, esp_flush, probe_reset, probe_bl,       probe_sleep,
+                      probe_img, NULL,     &p,        NULL,        GWSYNC_VIA_AUTO};
     CHECK(gwsync_probe(&io, sizeof p.img, scratch, &rep) == GWSYNC_SAME);
     CHECK(p.resets == 1 && p.bootloaders == 0);
     CHECK(rep.answered && !strcmp(rep.running.version, "custom-dev") && !strcmp(rep.carried.version, "bundled-v1"));
@@ -301,7 +302,8 @@ static void test_gwsync_same_code_reports_its_own_version(void)
     uint8_t scratch[SBL_PAGE];
     sbl_t sbl;
     gwsync_report_t rep;
-    gwsync_io_t io = {esp_write, esp_read, esp_flush, probe_reset, probe_bl, probe_sleep, probe_img, NULL, &p};
+    gwsync_io_t io = {esp_write, esp_read, esp_flush, probe_reset, probe_bl,       probe_sleep,
+                      probe_img, NULL,     &p,        NULL,        GWSYNC_VIA_AUTO};
     CHECK(gwsync_run(&io, sizeof p.img, &sbl, scratch, &rep) == GWSYNC_SAME);
     CHECK(p.bootloaders == 0);  // nothing flashed
     CHECK(!strcmp(rep.running.version, "40f8584-dirty") && !strcmp(rep.carried.version, "v0.2.0"));

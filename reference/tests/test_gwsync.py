@@ -61,6 +61,7 @@ class FakeContact(FakeRom):
         super().__init__(fd, flash)
         self.ctl, self.hung, self.chatter, self.soft_sbl = ctl, hung, chatter, soft_sbl
         self.mode, self.pads, self.gwbuf = 'gw', [], b''
+        self.jtag_image = None  # what "J" (written through the debug port, #81) puts in pages 0-29
 
     def run(self):
         os.set_blocking(self.fd, False)
@@ -73,6 +74,8 @@ class FakeContact(FakeRom):
             if self.ctl in r:
                 for line in os.read(self.ctl, 64).decode().split():
                     self.pads.append(line)
+                    if line == 'J' and self.jtag_image is not None:  # the debug port writes, then resets into it
+                        self.flash[: len(self.jtag_image)] = self.jtag_image
                     self.mode = 'rom' if line == 'B' else 'gw'
                     self.synced, self.buf, self.gwbuf, self.await_ack = False, b'', b'', False
                     with contextlib.suppress(OSError):  # what was on the line before the reset is lost
@@ -260,6 +263,64 @@ def test_a_silent_gateway_with_the_image_is_not_written(contact, tmp_path):
     code, out = run(port, fifo, a, tmp_path)
     assert code == 0 and out['result'] == 'same' and 'CRC' in out['message']
     assert not c.writes
+
+
+# The debug port (cJTAG on M/C, #81): tried first; auto falls back to the bootloader; cjtag-only never does
+
+
+def test_another_image_is_replaced_through_the_debug_port(contact, tmp_path):
+    a, b = image(1), image(2)
+    flash = chip()
+    put(flash, b)
+    before = bytes(flash)
+    c, port, fifo = contact(flash)
+    c.jtag_image = a
+    code, out = run(port, fifo, a, tmp_path, extra=('--cjtag', 'ok'))
+    assert code == 0 and out['result'] == 'updated' and 'debug port' in out['message'], out
+    assert bytes(flash[: len(a)]) == a and bytes(flash[0x1E000:]) == before[0x1E000:]
+    assert c.pads == ['R', 'J'] and not c.writes  # never in the bootloader
+
+
+def test_a_silent_gateway_with_the_image_through_the_debug_port(contact, tmp_path):
+    a = image(1)
+    flash = chip()
+    put(flash, a)
+    c, port, fifo = contact(flash, hung=True)
+    code, out = run(port, fifo, a, tmp_path, extra=('--cjtag', 'same'))
+    assert code == 0 and out['result'] == 'same' and 'cJTAG' in out['message'], out
+    assert c.pads == ['R'] and not c.writes
+
+
+def test_auto_falls_back_to_the_bootloader(contact, tmp_path):
+    a, b = image(1), image(2)
+    flash = chip()
+    put(flash, b)
+    c, port, fifo = contact(flash)
+    code, out = run(port, fifo, a, tmp_path, extra=('--cjtag', 'fail'))
+    assert code == 0 and out['result'] == 'updated' and 'debug port' not in out['message'], out
+    assert bytes(flash[: len(a)]) == a and c.pads == ['R', 'B', 'R']
+
+
+def test_cjtag_only_never_uses_the_bootloader(contact, tmp_path):
+    a, b = image(1), image(2)
+    flash = chip()
+    put(flash, b)
+    before = bytes(flash)
+    c, port, fifo = contact(flash)
+    code, out = run(port, fifo, a, tmp_path, extra=('--cjtag', 'fail', '--transport', 'cjtag'))
+    assert code == 1 and out['result'] == 'failed' and 'debug port' in out['message'], out
+    assert bytes(flash) == before and c.pads == ['R'] and not c.writes
+
+
+def test_sbl_only_ignores_the_debug_port(contact, tmp_path):
+    a, b = image(1), image(2)
+    flash = chip()
+    put(flash, b)
+    c, port, fifo = contact(flash)
+    c.jtag_image = image(3)  # would be wrong: must not be used
+    code, out = run(port, fifo, a, tmp_path, extra=('--cjtag', 'ok', '--transport', 'sbl'))
+    assert code == 0 and out['result'] == 'updated', out
+    assert bytes(flash[: len(a)]) == a and 'J' not in c.pads
 
 
 def test_a_chattering_line_does_not_hang_it(contact, tmp_path):

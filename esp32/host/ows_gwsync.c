@@ -1,8 +1,10 @@
 // ows-gwsync: the relays' start-up gateway check and update (esp32/contact/gwsync.c, #76) on a PC, against a
 // simulated contact board (reference/tests/test_gwsync.py: a gateway that answers or not, and the ROM bootloader).
 //   ows-gwsync --port PORT --ctl FIFO IMAGE.bin
-// The S and W pads are lines written to FIFO: "R" a reset into the firmware, "B" a reset into the bootloader. Prints
-// the result and the report; exit 0 for same or updated.
+// The S and W pads are lines written to FIFO: "R" a reset into the firmware, "B" a reset into the bootloader, "J" the
+// carried image written through the debug port (--cjtag ok). Prints the result and the report; exit 0 for same or
+// updated. --cjtag ok|same|fail simulates a debug port (#81): written, already equal, or not reachable;
+// --transport auto|cjtag|sbl picks how gwsync reflashes.
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
@@ -90,6 +92,23 @@ static void enter_bootloader(void *ctx)
     pad("B\n");
 }
 
+static const char *cjtag_mode;  // NULL: no debug port
+
+static int cjtag_flash(void *ctx, uint32_t len, char *mac, char *err, size_t cap)
+{
+    (void)ctx;
+    if (!strcmp(cjtag_mode, "fail")) {
+        snprintf(err, cap, "no CC1310 ICEPick-C IDCODE on probe pins");
+        return -1;
+    }
+    snprintf(mac, 9, "777B42DF");
+    if (!strcmp(cjtag_mode, "same")) {
+        return 0;
+    }
+    pad("J\n");  // the simulation writes the carried image, as the debug port would, and resets into it
+    return (int)((len + SBL_PAGE - 1) / SBL_PAGE);
+}
+
 static void progress(void *ctx, const char *s)
 {
     (void)ctx;
@@ -111,6 +130,7 @@ int main(int argc, char **argv)
 {
     const char *port = NULL, *ctl_path = NULL, *path = NULL;
     bool skip = false, query = false;
+    uint8_t transport = GWSYNC_VIA_AUTO;
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--port") && i + 1 < argc) {
             port = argv[++i];
@@ -120,6 +140,11 @@ int main(int argc, char **argv)
             skip = true;
         } else if (!strcmp(argv[i], "--query")) {
             query = true;
+        } else if (!strcmp(argv[i], "--cjtag") && i + 1 < argc) {
+            cjtag_mode = argv[++i];
+        } else if (!strcmp(argv[i], "--transport") && i + 1 < argc) {
+            const char *t = argv[++i];
+            transport = !strcmp(t, "cjtag") ? GWSYNC_VIA_CJTAG : !strcmp(t, "sbl") ? GWSYNC_VIA_SBL : GWSYNC_VIA_AUTO;
         } else {
             path = argv[i];
         }
@@ -157,7 +182,9 @@ int main(int argc, char **argv)
     cfsetospeed(&t, B115200);
     tcsetattr(fd, TCSANOW, &t);
 
-    gwsync_io_t io = {u_write, u_read, u_flush, reset, enter_bootloader, sleep_ms, read_image, progress, NULL};
+    gwsync_io_t io = {u_write,  u_read,     u_flush,  reset, enter_bootloader,
+                      sleep_ms, read_image, progress, NULL,  cjtag_mode ? cjtag_flash : NULL,
+                      transport};
     if (query) {
         build_info_t info;
         if (!gwsync_query(&io, &info)) {
