@@ -43,7 +43,8 @@ the evidence.
   2026-11-07): touch seen on the soldered 777B42DF, one round, then waiting for a lift (its backdoor is W, not on the
   probes). The leak sensor 77C685AE was dumped this way by the user (2026-11-07, `backups/`), so touch, lift and the
   DIO1 backdoor work on a real sensor. Since: the station on four wires (two probes on GPIO17/18 for every mode) and the
-  experimental W/S check: check its answer on sensors whose pads are known (the climate sensor, a v1 contact); cJTAG
+  W/S check (probe 1 on T or R as the witness, probe 2's pad held low across a power-up: S keeps the chip in reset):
+  check its answer on sensors whose pads are known (the climate sensor, a v1 contact); cJTAG
   on the two probes; a slip during an SBL dump.
   Left: a sensor that is not a v1 contact (the leak sensor), the user guide's level 4 and its wiring SVGs (`tools/wiring_svg.py`) on the new wiring; the
   ESP32-S3 (GPIO7, 15/16); a stock-backdoor unit (`R`) on the bootloader path; transmit bursts on GPIO power.

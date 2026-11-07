@@ -21,7 +21,7 @@ typedef enum {
     CJTAG_TRANSPORT_SBL = 1,
     CJTAG_TRANSPORT_AUTO = 2,
     CJTAG_TRANSPORT_SBL2 = 3,  // SBL with two hand-held probes on the sensor's TX/RX (R, T wires), + and - clipped
-    CJTAG_TRANSPORT_WS = 4,    // experimental: which of two pads is W and which S (after T/R), by how each one pulls
+    CJTAG_TRANSPORT_WS = 4,    // after T/R: probe 1 on T (or R), probe 2 on a pad: is that pad S (reset) or W
 } cjtag_transport_t;
 
 void cjtag_task_start(void);

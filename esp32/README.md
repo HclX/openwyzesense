@@ -65,9 +65,10 @@ set on the Probe tab), used for every mode:
   driven low: low on a pad, high in the air), holds the candidate RX (the stock backdoor, DIO1) or the other pad low
   across a power-up, and listens for the bootloader; after a try that found nothing, it waits for the probes to be
   lifted.
-- **W/S, experimental** (after T/R): the probes on the two other pads; 5 ms after a power-up each pad is read with the
-  ESP's pull-down and pull-up, twice: the reset pin's pull-up (`S`) against a floating DIO (`W`), or "can't tell". It
-  keeps the T/R identification.
+- **W/S** (after T/R): probe 1 on `T` (or `R`), probe 2 on one of the two other pads. The sensor is powered up with
+  that pad released, then held low, twice each: if holding it kept probe 1's pad dead (the chip held in reset), it is
+  `S`, otherwise `W`. Needs a firmware that drives `T` (or pulls `R` up) while it runs, else "can't tell". It keeps the
+  T/R identification.
 
 Probe tab, two steps: **Identify** with one of those modes (the pins found and confirmed, the sensor let go; nothing
 read but what identifies it, nothing written), then **Dump** or **Flash**, on the identified pins only (refused

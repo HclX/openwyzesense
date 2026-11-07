@@ -944,69 +944,76 @@ static void run_sbl_session(const sblprobe_result_t *map)
     ESP_LOGI(TAG, "%s", status_msg);
 }
 
-// How a pad pulls right after a power-up: 0 floating (follows the ESP's pull), 1 pulled high, 2 pulled low, 3 odd
-static int pad_pull(int gpio)
+// Whether the running sensor drives (or pulls up) the pad under a probe: high against the ESP's pull-down at some
+// point within a second (a UART's T idles high; a firmware may pull its R up).
+static bool witness_alive(int gpio)
 {
     gpio_num_t pin = (gpio_num_t)gpio;
     gpio_set_direction(pin, GPIO_MODE_INPUT);
     gpio_pullup_dis(pin);
     gpio_pulldown_en(pin);
-    esp_rom_delay_us(50);
-    int down = gpio_get_level(pin);
+    bool alive = false;
+    for (int i = 0; i < 50 && !alive; i++) {
+        vTaskDelay(pdMS_TO_TICKS(20));
+        alive = gpio_get_level(pin) != 0;
+    }
     gpio_pulldown_dis(pin);
-    gpio_pullup_en(pin);
-    esp_rom_delay_us(50);
-    int up = gpio_get_level(pin);
-    gpio_pullup_dis(pin);
-    return down && up ? 1 : !down && !up ? 2 : !down && up ? 0 : 3;
+    return alive;
 }
 
-// Experimental W/S check (the user, 2026-11-07: after T/R, which of the two other pads is W and which S, to mark them):
-// the probes on those two pads, the sensor powered up, and 5 ms later (the chip still in its ROM start, its I/O pins
-// untouched) each pad read once with the ESP's pull-down and once with its pull-up, twice. S (RESET_N) is pulled up
-// inside the chip and reads high both ways; an unused DIO (W) floats and follows the ESP's pull. Only one pulled high
-// and one floating, the same both times, is an answer; anything else is reported as seen. Weak: the reset pull-up is
-// about as strong as the ESP's pull-down, so it can read low; to be checked on sensors whose pads are known.
+// One power-up of the sensor (probe 2's pad held low across it, or released): is probe 1's pad alive?
+static bool ws_run(bool hold)
+{
+    release_sbl_pins(true);
+    vTaskDelay(pdMS_TO_TICKS(200));
+    if (hold) {
+        sbl_pin_low(NULL, 1);
+    }
+    sbl_power(NULL, true);
+    bool alive = witness_alive(cfg_sbl_pins[0]);
+    release_sbl_pins(true);  // released, then powered off
+    return alive;
+}
+
+// W/S check (the user, 2026-11-07: after T/R; probe 1 on a known pad, T preferably, probe 2 on the pad to test): a
+// power-up with probe 2 released, then one with its pad held low. Holding S (RESET_N) low keeps the chip in reset, so
+// probe 1's pad stays dead; holding W changes nothing (as the backdoor it would start the bootloader, which drives T as
+// well). Each twice, the same both times. Needs a firmware that drives (or pulls up) probe 1's pad while it runs.
 static void ws_check(const sblprobe_io_t *io)
 {
-    static const char *names[] = {"floating", "pulled high", "pulled low", "odd"};
     if (!touch_gate(io)) {
         if (!need_lift) {
-            note("Waiting: hold the two probes on the two pads that are not T/R (W and S)");
+            note("Waiting: probe 1 on T (or R), probe 2 on the pad to test");
         }
         return;
     }
-    int got[2][2];
-    for (int rep = 0; rep < 2; rep++) {
-        release_sbl_pins(true);
-        vTaskDelay(pdMS_TO_TICKS(200));
-        sbl_power(NULL, true);
-        vTaskDelay(pdMS_TO_TICKS(5));
-        got[rep][0] = pad_pull(cfg_sbl_pins[0]);
-        got[rep][1] = pad_pull(cfg_sbl_pins[1]);
-    }
-    release_sbl_pins(true);
+    bool free0 = ws_run(false), held0 = ws_run(true), free1 = ws_run(false), held1 = ws_run(true);
     xSemaphoreTake(lock, portMAX_DELAY);
     if (state == STATE_ARMED) {
-        bool same = got[0][0] == got[1][0] && got[0][1] == got[1][1];
-        int s_pad = -1;
-        if (same && got[0][0] == 1 && got[0][1] == 0) {
-            s_pad = 0;
-        } else if (same && got[0][0] == 0 && got[0][1] == 1) {
-            s_pad = 1;
-        }
-        if (s_pad >= 0) {
+        int p1 = cfg_sbl_pins[0], p2 = cfg_sbl_pins[1];
+        if (free0 != free1 || held0 != held1) {
             snprintf(status_msg, sizeof status_msg,
-                     "W/S (experimental): S = GPIO%d (pulled high: the reset pin's pull-up), W = GPIO%d (floating). "
-                     "The T/R identification is kept.",
-                     cfg_sbl_pins[s_pad], cfg_sbl_pins[1 - s_pad]);
+                     "W/S: not the same twice (released: %s/%s, held: %s/%s): hold the probes still and try again",
+                     free0 ? "alive" : "dead", free1 ? "alive" : "dead", held0 ? "alive" : "dead",
+                     held1 ? "alive" : "dead");
+        } else if (!free0) {
+            snprintf(
+                status_msg, sizeof status_msg,
+                "W/S: can't tell: the running sensor does not drive the pad under GPIO%d. Put probe 1 on the other "
+                "of T/R and try again.",
+                p1);
+        } else if (!held0) {
+            snprintf(
+                status_msg, sizeof status_msg,
+                "W/S: the pad under GPIO%d is S (held low, it kept the sensor in reset). The T/R identification is "
+                "kept.",
+                p2);
         } else {
             snprintf(
                 status_msg, sizeof status_msg,
-                "W/S (experimental): can't tell: GPIO%d %s/%s, GPIO%d %s/%s (two power-ups); the T/R identification "
-                "is kept.",
-                cfg_sbl_pins[0], names[got[0][0]], names[got[1][0]], cfg_sbl_pins[1], names[got[0][1]],
-                names[got[1][1]]);
+                "W/S: the pad under GPIO%d is W (holding it low changed nothing; not S). The T/R identification is "
+                "kept.",
+                p2);
         }
         done_seq++;
         state = STATE_DONE;

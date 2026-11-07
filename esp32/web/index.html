@@ -112,14 +112,18 @@ used. Page 31 (CCFG + factory MAC) is never erased or written.</p>
 </dl>
 <p class=hint>Four wires: the sensor's <b>+</b> and <b>−</b> on clips (its battery out), and two hand probes, used for
 every mode. cJTAG: the probes on <b>M</b> and <b>C</b>. Bootloader: on its <b>T</b> and <b>R</b> pads (found which is
-which). Then, experimental: on the other two pads, to tell <b>W</b> from <b>S</b>.</p>
+which). Then <b>W/S</b>: probe 1 on <b>T</b> (or <b>R</b>), probe 2 on one of the other two pads: the station
+powers the sensor up with that pad released and then held low; if holding it kept the sensor from starting, it is
+<b>S</b> (reset), otherwise <b>W</b>.</p>
 <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-top:10px">
 <div><label style="margin-top:0">Identify with</label><select id=cjtrans style="width:200px">
 <option value=cjtag>2 probes: cJTAG (M, C)</option>
 <option value=sbl2>2 probes: bootloader T/R</option>
-<option value=ws>2 probes: W/S (experimental, after T/R)</option></select></div>
-<div><label style="margin-top:0">Probe 1 colour (<span class=pinr>GPIO</span>)</label><input type=text id=wirer maxlength=15 placeholder="yellow" style="width:110px"></div>
-<div><label style="margin-top:0">Probe 2 colour (<span class=pint>GPIO</span>)</label><input type=text id=wiret maxlength=15 placeholder="green" style="width:110px"></div>
+<option value=ws>2 probes: W/S (probe 1 on T or R, probe 2 on the pad to test)</option></select></div>
+<div><label style="margin-top:0">Probe 1 colour (<span class=pinr>GPIO</span>)</label><input type=text id=wirer list=wirecolours maxlength=15 placeholder="yellow" style="width:110px"></div>
+<div><label style="margin-top:0">Probe 2 colour (<span class=pint>GPIO</span>)</label><input type=text id=wiret list=wirecolours maxlength=15 placeholder="green" style="width:110px"></div>
+<datalist id=wirecolours><option value=red><option value=black><option value=yellow><option value=green><option value=blue>
+<option value=white><option value=orange><option value=purple><option value=brown><option value=grey></datalist>
 <label class=check style="margin-top:0"><input type=checkbox id=cjsound checked>Audio cues (lock, page ticks, slip, done)</label>
 </div>
 <div class=btns style="margin-top:14px">
