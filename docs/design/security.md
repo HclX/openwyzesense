@@ -163,15 +163,11 @@ Either way:
 
 | D | **The host holds the keys and pushes them to the gateway's RAM** at every gateway start (the user's preference: no gateway flash writes for keys) | keys never in gateway flash; a stolen or replaced gateway holds nothing once unpowered; with 4.1 F, the host pushes a single 16-byte `K_net` | after a restart, the gateway cannot verify or answer secure sensors until its host has connected and pushed the key: a gateway without its host (a relay whose wyzesense2mqtt-rs is down) drops their frames meanwhile; RAM (below) |
 
-**RAM (D).** The gateway holds at most 64 sensors (`GW_MAX_SENSORS`). Its image already reserves 20,472 of the
-CC1310's 20,480 bytes; the largest item is a **6 KB stack** (`STACK_SIZE`), whose real use has not been measured. Needed:
-
-- with F: `K_net` (16 B), plus session state per sensor, re-deriving each session key per frame on the AES hardware:
-  gateway nonce + two counters, ~12–16 B, so **~1 KB** for 64 sensors;
-- with per-sensor keys (A, B, C): another 16 B each, **~1 KB** more.
-
-Both must come out of the stack reservation, after measuring its high-water mark (paint it, run the tests, read it
-back).
+**RAM (D).** The gateway holds at most 64 sensors (`GW_MAX_SENSORS`). (Correction: `arm-none-eabi-size` counts the
+fixed 6 KB stack block at the top of RAM as `.bss`, which made RAM look full. The linker map shows the gateway's data and
+`.bss` end at ~8.2 KB and the stack starts at 14 KB: **~6 KB free**; the sensor has ~8.6 KB free.) The prototype keeps
+16 sessions of 32 B (key, counters) and a `secure` flag per sensor: under 1 KB; 64 full sessions would be ~2 KB, which
+also fits.
 
 **Recommendation: D with 4.1 F** (the user's preference, and F makes the push one key). A remains the fallback if the
 gap after a gateway restart proves a problem. Either way, `nv.json` may carry keys in clear (decided).
@@ -250,7 +246,33 @@ Messages, all in our own range, only between our sensor and our gateway after an
 | Host | keeps `K_net` (and pushes it at every gateway start); `nv.json` may carry it in clear |
 | Unattended OTA of 100 sensors | each starts at its next check-in (≤ 4 h for v1 contacts); one at a time, ~2.5 min each, so ~4–5 h in all |
 
-## 7. Questions for the user
+## 7. Prototype (branch `issue-28-secure-link-prototype`, draft)
+
+Built on the host board and tested end to end (`test_secure_link` in `firmware/tests/test_apps.c`); not yet on hardware.
+
+- **Our messages share one first byte, `0x4F`, then a sub-ID** (the user's suggestion): no stock message uses `0x4F`.
+  Stock gateways send `0xC0`, `0xD0`, `0xD2`, `0xE0` and `0xE2` to sensors (FACTS.md §9, host commands 0x5370–0x5393),
+  so our OTA's `C0`–`C3` collided with one of them; OTA is now `4F 10`–`13` (no compatibility with earlier images
+  needed: the user reflashes them by JTAG). Sub-IDs: `01` key, `02` hello, `03` session, `04` sealed
+  frame, `05` new session (`firmware/common/seclink.h`).
+- **Crypto** (`firmware/common/seclink.c`): AES-CMAC and AES-CCM built on the platform's AES-ECB (the CC1310's
+  engine; `tests/aes_ref.c` on the host), checked against RFC 4493 and RFC 3610 vectors; `platform_random()` from the
+  CC1310's TRNG.
+- **Gateway:** the A6 mark on by default; `OWS_SUB_NET_KEY` (`0x53F0 0x07`) puts `K_net` in RAM; with it, A6 advertises
+  `A6_OURS_SECURE` and `4F 01` carries the sensor's key; sessions in RAM; a secured sensor's stock-format reports are
+  dropped; an SL_FRAME is ACKed only with the key **and** a session for that sensor, so a report is never lost to a
+  gateway that cannot open it.
+- **Sensor:** the key in NV item `0x22`; a hello after each start or a resync; reports sealed; nobody answering a hello
+  or a sealed report: reports kept, a hello at once, then after 60 s, 5 min, 15 min, then with each heartbeat.
+- **Flash cost:** ~2.6 KB on the gateway and on the sensor.
+- **OTA** moved to `4F 10`–`13`, sealed for a secured sensor, which then takes the offer **without the button** at its
+  next check-in (`test_secure_ota_without_button`: staged, no press, an A1, updated). Blocks shrink to 80 bytes so a
+  sealed block fits one frame (a 9 KB update: 48 s instead of ~43 s in the simulation).
+- **Not yet:** the `secure` flag persisted in the gateway's table (now RAM only: after a gateway restart, a
+  forged stock-format report is accepted until the sensor's next hello); a plain B0 still accepted by a secured
+  sensor; the host side (wyzesense2mqtt-rs pushing `K_net`, `ows-flash`), the ESP relay keeping `K_net`.
+
+## 8. Questions for the user
 
 All six answered on PR #77 (see the table at the top). Still to settle before phase 0: nothing from the user; TASK-22 on
 the bench.

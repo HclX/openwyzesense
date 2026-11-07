@@ -52,6 +52,7 @@ enum {
     OWS_SUB_NETWORK = 0x04,     // [] or [pan_le16, short_le16, ext_le64] -> [0x04, status, pan, short, ext]
     OWS_SUB_ENTER_SBL = 0x05,   // ["OSBL"] -> [0x05, status] (direct-UART gateways only; 0xE0 on dongle)
     OWS_SUB_NV_IMPORT = 0x06,   // [OWS_NV_*, ...] -> [0x06, OWS_NV_*, status, ...]
+    OWS_SUB_NET_KEY = 0x07,     // [] or [key(16)] -> [0x07, has_key(1)]: the secured link's network key, RAM only
     OWS_SUB_OTA_OFFER = 0x10,   // [mac(8), offer(24)] -> [0x10, status]
     OWS_SUB_OTA_NEED = 0x11,    // gw -> host: [0x11, mac(8), slot(1), off_be32(4), len(1)] (15 B)
     OWS_SUB_OTA_DATA = 0x12,    // host -> gw: [0x12, off_be32(4), data(<=32)] (<= 37 B, ACK only)

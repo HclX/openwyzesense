@@ -17,6 +17,7 @@
 #include "ota.h"
 #include "sensor_app.h"
 #include "sniffer_app.h"
+#include "seclink.h"
 #include "wyze_app.h"
 
 static int failures, checks;
@@ -216,7 +217,7 @@ static void handshake(void)
     CHECK(r && r->n == 0);
     CHECK(wait_host(HOST_TIME_SYNC_REQ, 1000) != NULL);  // the dongle asks for the time right away
     r = ows_call(OWS_SUB_FLAGS, NULL, 0);                // our feature flags (R3): all off after a reset
-    CHECK(r && r->n == 9 && r->p[0] == OWS_SUB_FLAGS && !memcmp(r->p + 1, "\0\0\0\0", 4) &&
+    CHECK(r && r->n == 9 && r->p[0] == OWS_SUB_FLAGS && !memcmp(r->p + 1, "\0\0\0\x08", 4) &&
           r->p[8] == GW_FLAGS_SUPPORTED);
 }
 
@@ -875,6 +876,32 @@ static void stage_and_press(void)
     short_press();
 }
 
+static const uint8_t net_key[16];  // the secured link's network key in these tests (defined with its tests below)
+
+// The secured link (#28): an update for a secured sensor comes sealed from its own gateway, so it needs no button: the
+// host stages it, and the sensor takes it at its next check-in (here an A1 from the console, as a heartbeat would)
+static void test_secure_ota_without_button(void)
+{
+    boot_ota_world(GW_FLAG_OTA | GW_FLAG_ANNOUNCE);
+    const pkt_t *r = ows_call(OWS_SUB_NET_KEY, net_key, sizeof net_key);
+    CHECK(r && r->n == 2 && r->p[1] == 1);
+    pair(false);
+    run(15000);
+    CHECK(sensor_app.sensor.sl.session && (sensor_app.sensor.gw_features & A6_OURS_OTA));
+    CHECK(stage() == 0);
+    run(5000);
+    CHECK(!strstr(sn_text, "ota offer"));  // nothing yet: the sensor has not polled
+    CHECK(say("status", "", 100));         // its next check-in (no button)
+    int res = ota_result(120000);
+    if (res != OTA_DONE_OK) {
+        fprintf(stderr, "secure ota: result %d\n--- sensor:\n%s\n", res, sn_text);
+    }
+    CHECK(res == OTA_DONE_OK);
+    run(500);
+    CHECK(!sensor_app.ota_window && strstr(sn_text, "ota offer 11, slot B, 9000 bytes: taken"));
+    CHECK(sn->slot == 1 && running_version() == 11);
+}
+
 // With OTA on, a paired sensor, the update staged, a short press of its button: offered version 11, the sensor (in
 // A) takes the slot-B build, writes slot B, says so, restarts into it; it reports as before and confirms itself
 // after its first minute. It never paired again. Then version 12, staged after the press (found by the window's
@@ -1106,10 +1133,17 @@ static void test_gateway_announces_itself(void)
     handshake();
     size_t air0 = host_n_air;
     pair(false);
-    CHECK(last_a6(air0, a6) && !memcmp(a6 + 11, zero, 5));  // flag off: stock
-    CHECK(!sensor_app.sensor.gw_ours && !strstr(sn_text, "gateway ours"));
+    CHECK(last_a6(air0, a6) && !memcmp(a6 + 11, "OW\x01\x00\x00", 5));  // on by default (#28), no features yet
+    CHECK(sensor_app.sensor.gw_ours && sensor_app.sensor.gw_features == 0);
 
-    const pkt_t *r = ows_call(OWS_SUB_FLAGS, "\0\0\0\x0c", 4);  // ANNOUNCE + OTA
+    const pkt_t *r = ows_call(OWS_SUB_FLAGS, "\0\0\0\0", 4);  // the host turns it off: stock
+    CHECK(r && r->p[4] == 0);
+    air0 = host_n_air;
+    pair(true);
+    CHECK(last_a6(air0, a6) && !memcmp(a6 + 11, zero, 5));
+    CHECK(!sensor_app.sensor.gw_ours);
+
+    r = ows_call(OWS_SUB_FLAGS, "\0\0\0\x0c", 4);  // ANNOUNCE + OTA
     CHECK(r && r->p[4] == (GW_FLAG_ANNOUNCE | GW_FLAG_OTA));
     air0 = host_n_air;
     pair(true);  // paired again, by the button
@@ -1121,6 +1155,155 @@ static void test_gateway_announces_itself(void)
     CHECK(say("info", "gw ours 0001", 200));
     CHECK(say("leave", "ok", 200));
     CHECK(!sensor_app.sensor.gw_ours);
+}
+
+// --- the secured link (common/seclink.h, docs/design/security.md; prototype, #28) ---
+
+static const uint8_t net_key[16] = {0x10, 0x32, 0x54, 0x76, 0x98, 0xba, 0xdc, 0xfe,
+                                    0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef};
+
+// The last data frame the sensor sent after air index from: its plaintext (ECB envelope opened) into pt; its MAC frame
+// into raw (for replaying it)
+static size_t last_from_sensor(size_t from, uint8_t pt[APP_MAX_PAYLOAD], uint8_t raw[128], size_t *raw_len)
+{
+    size_t n = 0;
+    for (size_t i = from; i < host_n_air && i < HOST_AIR_LOG; i++) {
+        mac_frame_t m;
+        if (host_air[i].from != 1 || !mac_parse(host_air[i].frame, host_air[i].len, &m) || m.type != MAC_DATA ||
+            !m.payload_len || m.payload_len % 16 || m.payload_len > APP_MAX_PAYLOAD) {
+            continue;
+        }
+        aes128_ecb_decrypt(app_key, m.payload, pt, m.payload_len);
+        n = m.payload_len;
+        if (raw) {
+            memcpy(raw, host_air[i].frame, host_air[i].len);
+            *raw_len = host_air[i].len;
+        }
+    }
+    return n;
+}
+
+// Alarms (0x5319) of type from mac since got index from
+static int alarms_since(size_t from, const uint8_t mac[8], uint8_t type)
+{
+    int k = 0;
+    for (size_t i = from; i < n_got; i++) {
+        k += got[i].cmd == HOST_ALARM && got[i].n > 22 && got[i].p[8] == type && !memcmp(got[i].p + 9, mac, 8);
+    }
+    return k;
+}
+
+// A frame on the air from an attacker's radio (a device in "another process")
+static void inject(const uint8_t *frame, size_t len)
+{
+    host_air_t a = {HOST_REMOTE + 7, host_now_us() + 1000, host_now_us() + 1000 + 2000 * len, -50, (uint8_t)len, {0}};
+    memcpy(a.frame, frame, len);
+    host_air_receive(&a);
+}
+
+static void push_net_key(void)
+{
+    const pkt_t *r = ows_call(OWS_SUB_NET_KEY, net_key, sizeof net_key);
+    CHECK(r && r->n == 2 && r->p[1] == 1);
+}
+
+static void test_secure_link(void)
+{
+    const uint8_t *mac = sensor_app.sensor.cfg.mac;
+    uint8_t pt[APP_MAX_PAYLOAD], raw[128], f[128];
+    size_t raw_len = 0;
+
+    boot_world();
+    handshake();
+    const pkt_t *r = ows_call(OWS_SUB_NET_KEY, NULL, 0);  // no key until the host pushes one
+    CHECK(r && r->n == 2 && r->p[1] == 0);
+    push_net_key();
+    size_t air0 = host_n_air;
+    pair(false);
+    uint8_t a6[16];
+    CHECK(last_a6(air0, a6) && !memcmp(a6 + 11, "OW\x01\x00\x02", 5));  // ours, A6_OURS_SECURE
+    run(10000);
+    // the key came after the A6, the sensor said hello, and the session is up
+    CHECK(sensor_app.sensor.sl.have_key && sensor_app.sensor.sl.session);
+    uint8_t ks[16];
+    sl_sensor_key(net_key, mac, ks);
+    CHECK(!memcmp(sensor_app.sensor.sl.key, ks, 16));
+    CHECK(gw_app.gw.n_sensors == 1 && gw_app.gw.sensors[0].secure);
+
+    // an event: sealed on the air, an ordinary alarm at the host
+    size_t from = n_got;
+    air0 = host_n_air;
+    CHECK(say("event 1", "ok", 100));
+    r = alarm_from(mac, APP_EVENT, 5000);
+    CHECK(r && r->p[8 + 14] == 1);
+    CHECK(last_from_sensor(air0, pt, raw, &raw_len) && pt[0] == APP_OURS && pt[1] == SL_FRAME);
+    CHECK(memmem(pt, sizeof pt, mac, 8) == NULL);  // the MAC is not in clear any more (confidentiality)
+    run(3000);
+    CHECK(alarms_since(from, mac, APP_EVENT) == 1);
+
+    // a replay of that frame: dropped
+    from = n_got;
+    inject(raw, raw_len);
+    run(1000);
+    CHECK(alarms_since(from, mac, APP_EVENT) == 0);
+
+    // a forged stock-format A2 from its address and MAC: dropped (the sensor is secured)
+    uint8_t forged[17] = {APP_EVENT};
+    memcpy(forged + 1, mac, 8);
+    forged[9] = SENSOR_CONTACT_V2, forged[10] = 0x14, forged[11] = 0x60, forged[13] = 1, forged[14] = 0;
+    forged[16] = 0x40;
+    uint8_t ct[32];
+    size_t clen = app_encrypt(forged, sizeof forged, ct);
+    inject(f,
+           mac_build_data(f, 0x77, gw_app.gw.pan, gw_app.gw.short_addr, sensor_app.sensor.short_addr, ct, clen, true));
+    run(1000);
+    CHECK(alarms_since(from, mac, APP_EVENT) == 0);
+    // (control: the same frame does get through for a sensor that is not secured, so the drop above is the guard)
+    gw_app.gw.sensors[0].secure = false;
+    forged[16] = 0x41;  // not a retry of the one above
+    clen = app_encrypt(forged, sizeof forged, ct);
+    inject(f,
+           mac_build_data(f, 0x78, gw_app.gw.pan, gw_app.gw.short_addr, sensor_app.sensor.short_addr, ct, clen, true));
+    run(1000);
+    CHECK(alarms_since(from, mac, APP_EVENT) == 1);
+    gw_app.gw.sensors[0].secure = true;
+
+    // the sensor restarts: its key from flash, a new session at its next report
+    host_boot(sn);
+    run(2000);
+    CHECK(sensor_app.sensor.sl.have_key && !sensor_app.sensor.sl.session);
+    CHECK(say("event 0", "ok", 100));
+    r = alarm_from(mac, APP_EVENT, 10000);
+    CHECK(r && r->p[8 + 14] == 0 && sensor_app.sensor.sl.session);
+
+    // the gateway restarts and its host pushes the key again: the sensor's next report finds no session (no ACK),
+    // it says hello at once, and the report goes again
+    host_boot(gw);
+    host_rx_init(&host_rx);
+    run(500);
+    handshake();
+    push_net_key();
+    from = n_got;
+    CHECK(say("event 1", "ok", 100));
+    r = alarm_from(mac, APP_EVENT, 15000);
+    CHECK(r && r->p[8 + 14] == 1);
+    run(3000);
+    CHECK(alarms_since(from, mac, APP_EVENT) == 1);
+
+    // the gateway restarts and nobody pushes the key: the report waits (no ACK, backing off), not lost; once the key
+    // is there, the next try delivers it
+    host_boot(gw);
+    host_rx_init(&host_rx);
+    run(500);
+    handshake();
+    from = n_got;
+    CHECK(say("event 0", "ok", 100));
+    run(20000);
+    CHECK(alarms_since(from, mac, APP_EVENT) == 0 && sensor_app.sensor.n_queued >= 1);
+    push_net_key();
+    r = alarm_from(mac, APP_EVENT, 70000);  // the backoff's second step: 60 s
+    CHECK(r && r->p[8 + 14] == 0);
+    trace();
 }
 
 // OWS_SUB_BUILD_INFO (#76, TASK-10): paged <= 55 B query of the image's build info block (and legacy 0x53FA alias)
@@ -1963,6 +2146,7 @@ int main(void)
     test_gateway_without_radio();
     test_sensor_without_radio();
     test_gateway_announces_itself();
+    test_secure_link();
     test_gateway_skips_stray_bytes();
     test_gateway_build_info();
     test_software_sbl_entry_apps();
@@ -1971,6 +2155,7 @@ int main(void)
     test_ota_multi_sensor_and_wildcard();
     test_repurposed_diy_profile_and_ota();
     test_ota_update();
+    test_secure_ota_without_button();
     test_ota_lossy();
     test_ota_from_the_console();
     test_ota_reset_midway();

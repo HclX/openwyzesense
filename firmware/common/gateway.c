@@ -7,6 +7,7 @@
 #include "build_info.h"
 #include "mac154.h"
 #include "ota.h"
+#include "seclink.h"
 #include "wyze_app.h"
 
 #define SUPERFRAME        0x4FFF  // non-beacon PAN coordinator, association permit off
@@ -32,7 +33,7 @@
 
 static const char VERSION[] = "0.0.0.47 V1.8 Gateway GW3U";
 
-enum { PEND_ASSOC_RESP, PEND_JOIN_TOKEN, PEND_JOIN_DONE, PEND_KEYPAD_REPLY };
+enum { PEND_ASSOC_RESP, PEND_JOIN_TOKEN, PEND_JOIN_DONE, PEND_KEYPAD_REPLY, PEND_OURS };
 
 void gw_init(gateway_t *gw, uint16_t pan, uint16_t short_addr, uint64_t ext, const uint8_t mac[8], const gw_io_t *io)
 {
@@ -46,6 +47,7 @@ void gw_init(gateway_t *gw, uint16_t pan, uint16_t short_addr, uint64_t ext, con
     gw->rng = (uint32_t)(ext ^ ext >> 32) | 1;  // differs per chip; never 0 (xorshift)
     gw->addr_first = 0x0001;
     gw->addr_last = 0xFFFD;
+    gw->flags = GW_FLAG_ANNOUNCE;  // our devices recognise each other by default (R3 amended, #28)
 }
 
 static uint32_t next_random(gateway_t *gw)
@@ -222,6 +224,8 @@ static uint64_t bit_remove(uint64_t m, size_t idx)
     return lo | hi;
 }
 
+static void drop_session(gateway_t *gw, uint16_t short_addr);
+
 static void remove_sensor(gateway_t *gw, const uint8_t mac[8])
 {
     forget_joining_mac(gw, mac);
@@ -241,6 +245,7 @@ static void remove_sensor(gateway_t *gw, const uint8_t mac[8])
         }
     }
     forget_joining_short(gw, addr);
+    drop_session(gw, addr);
     if (gw->ota.wildcard && idx < 64) {
         gw->ota.wildcard_done = bit_remove(gw->ota.wildcard_done, idx);
         gw->ota.wildcard_skip = bit_remove(gw->ota.wildcard_skip, idx);
@@ -441,12 +446,14 @@ static void send_pending(gateway_t *gw, gw_pending_t *p)
         case PEND_JOIN_DONE: {
             size_t n = app_build_join_done(pt, p->data, gw->clock_ms);
             if (gw->flags & GW_FLAG_ANNOUNCE) {
-                n = app_mark_ours(pt, n, gw->flags & GW_FLAG_OTA ? A6_OURS_OTA : 0);
+                n = app_mark_ours(
+                    pt, n, (gw->flags & GW_FLAG_OTA ? A6_OURS_OTA : 0) | (gw->have_net_key ? A6_OURS_SECURE : 0));
             }
             send_data(gw, (uint16_t)p->dst, pt, n);
             break;
         }
         case PEND_KEYPAD_REPLY:
+        case PEND_OURS:
             send_data(gw, (uint16_t)p->dst, p->data, p->len);
             break;
         default:
@@ -675,18 +682,111 @@ static bool seen_lately(gateway_t *gw, uint16_t src, const uint8_t *pt, size_t n
 // A report's sender is a sensor in the table: its short address and the MAC in the report both match one entry.
 // Anything else (an unpaired sensor still on our PAN, a stock v1 contact that lost its MAC and reports zeros) is
 // dropped silently, as the stock dongle does (stock-unknowns.md D8; #31): never forwarded, never "recovered".
-static bool paired(const gateway_t *gw, uint16_t src, const uint8_t mac[8])
+static gw_sensor_t *paired(gateway_t *gw, uint16_t src, const uint8_t mac[8])
 {
     static const uint8_t zero[8];
     if (!memcmp(mac, zero, 8)) {
-        return false;
+        return NULL;
     }
     for (size_t i = 0; i < gw->n_sensors; i++) {
         if (gw->sensors[i].short_addr == src && !memcmp(gw->sensors[i].mac, mac, 8)) {
-            return true;
+            return &gw->sensors[i];
         }
     }
-    return false;
+    return NULL;
+}
+
+// --- the secured link (seclink.h, docs/design/security.md) ---
+
+static gw_session_t *session_of(gateway_t *gw, uint16_t short_addr)
+{
+    for (size_t i = 0; i < GW_MAX_SESSIONS; i++) {
+        if (gw->sessions[i].used && gw->sessions[i].short_addr == short_addr) {
+            return &gw->sessions[i];
+        }
+    }
+    return NULL;
+}
+
+static void drop_session(gateway_t *gw, uint16_t short_addr)
+{
+    gw_session_t *x = session_of(gw, short_addr);
+    if (x) {
+        memset(x, 0, sizeof *x);
+    }
+}
+
+// A session for short_addr: its old one, a free one, or the least recently used (that sensor will be asked again)
+static gw_session_t *new_session(gateway_t *gw, uint16_t short_addr)
+{
+    gw_session_t *x = session_of(gw, short_addr);
+    for (size_t i = 0; i < GW_MAX_SESSIONS && !x; i++) {
+        if (!gw->sessions[i].used) {
+            x = &gw->sessions[i];
+        }
+    }
+    for (size_t i = 0; i < GW_MAX_SESSIONS && !x; i++) {
+        if (!x || (int32_t)(gw->sessions[i].last_ms - x->last_ms) < 0) {
+            x = &gw->sessions[i];
+        }
+    }
+    if (!x) {
+        x = &gw->sessions[0];
+        for (size_t i = 1; i < GW_MAX_SESSIONS; i++) {
+            if ((int32_t)(gw->sessions[i].last_ms - x->last_ms) < 0) {
+                x = &gw->sessions[i];
+            }
+        }
+    }
+    memset(x, 0, sizeof *x);
+    x->used = true;
+    x->short_addr = short_addr;
+    x->last_ms = gw->now_ms;
+    return x;
+}
+
+// One of our messages (4F ..) for dst's next poll
+static void queue_ours(gateway_t *gw, uint16_t dst, const uint8_t *msg, size_t n)
+{
+    gw_pending_t *p = n <= sizeof p->data ? queue(gw, dst, PEND_OURS) : NULL;
+    if (p) {
+        memcpy(p->data, msg, n);
+        p->len = (uint8_t)n;
+    }
+}
+
+// SL_HELLO: the sensor proves it has its key; a new session, and our half of it (SL_SESSION) on its next poll
+static void secure_hello(gateway_t *gw, uint16_t src, const uint8_t *pt, size_t n)
+{
+    uint8_t ks[16], tag[SL_TAG], reply[SL_SESSION_LEN] = {APP_OURS, SL_SESSION};
+    gw_sensor_t *ps = n >= SL_HELLO_LEN && gw->have_net_key ? paired(gw, src, pt + 2) : NULL;
+    if (!ps) {
+        return;
+    }
+    sl_sensor_key(gw->net_key, pt + 2, ks);
+    sl_hello_tag(ks, pt + 2, pt + 10, tag);
+    if (!sl_equal(tag, pt + 18, SL_TAG)) {
+        return;  // not the key we gave it (another network key, or forged)
+    }
+    gw_session_t *x = new_session(gw, src);
+    platform_random(reply + 2, SL_NONCE);
+    sl_session_key(ks, pt + 10, reply + 2, x->key);
+    sl_session_tag(ks, pt + 10, reply + 2, reply + 2 + SL_NONCE);
+    ps->secure = true;
+    queue_ours(gw, src, reply, sizeof reply);
+}
+
+// What a data request is answered with, sealed for a sensor with a session
+static void send_app(gateway_t *gw, uint16_t dst, const uint8_t *pt, size_t n)
+{
+    uint8_t f[APP_MAX_PAYLOAD];
+    gw_session_t *x = session_of(gw, dst);
+    size_t len = x ? sl_seal(x->key, SL_DOWN, ++x->tx_ctr, pt, n, f) : 0;
+    if (len) {
+        send_data(gw, dst, f, len);
+    } else {
+        send_data(gw, dst, pt, n);
+    }
 }
 
 // --- OTA (common/ota.h) ---
@@ -752,7 +852,7 @@ static bool ota_target_for(const gateway_t *gw, uint16_t src, uint8_t mac_out[8]
     return true;
 }
 
-// Serializes the single 96-byte block buffer to one active sensor at a time; yields if the active sensor goes silent.
+// Serializes the single block buffer (OTA_BLOCK bytes) to one active sensor at a time; yields if the active sensor goes silent.
 static bool ota_acquire_for(gateway_t *gw, uint16_t src, uint8_t mac_out[8])
 {
     if (!ota_target_for(gw, src, mac_out)) {
@@ -830,7 +930,7 @@ static void ota_request(gateway_t *gw, uint16_t src, const uint8_t *pt)
 // Returns whether a frame went.
 static bool ota_poll(gateway_t *gw, uint16_t src, uint8_t seq)
 {
-    uint8_t pt[6 + OTA_BLOCK], mac[8];
+    uint8_t pt[1 + 6 + OTA_BLOCK] = {APP_OURS}, mac[8];
     if (!ota_acquire_for(gw, src, mac)) {
         return false;
     }
@@ -840,21 +940,21 @@ static bool ota_poll(gateway_t *gw, uint16_t src, uint8_t seq)
         gw->ota.active_ms = gw->now_ms;
         gw->ota.started = false;
         gw->ota.want_len = gw->ota.filled = 0;
-        pt[0] = APP_OTA_OFFER;
-        memcpy(pt + 1, gw->ota.offer, OTA_OFFER_LEN);
+        pt[1] = APP_OTA_OFFER;
+        memcpy(pt + 2, gw->ota.offer, OTA_OFFER_LEN);
         send_ack(gw, seq, true);
-        send_data(gw, src, pt, 1 + OTA_OFFER_LEN);
+        send_app(gw, src, pt, 2 + OTA_OFFER_LEN);  // sealed for a secured sensor: then no button needed (#28)
         return true;
     }
     if (!gw->ota.want_len || gw->ota.filled != gw->ota.want_len) {
         return false;
     }
-    pt[0] = APP_OTA_BLOCK;
-    ota_put_be32(pt + 1, gw->ota.want);
-    pt[5] = gw->ota.want_len;
-    memcpy(pt + 6, gw->ota.block, gw->ota.want_len);
+    pt[1] = APP_OTA_BLOCK;
+    ota_put_be32(pt + 2, gw->ota.want);
+    pt[6] = gw->ota.want_len;
+    memcpy(pt + 7, gw->ota.block, gw->ota.want_len);
     send_ack(gw, seq, true);
-    send_data(gw, src, pt, 6u + gw->ota.want_len);
+    send_app(gw, src, pt, 7u + gw->ota.want_len);
     return true;
 }
 
@@ -937,17 +1037,65 @@ static void ota_data_command(gateway_t *gw, const uint8_t *payload, size_t len)
     gw->ota.filled = (uint8_t)(gw->ota.filled + n);
 }
 
-static void sensor_message(gateway_t *gw, uint16_t src, const uint8_t *pt, size_t n, int8_t rssi)
+static void handle_message(gateway_t *gw, uint16_t src, const uint8_t *pt, size_t n, int8_t rssi, bool authed);
+
+// A secured sensor's reports come only inside SL_FRAMEs (authed): the stock format from it is a forgery
+static bool heard(gateway_t *gw, uint16_t src, const uint8_t mac[8], bool authed)
+{
+    gw_sensor_t *ps = paired(gw, src, mac);
+    return ps && (authed || !ps->secure);
+}
+
+// SL_FRAME: opened with src's session; a sensor without one is asked for a new one (SL_RESYNC)
+static void secure_frame(gateway_t *gw, uint16_t src, const uint8_t *pt, size_t n, int8_t rssi)
+{
+    static const uint8_t resync[2] = {APP_OURS, SL_RESYNC};
+    uint8_t inner[APP_MAX_PAYLOAD];
+    size_t len;
+    uint32_t ctr;
+    gw_session_t *x = session_of(gw, src);
+    if (!x) {
+        queue_ours(gw, src, resync, sizeof resync);
+        return;
+    }
+    if (!sl_open(x->key, SL_UP, pt, n, inner, &len, &ctr) || ctr <= x->rx_ctr || !len ||
+        (inner[0] == APP_OURS && (len < 2 || inner[1] <= SL_RESYNC))) {
+        return;  // forged, another session's, a replay, or the link's own messages nested (only OTA ones are carried)
+    }
+    x->rx_ctr = ctr;
+    x->last_ms = gw->now_ms;
+    handle_message(gw, src, inner, len, rssi, true);
+}
+
+static void handle_message(gateway_t *gw, uint16_t src, const uint8_t *pt, size_t n, int8_t rssi, bool authed)
 {
     static const uint8_t zero[8];
     uint8_t payload[HOST_MAX_PACKET];
     switch (pt[0]) {
+        case APP_OURS:
+            if (n >= 2 && pt[1] == SL_HELLO) {
+                secure_hello(gw, src, pt, n);
+            } else if (n >= 2 && pt[1] == SL_FRAME && !authed) {
+                secure_frame(gw, src, pt, n, rssi);
+            } else if (n >= 15 && (pt[1] == APP_OTA_REQUEST || pt[1] == APP_OTA_DONE) &&
+                       heard(gw, src, pt + 2, authed)) {
+                const uint8_t *m = pt + 1;  // the message after APP_OURS: sub-ID, MAC, ...
+                uint8_t mac[8];
+                if (m[0] == APP_OTA_REQUEST) {
+                    ota_request(gw, src, m);
+                } else if (ota_target_for(gw, src, mac)) {
+                    memcpy(payload, m + 1, 13);  // MAC, status, version
+                    ows_send(gw, OWS_SUB_OTA_DONE, payload, 13);
+                    ota_finish_target(gw, src, mac, m[9]);
+                }
+            }
+            break;
         case APP_STATUS:
         case APP_EVENT:
         case APP_CLIMATE:
         case APP_MOTION_SUMMARY: {
             size_t len;
-            if (n < 9 || !paired(gw, src, pt + 1)) {
+            if (n < 9 || !heard(gw, src, pt + 1, authed)) {
                 break;
             }
             // byte 13 is the data length; byte 12 the low-battery flag (FACTS.md: 0x01 once a stock sensor latched
@@ -1002,7 +1150,7 @@ static void sensor_message(gateway_t *gw, uint16_t src, const uint8_t *pt, size_
             break;
         }
         case APP_HISTORY_LOG: {  // AD: stock v1 50-entry offline missed-event record -> synthetic A2 HOST_ALARM
-            if (n < 22 || pt[18] != APP_EVENT || !paired(gw, src, pt + 1)) {
+            if (n < 22 || pt[18] != APP_EVENT || !heard(gw, src, pt + 1, authed)) {
                 break;
             }
             set_type(gw, src, pt[9]);
@@ -1089,25 +1237,14 @@ static void sensor_message(gateway_t *gw, uint16_t src, const uint8_t *pt, size_
             }
             host_send(gw, HOST_GET_R1 + 1, pt, 27);
             break;
-        case APP_OTA_REQUEST:
-            if (n < 14) {
-                break;
-            }
-            ota_request(gw, src, pt);
-            break;
-        case APP_OTA_DONE: {
-            uint8_t mac[8];
-            if (n < 14 || !ota_target_for(gw, src, mac)) {
-                break;
-            }
-            memcpy(payload, pt + 1, 13);  // MAC, status, version
-            ows_send(gw, OWS_SUB_OTA_DONE, payload, 13);
-            ota_finish_target(gw, src, mac, pt[9]);
-            break;
-        }
         default:
             break;
     }
+}
+
+static void sensor_message(gateway_t *gw, uint16_t src, const uint8_t *pt, size_t n, int8_t rssi)
+{
+    handle_message(gw, src, pt, n, rssi, false);
 }
 
 // GW_FLAG_ROAM: a report from a sensor another gateway owns, heard but not ACKed, for the host to compare signal
@@ -1193,17 +1330,25 @@ void gw_rx(gateway_t *gw, const uint8_t *frame, size_t len, int8_t rssi)
             send_pending(gw, p);
         } else if (time_sync) {
             uint8_t pt[APP_MAX_PAYLOAD];
-            send_data(gw, (uint16_t)m.src, pt, app_build_time_sync(pt, gw->clock_ms));
+            send_app(gw, (uint16_t)m.src, pt, app_build_time_sync(pt, gw->clock_ms));  // sealed if it has a session
         }
     } else if (m.type == MAC_DATA && m.ack_req) {
         uint8_t pt[APP_MAX_PAYLOAD];
-        if (ours) {
-            send_ack(gw, m.seq, false);
-        }
         if (m.src_mode != MAC_ADDR_SHORT || !m.payload_len || m.payload_len > sizeof pt || m.payload_len % 16) {
+            if (ours) {
+                send_ack(gw, m.seq, false);
+            }
             return;
         }
         aes128_ecb_decrypt(app_key, m.payload, pt, m.payload_len);
+        // a secured frame it cannot open (no network key yet since the start, or no session with that sensor, as
+        // after a restart): no ACK, so the sensor keeps the report, starts a new session and sends it again
+        // (docs/design/security.md 4.6.1)
+        bool unkeyed =
+            pt[0] == APP_OURS && pt[1] == SL_FRAME && (!gw->have_net_key || !session_of(gw, (uint16_t)m.src));
+        if (ours && !unkeyed) {
+            send_ack(gw, m.seq, false);
+        }
         if (ours) {
             sensor_message(gw, (uint16_t)m.src, pt, m.payload_len, rssi);
         } else {
@@ -1626,6 +1771,14 @@ static void ows_command(gateway_t *gw, const host_pkt_t *h)
         case OWS_SUB_ADDR_RANGE:
             addr_range_command(gw, sub, sub_len);
             break;
+        case OWS_SUB_NET_KEY:  // the secured link's network key: RAM only, pushed by the host at every start
+            if (sub_len == 16) {
+                memcpy(gw->net_key, sub, 16);
+                gw->have_net_key = true;
+            }
+            out[0] = gw->have_net_key;
+            ows_send(gw, OWS_SUB_NET_KEY, out, 1);
+            break;
         default:
             break;
     }
@@ -1701,6 +1854,19 @@ void gw_host(gateway_t *gw, const uint8_t *pkt, size_t len)
             gw_pending_t *p = s >= 0 ? queue(gw, (uint64_t)s, PEND_JOIN_DONE) : NULL;
             if (p) {
                 memcpy(p->data, h.payload + 8, 2);
+            }
+            if (s >= 0) {  // a (re)pairing: no session until it says hello with the key it gets now
+                drop_session(gw, (uint16_t)s);
+                for (size_t i = 0; i < gw->n_sensors; i++) {
+                    if (gw->sensors[i].short_addr == (uint16_t)s) {
+                        gw->sensors[i].secure = false;
+                    }
+                }
+            }
+            if (p && gw->have_net_key && (gw->flags & GW_FLAG_ANNOUNCE)) {  // its key, after the A6 (4.1 F1: in clear)
+                uint8_t key[2 + 16] = {APP_OURS, SL_KEY};
+                sl_sensor_key(gw->net_key, h.payload, key + 2);
+                queue_ours(gw, (uint16_t)s, key, sizeof key);
             }
             if (h.len >= 8) {
                 forget_joining_mac(gw, h.payload);
