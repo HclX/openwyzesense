@@ -42,7 +42,8 @@ the evidence.
   running gateway image (10 pages verified, page 31 intact). `sbl2` (two hand probes on TX/RX, + and − clipped,
   2026-11-07): touch seen on the soldered 777B42DF, one round, then waiting for a lift (its backdoor is W, not on the
   probes). The leak sensor 77C685AE was dumped this way by the user (2026-11-07, `backups/`), so touch, lift and the
-  DIO1 backdoor work on a real sensor. Since: the station on four wires (two probes on GPIO17/18 for every mode) and the
+  DIO1 backdoor work on a real sensor; dumped again at 10:55 after a run with + and - swapped by mistake, so it
+  survived that. Since: the station on four wires (two probes on GPIO17/18 for every mode) and the
   W/S check (probe 1 on T or R as the witness, probe 2's pad held low across a power-up: S keeps the chip in reset):
   on the leak sensor it called both remaining pads W (2026-11-07). Hypothesis to check: the board pulls its T line up,
   so the witness reads high even with the chip held in reset; a fix could compare the witness against the chip
