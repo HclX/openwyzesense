@@ -118,10 +118,12 @@ static void restart(bool bootloader)
         gpio_pullup_dis(rx);
         gpio_set_level(CONFIG_OWS_CONTACT_POWER, 0);
         vTaskDelay(pdMS_TO_TICKS(OFF_MS));
-        if (!bootloader) {
-            gpio_set_level(tx, 1);  // R high before the chip looks at it (a backdoor on DIO1 would catch it low)
-        }
         gpio_set_level(CONFIG_OWS_CONTACT_POWER, 1);
+        if (!bootloader) {
+            // R high right after the power, not before (it would feed the unpowered chip, which then missed its
+            // power-on reset without S: bench, #81), and long before the ROM looks at its backdoor pin
+            gpio_set_level(tx, 1);
+        }
         vTaskDelay(pdMS_TO_TICKS(10));
     } else {
         if (!bootloader) {
