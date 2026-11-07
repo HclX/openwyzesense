@@ -57,7 +57,7 @@ The data of each item is what it was in the stock format, so the apps did not ch
 |---|---|---|---|---|
 | 1 | 0 | 16 | gateway | network: PAN (2), coordinator short address (2), IEEE address (8), `17 00 BE BE` (as on the stock dongles; meaning open) |
 | 4 | 0 | 4 | gateway | number of sensors (1), `00 00 00` |
-| 5 | *n* | 24 | gateway | sensor *n*: PAN (2), short address (2), ASCII MAC (8), 12 bytes: byte 17 `01`, the rest `00` (as stock) |
+| 5 | *n* | 24 | gateway | sensor *n*: PAN (2), short address (2), ASCII MAC (8), 12 bytes: byte 17 `01`, byte 18 bit 0 = secured (ours, #28), the rest `00` (as stock) |
 | 0x20 | 0 | 12 | sensor | its join: type, flags (bit 0: the gateway is ours), PAN (2), coordinator (2), short address (2), `00 00` (the message counter was here; RAM only since #38), the gateway's features (2) |
 | 0x21 | 0 | 8 | sensor | DIY pin/type profile (`NV_CFG`): `sensor_type` (`00` = board default, `01` v1 contact, `02` v1 motion, `03` v2 leak, `07` climate, `0E` v2 contact, `0F` v2 motion), `flags` (bit 0: `invert` `INPUT_EVENT` polarity), `pull` (`00` up, `01` none, `02` down, `FF` board default), `00`, `debounce_ms` (LE16, `0` = default 40 ms, `1..5000`), `00 00` |
 
@@ -68,7 +68,7 @@ The data of each item is what it was in the stock format, so the apps did not ch
   "format": "openwyzesense-nv-json", "version": 1,
   "source": {"layout": "stock" | "ows" | "blank"},
   "network": {"pan": "65FE", "short": "D425", "ext": "00124B0012345678"},
-  "sensors": [{"sub": 1, "mac": "77A8C793", "short": "0005"}],
+  "sensors": [{"sub": 1, "mac": "77A8C793", "short": "0005", "secure": true}],
   "join": {"type": "01", "gw_ours": true, "pan": "65FE", "coord": "D425", "short": "0006", "gw_features": "0001"},
   "cfg": {"type": "03", "invert": true, "pull": "up", "debounce_ms": 100},
   "dropped": [{"what": "sensor 5", "why": "shares short address 0004 with 777C1FCA: re-pair 7788CCF6 after the migration", "mac": "7788CCF6"}],
@@ -82,7 +82,8 @@ for the record, not imported. A stock v1 motion's page (header `00 00 00 00`) is
 unrecognised: its units are wiped when flashed (the user's decision 4 on #61). Validation on export:
 
 - network: PAN not 0000 / FFFF, coordinator short address not FFFE / FFFF;
-- sensors: an ASCII MAC of 8 hex digits (not all zeros), a short address 0001-FFFD, the network's PAN; one per MAC
+- sensors: an ASCII MAC of 8 hex digits (not all zeros), a short address 0001-FFFD, the network's PAN, and `"secure": true`
+  when byte 18 bit 0 is set (written only when true, #28); one per MAC
   and one per short address (the lowest sub-ID kept; a stock table can hold two on one address, #12, and the other
   is listed under `dropped` with its `mac`, to be re-paired after the migration: the user's decision, #90);
 - join: PAN not 0000 / FFFF, addresses as above (any other PAN, 845B included: #70).

@@ -30,8 +30,8 @@ def stock_page(records):
     return bytes(page) + b'\xff' * (4096 - len(page))
 
 
-def sensor(pan, short, mac):
-    return nvows.sensor_data(pan, short, mac)
+def sensor(pan, short, mac, secure=False):
+    return nvows.sensor_data(pan, short, mac, secure=secure)
 
 
 PAN, COORD, EXT = 0x65FE, 0xD425, 0x00124B0012345678
@@ -81,6 +81,17 @@ def made_up():
         nvows.encode({(0x20, 0): bytes([0x01, 0]) + (0x845B).to_bytes(2, 'little') + b'\x66\x33\x05\x00' + bytes(4)}),
     )
     yield 'ows_bad_cfg', nvows.encode({(0x21, 0): bytes([0, 0, 7, 0]) + bytes(4)})
+    yield (
+        'ows_secured_sensor',
+        nvows.encode(
+            {
+                (1, 0): net,
+                (4, 0): bytes([2, 0, 0, 0]),
+                (5, 1): sensor(PAN, 0x0003, b'77A8C793', secure=True),
+                (5, 2): sensor(PAN, 0x0004, b'77A8C794'),
+            }
+        ),
+    )
     # ours, with a superseded record, a deleted one and a bad CRC
     page = bytearray(nvows.encode({(1, 0): net, (4, 0): bytes([1, 0, 0, 0])}).rstrip(b'\xff'))
     page += nvows.record(5, 1, sensor(PAN, 0x0003, b'77A8C793'))

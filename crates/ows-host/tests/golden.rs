@@ -73,6 +73,33 @@ fn import_refuses_what_the_reference_refuses() {
 }
 
 #[test]
+fn sensor_secure_mark_round_trip() {
+    let base = r#"{"format":"openwyzesense-nv-json","version":1"#;
+    let net = r#","network":{"pan":"65FE","short":"D425","ext":"00124B0012345678"}"#;
+    let json = format!(
+        r#"{base}{net},"sensors":[{{"sub":1,"mac":"77A8C793","short":"0003","secure":true}},{{"sub":2,"mac":"77A8C794","short":"0004","secure":false}},{{"sub":3,"mac":"77A8C795","short":"0005"}}]}}"#
+    );
+    let page = nv::import(&doc(&json)).unwrap();
+    let items = nv::latest(&page);
+    assert_eq!(items[&(nv::ITEM_SENSOR, 1)][18], 1);
+    assert_eq!(items[&(nv::ITEM_SENSOR, 2)][18], 0);
+    assert_eq!(items[&(nv::ITEM_SENSOR, 3)][18], 0);
+    let back = nv::export(&page);
+    assert_eq!(
+        back.sensors,
+        vec![
+            nv::Sensor { sub: 1, mac: "77A8C793".into(), short: "0003".into(), secure: true },
+            nv::Sensor { sub: 2, mac: "77A8C794".into(), short: "0004".into(), secure: false },
+            nv::Sensor { sub: 3, mac: "77A8C795".into(), short: "0005".into(), secure: false },
+        ]
+    );
+    let out = back.to_json();
+    assert!(out.contains(r#""secure": true"#) && !out.contains(r#""secure": false"#));
+    let bad = format!(r#"{base}{net},"sensors":[{{"sub":1,"mac":"77A8C793","short":"0003","secure":1}}]}}"#);
+    assert!(nv::NvDoc::from_json(&bad).is_err());
+}
+
+#[test]
 fn page_for_choices() {
     let stock = std::fs::read(vectors().join("dongle_77A85A36_2026-10-23_before_ours.page30.bin")).unwrap();
     assert_eq!(nv::page_for(&nv::NvChoice::Keep, &stock).unwrap(), (None, None));
