@@ -75,7 +75,19 @@ typedef struct {
     uint8_t mac[8];  // ASCII
     uint16_t short_addr;
     uint16_t nv_sub;  // its record in the NV page (item 5, this sub-ID)
+    bool secure;      // it proved its key (SL_HELLO): its stock-format reports are dropped (RAM only, prototype)
 } gw_sensor_t;
+
+// The secured link (seclink.h, docs/design/security.md): sessions in RAM, the oldest replaced when full (that sensor
+// is then asked for a new one: SL_RESYNC)
+#define GW_MAX_SESSIONS 16
+typedef struct {
+    bool used;
+    uint16_t short_addr;
+    uint32_t rx_ctr, tx_ctr;  // the last counter heard from it / sent to it
+    uint32_t last_ms;
+    uint8_t key[16];  // the session key
+} gw_session_t;
 
 typedef struct {
     bool used;
@@ -85,8 +97,8 @@ typedef struct {
     uint64_t dst;         // short address, or the extended address of a sensor still associating
     uint16_t short_addr;  // association response: the address given
     uint8_t mac[8];       // association response: the sensor's ASCII MAC (= its extended address)
-    uint8_t data[16];     // A4 token, A6 status, keypad reply
-    uint8_t len;          // data length for the keypad reply
+    uint8_t data[18];     // A4 token, A6 status, keypad reply, one of our messages (seclink.h)
+    uint8_t len;          // data length for the keypad reply and our messages
 } gw_pending_t;
 
 typedef struct {
@@ -153,6 +165,9 @@ typedef struct {
     uint16_t addr_first, addr_last;  // OWS_SUB_ADDR_RANGE: short addresses new sensors get (0x0001-0xFFFD at reset)
     uint16_t history_tie;
     gw_sensor_t sensors[GW_MAX_SENSORS];
+    gw_session_t sessions[GW_MAX_SESSIONS];
+    uint8_t net_key[16];  // OWS_SUB_NET_KEY, from the host at every start; never in flash
+    bool have_net_key;
     struct {
         uint16_t short_addr;
         uint8_t type;

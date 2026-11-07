@@ -175,6 +175,7 @@ static void test_replay(const char *path)
         if (sscanf(l, "SESSION %63s %u %u %u", name, &permit, &dsn, &bsn) == 4) {
             gw_init(&gw, PAN, SHORT, EXT, (const uint8_t *)"778B5F63", &io);
             gw.permit = permit, gw.dsn = (uint8_t)dsn, gw.bsn = (uint8_t)bsn;
+            gw.flags = 0;  // as the stock dongle: no "ours" mark in its A6
             sessions++;
         } else if (sscanf(l, "SENSOR %15s %x", mac, &addr) == 2) {
             CHECK(gw_add_sensor(&gw, (const uint8_t *)mac, (uint16_t)addr));
@@ -413,12 +414,12 @@ static void test_flags(void)
     gateway_t gw;
     uint32_t supported = 0;
     gw_init(&gw, PAN, SHORT, EXT, (const uint8_t *)"778B5F63", &io);
-    CHECK(flags_call(&gw, NULL, &supported) == 0);                                        // off after a reset
+    CHECK(flags_call(&gw, NULL, &supported) == GW_FLAG_ANNOUNCE);  // after a reset: the "ours" mark only (#28)
     CHECK(supported == (GW_FLAG_DEDUP | GW_FLAG_OTA | GW_FLAG_ANNOUNCE | GW_FLAG_ROAM));  // bit 1: reserved (#31)
     CHECK(flags_call(&gw, all, NULL) == GW_FLAGS_SUPPORTED);                              // only what it has
     CHECK(flags_call(&gw, dedup, NULL) == GW_FLAG_DEDUP);
     gw_init(&gw, PAN, SHORT, EXT, (const uint8_t *)"778B5F63", &io);
-    CHECK(flags_call(&gw, NULL, NULL) == 0);  // not kept across a reset
+    CHECK(flags_call(&gw, NULL, NULL) == GW_FLAG_ANNOUNCE);  // not kept across a reset
 }
 
 static void test_dedup(void)

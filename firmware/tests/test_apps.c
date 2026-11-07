@@ -216,7 +216,7 @@ static void handshake(void)
     CHECK(r && r->n == 0);
     CHECK(wait_host(HOST_TIME_SYNC_REQ, 1000) != NULL);  // the dongle asks for the time right away
     r = ows_call(OWS_SUB_FLAGS, NULL, 0);                // our feature flags (R3): all off after a reset
-    CHECK(r && r->n == 9 && r->p[0] == OWS_SUB_FLAGS && !memcmp(r->p + 1, "\0\0\0\0", 4) &&
+    CHECK(r && r->n == 9 && r->p[0] == OWS_SUB_FLAGS && !memcmp(r->p + 1, "\0\0\0\x08", 4) &&
           r->p[8] == GW_FLAGS_SUPPORTED);
 }
 
@@ -1106,10 +1106,17 @@ static void test_gateway_announces_itself(void)
     handshake();
     size_t air0 = host_n_air;
     pair(false);
-    CHECK(last_a6(air0, a6) && !memcmp(a6 + 11, zero, 5));  // flag off: stock
-    CHECK(!sensor_app.sensor.gw_ours && !strstr(sn_text, "gateway ours"));
+    CHECK(last_a6(air0, a6) && !memcmp(a6 + 11, "OW\x01\x00\x00", 5));  // on by default (#28), no features yet
+    CHECK(sensor_app.sensor.gw_ours && sensor_app.sensor.gw_features == 0);
 
-    const pkt_t *r = ows_call(OWS_SUB_FLAGS, "\0\0\0\x0c", 4);  // ANNOUNCE + OTA
+    const pkt_t *r = ows_call(OWS_SUB_FLAGS, "\0\0\0\0", 4);  // the host turns it off: stock
+    CHECK(r && r->p[4] == 0);
+    air0 = host_n_air;
+    pair(true);
+    CHECK(last_a6(air0, a6) && !memcmp(a6 + 11, zero, 5));
+    CHECK(!sensor_app.sensor.gw_ours);
+
+    r = ows_call(OWS_SUB_FLAGS, "\0\0\0\x0c", 4);  // ANNOUNCE + OTA
     CHECK(r && r->p[4] == (GW_FLAG_ANNOUNCE | GW_FLAG_OTA));
     air0 = host_n_air;
     pair(true);  // paired again, by the button
