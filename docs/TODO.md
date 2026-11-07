@@ -44,7 +44,9 @@ the evidence.
   probes). The leak sensor 77C685AE was dumped this way by the user (2026-11-07, `backups/`), so touch, lift and the
   DIO1 backdoor work on a real sensor. Since: the station on four wires (two probes on GPIO17/18 for every mode) and the
   W/S check (probe 1 on T or R as the witness, probe 2's pad held low across a power-up: S keeps the chip in reset):
-  check its answer on sensors whose pads are known (the climate sensor, a v1 contact); cJTAG
+  on the leak sensor it called both remaining pads W (2026-11-07). Hypothesis to check: the board pulls its T line up,
+  so the witness reads high even with the chip held in reset; a fix could compare the witness against the chip
+  unpowered, or watch T for real UART activity instead of a level. Check on sensors whose pads are known; cJTAG
   on the two probes; a slip during an SBL dump.
   Left: a sensor that is not a v1 contact (the leak sensor), the user guide's level 4 and its wiring SVGs (`tools/wiring_svg.py`) on the new wiring; the
   ESP32-S3 (GPIO7, 15/16); a stock-backdoor unit (`R`) on the bootloader path; transmit bursts on GPIO power.

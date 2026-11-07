@@ -352,6 +352,12 @@ static esp_err_t wires_post(httpd_req_t *req)
     body[n] = 0;
     set_field(body, "r", settings.wire_r, sizeof settings.wire_r, true);
     set_field(body, "t", settings.wire_t, sizeof settings.wire_t, true);
+    if (!strcmp(settings.wire_r, "-")) {  // "-": back to the default (an empty field is left unchanged)
+        settings.wire_r[0] = 0;
+    }
+    if (!strcmp(settings.wire_t, "-")) {
+        settings.wire_t[0] = 0;
+    }
     if (!settings_save()) {
         return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "saving failed");
     }

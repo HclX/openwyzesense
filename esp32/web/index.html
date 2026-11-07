@@ -49,6 +49,15 @@ font:inherit;font-weight:600;cursor:pointer}
 .msg{margin-top:10px;font-size:14px;min-height:1.2em;overflow-wrap:anywhere}
 .msg.ok{color:var(--ok)}.msg.bad{color:var(--bad)}
 .note{color:var(--mute);font-size:13px;margin:6px 0 0}
+.wrow{display:flex;align-items:center;gap:8px;margin:7px 0;max-width:460px}
+.wpad{flex:none;width:34px;height:24px;border:1px solid var(--line);background:var(--bar);border-radius:5px;
+display:flex;align-items:center;justify-content:center;font-weight:650}
+.wdesc{flex:1;min-width:0;border-bottom:2px solid var(--acc);font-size:12px;color:var(--mute);white-space:nowrap;
+overflow:hidden;text-overflow:ellipsis;padding-bottom:2px}
+.wdot{flex:none;width:12px;height:12px;border-radius:50%;border:1px solid var(--fg)}
+.wgpio{flex:none;min-width:64px;text-align:center;border:1px solid var(--acc);border-radius:5px;padding:2px 6px;
+font-size:13px;background:var(--card)}
+.wrow input.wcol{flex:none;width:92px;margin:0;padding:3px 6px}
 table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
 th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
 th{color:var(--mute);font-size:12px;font-weight:600}
@@ -98,7 +107,7 @@ chosen transport (<code>cJTAG</code> on M/C, polarity found; <code>SBL</code>: w
 the backdoor; <code>Auto</code>: cJTAG, then SBL), confirms them, and lets it go. Nothing is read but what identifies
 it, nothing written. <b>2. Dump</b> or <b>Flash</b>: put a sensor back on the same pads; only the identified pins are
 used. Page 31 (CCFG + factory MAC) is never erased or written.</p>
-<details style="margin-top:8px"><summary>Wiring</summary><div class=wiring></div></details>
+<div class=wiring style="margin-top:8px"></div>
 <div class=big id=cjstate style="margin-top:8px">Disarmed</div>
 <div class=prog id=cjprog style="display:block;height:12px"><i id=cjbar></i></div>
 <div class=msg id=cjmsg>Start with Identify.</div>
@@ -120,8 +129,6 @@ powers the sensor up with that pad released and then held low; if holding it kep
 <option value=cjtag>2 probes: cJTAG (M, C)</option>
 <option value=sbl2>2 probes: bootloader T/R</option>
 <option value=ws>2 probes: W/S (probe 1 on T or R, probe 2 on the pad to test)</option></select></div>
-<div><label style="margin-top:0">Probe 1 colour (<span class=pinr>GPIO</span>)</label><input type=text id=wirer list=wirecolours maxlength=15 placeholder="yellow" style="width:110px"></div>
-<div><label style="margin-top:0">Probe 2 colour (<span class=pint>GPIO</span>)</label><input type=text id=wiret list=wirecolours maxlength=15 placeholder="green" style="width:110px"></div>
 <datalist id=wirecolours><option value=red><option value=black><option value=yellow><option value=green><option value=blue>
 <option value=white><option value=orange><option value=purple><option value=brown><option value=grey></datalist>
 <label class=check style="margin-top:0"><input type=checkbox id=cjsound checked>Audio cues (lock, page ticks, slip, done)</label>
@@ -206,8 +213,8 @@ function wireOf(n){return WIRES[n]||''}
 function withWire(t){return String(t||'').replace(/GPIO(\d+)/g,(m,n)=>wireOf(n)?wireOf(n)+' wire '+m:m)}
 function noteWires(s){const p=s.pins||{},w=s.wires||{};WIRES={};if(s.role==2&&p.r>=0){WIRES[p.r]=w.r||'yellow';WIRES[p.t]=w.t||'green'}
 if(p.r>=0){document.querySelectorAll('.pinr').forEach(e=>e.textContent='GPIO'+p.r);document.querySelectorAll('.pint').forEach(e=>e.textContent='GPIO'+p.t)}
-if(!wiresFilled&&s.wires){wiresFilled=true;$('wirer').value=w.r||'';$('wiret').value=w.t||''}}
-async function saveWires(){const b=new URLSearchParams({r:$('wirer').value.trim(),t:$('wiret').value.trim()});
+}
+async function saveWires(k,v){const b=new URLSearchParams({[k]:v.trim()||'-'});
 try{const r=await fetch('/wires',{method:'POST',body:b});showMsg($('cjmsg'),r.ok,(await r.text()).trim());wiringKey='';poll()}
 catch(e){showMsg($('cjmsg'),false,'saving the wire colours failed')}}
 // The wiring, drawn from the firmware's own pin map (pins.h, reported in /api/status); the ESP8266's pins are fixed
@@ -224,6 +231,15 @@ const rows=st&&!e8?[['+',g(p.power),'the sensor’s supply, switched (a clip)',n
 ['R',g(p.r),wcol(p.r,st?'hand probe / SBL pad':'its input (DIO1)'),p.r],['T',g(p.t),wcol(p.t,st?'hand probe / SBL pad':'its output (DIO0)'),p.t],
 ['M',g(p.m),st?'cJTAG (TMSC)':'debug port TMSC: updates'],['C',g(p.c),st?'cJTAG (TCKC)':'debug port TCKC'],
 ['S',g(p.s),st?'SBL pad':'RESET_N (optional)'],['W',g(p.w),st?'SBL pad':'bootloader backdoor (optional)']];
+if(st&&!e8){const w=s.wires||{},esc=t=>String(t).replace(/[&<>"]/g,c=>'&#'+c.charCodeAt(0)+';');
+let v=rows.map(r=>{const col=r[4]||wireOf(r[3]),k=r[3]===p.r?'r':r[3]===p.t?'t':'';
+return '<div class=wrow><span class=wpad>'+r[0]+'</span><span class=wdesc>'+r[2]+'</span>'+
+'<span class=wdot style="background:'+(CSS.supports('color',col)?col:'transparent')+'"></span><span class=wgpio>'+r[1]+'</span>'+
+(k?'<input class=wcol data-k='+k+' list=wirecolours maxlength=15 value="'+esc(w[k]||'')+'" placeholder="'+esc(col)+'" aria-label="'+r[2]+' colour">':
+'<span style="flex:none;width:92px"></span>')+'</div>'}).join('');
+v+='<p class=hint>The sensor’s <b>+</b> and <b>−</b> clipped to its battery holder (battery out); the two probes on its pads: '+
+'<b>M</b>/<b>C</b> for cJTAG, <b>T</b>/<b>R</b> for the bootloader, either way round. Name each probe’s colour in its box.</p>';
+document.querySelectorAll('.wiring').forEach(d=>d.innerHTML=v);return}
 const H=30,W=360,top=34,h=top+rows.length*H+6;
 let v='<svg viewBox="0 0 '+W+' '+h+'" width="100%" style="max-width:420px;display:block" role="img" aria-label="wiring">'+
 '<text x="8" y="20" font-size="12" fill="var(--mute)">'+(st?'sensor':'contact')+' pad</text>'+
@@ -374,7 +390,7 @@ setInterval(pollCjtag,350);
 $('cjarmid').onclick=async()=>{tone(520,60,0,'sine');
 const r=await fetch('/cjtag/arm?mode=identify&'+cjQuery(),{method:'POST'});const t=(await r.text()).trim();
 showMsg($('cjmsg'),r.ok,t);cjLastState='armed';cjLastPage=0;pollCjtag()};
-$('wirer').onchange=$('wiret').onchange=saveWires;
+document.addEventListener('change',e=>{if(e.target.classList.contains('wcol'))saveWires(e.target.dataset.k,e.target.value)});
 $('cjarmdump').onclick=async()=>{tone(520,60,0,'sine');
 const r=await fetch('/cjtag/arm?mode=dump&'+cjQuery(),{method:'POST'});const t=(await r.text()).trim();
 showMsg($('cjmsg'),r.ok,t);cjLastState='armed';cjLastPage=0;pollCjtag()};
