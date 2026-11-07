@@ -608,16 +608,13 @@ static bool to_cjtag_stage(void *ctx, const uint8_t *data, size_t len)
     return cjtag_task_stage_feed(data, len);
 }
 
-static cjtag_transport_t parse_transport(const char *s)
+static cjtag_transport_t parse_transport(const char *s)  // the station's three modes, all on the two probes
 {
-    if (!strcmp(s, "sbl")) {
-        return CJTAG_TRANSPORT_SBL;
-    }
-    if (!strcmp(s, "auto")) {
-        return CJTAG_TRANSPORT_AUTO;
-    }
     if (!strcmp(s, "sbl2")) {
         return CJTAG_TRANSPORT_SBL2;
+    }
+    if (!strcmp(s, "ws")) {
+        return CJTAG_TRANSPORT_WS;
     }
     return CJTAG_TRANSPORT_CJTAG;
 }

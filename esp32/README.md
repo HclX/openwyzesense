@@ -55,19 +55,24 @@ port that does not answer falls back to the bootloader. Tried on the LOLIN32 (do
 ### Relay or provisioning station
 
 One image, two roles, chosen on the setup page ("Device role"; one at a time, the ESP restarts to switch): the
-**relay** (the default) or the **provisioning station**, which dumps and flashes other sensors on the same harness (no
-relay meanwhile). On the station, a sensor's `+` hangs on the power GPIO, its `M`/`C` on the same two GPIOs (polarity
-found), and a sensor with four unmarked pads besides `+`/`-` (the v2 leak sensor) goes on `R`, `T`, `S`, `W` in any
-order: the station finds which is which through the TI ROM bootloader (`esp32/contact/sblprobe.c`). Probe tab, two
-separate steps: **Identify** (with `cjtag`, `sbl` or `auto`: the pins found, confirmed by a second independent
-connect, the sensor let go; nothing read but what identifies it, nothing written), then **Dump** or **Flash**, which use
-only the identified pins and wait for a sensor on the same pads (refused before an identification). Transport `sbl2`
-is for two hand-held probes on the sensor's TX and RX pads (the `R` and `T` wires, either way round) with `+` and `−`
-clipped to the battery holder: the station tries only once both probes have been on the sensor for 200 ms (a 20 us
-pull-up pulse on each probe, the sensor unpowered: low on a pad, high in the air), holds the candidate RX (the stock
-backdoor, DIO1) or the other pad low across a power-up, and listens for the bootloader; after a try that found
-nothing, it waits for the probes to be lifted and put back. A dump of the
-unit, downloaded, before any flash of it; pages 0-29 (30 only for an NV wipe), every page verified, page 31 never.
+**relay** (the default) or the **provisioning station**, which dumps and flashes other sensors (no relay meanwhile).
+The station has four wires (the user, 2026-11-07): the sensor's `+` (the supply pin, switched) and `−` on clips at its
+battery holder (battery out), and two hand-held probes, the harness's `R` and `T` wires (probe 1, probe 2; colours
+set on the Probe tab), used for every mode:
+- **cJTAG**: the probes on `M` and `C` (polarity found).
+- **Bootloader T/R** (`sbl2`): the probes on its TX and RX pads, either way round. The station tries only once both
+  probes have been on the sensor for 200 ms (a 20 us pull-up pulse on each, the sensor unpowered with its supply
+  driven low: low on a pad, high in the air), holds the candidate RX (the stock backdoor, DIO1) or the other pad low
+  across a power-up, and listens for the bootloader; after a try that found nothing, it waits for the probes to be
+  lifted.
+- **W/S, experimental** (after T/R): the probes on the two other pads; 5 ms after a power-up each pad is read with the
+  ESP's pull-down and pull-up, twice: the reset pin's pull-up (`S`) against a floating DIO (`W`), or "can't tell". It
+  keeps the T/R identification.
+
+Probe tab, two steps: **Identify** with one of those modes (the pins found and confirmed, the sensor let go; nothing
+read but what identifies it, nothing written), then **Dump** or **Flash**, on the identified pins only (refused
+before an identification). A dump of the unit, saved, before any flash of it; it stays on the station until the next
+Dump, staged image or Disarm. Pages 0-29 (30 only for an NV wipe), every page verified, page 31 never.
 
 Provision the contact board once over JTAG (`docs/design/v1-contact.md`), backing up its stock flash first:
 `tools/uniflash.py provision --gateway --backup backups/contact_<MAC>` (or step by step:

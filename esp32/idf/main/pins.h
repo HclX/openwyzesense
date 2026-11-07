@@ -32,13 +32,15 @@
 
 #define OWS_PIN_STATUS_LED (-1)  // no status LED
 
-// The provisioning station (role station, mutually exclusive with the relay: the user, 2026-11-06) uses the same
-// harness as the relay's contact: the probed sensor's + on the contact's supply pin, its M/C on the contact's M/C,
-// and for a sensor with 4 unmarked pads (SBL pad search, sblprobe.c) those pads on the contact's R, T, S and W.
-#define OWS_PIN_STATION_A     OWS_PIN_CONTACT_TMS  // cJTAG probe A (M or C, polarity found)
-#define OWS_PIN_STATION_B     OWS_PIN_CONTACT_TCK
-#define OWS_PIN_STATION_SBL_0 OWS_PIN_CONTACT_TX
-#define OWS_PIN_STATION_SBL_1 OWS_PIN_CONTACT_RX
-#define OWS_PIN_STATION_SBL_2 OWS_PIN_CONTACT_RESET
-#define OWS_PIN_STATION_SBL_3 OWS_PIN_CONTACT_BOOT
-#define OWS_PIN_STATION_POWER OWS_PIN_CONTACT_POWER
+// The provisioning station (role station, mutually exclusive with the relay: the user, 2026-11-06/07): four wires,
+// the sensor's + and - on clips (the contact's supply pin and GND) and two hand-held probes, the harness's R and T
+// wires, used for every mode: cJTAG (M/C), the bootloader's T/R, and the experimental W/S check.
+#define OWS_PIN_STATION_PROBE1 OWS_PIN_CONTACT_TX
+#define OWS_PIN_STATION_PROBE2 OWS_PIN_CONTACT_RX
+#define OWS_PIN_STATION_A      OWS_PIN_STATION_PROBE1  // cJTAG (M or C, polarity found)
+#define OWS_PIN_STATION_B      OWS_PIN_STATION_PROBE2
+#define OWS_PIN_STATION_SBL_0  OWS_PIN_STATION_PROBE1  // the bootloader's R/T (sbl2), or W/S
+#define OWS_PIN_STATION_SBL_1  OWS_PIN_STATION_PROBE2
+#define OWS_PIN_STATION_SBL_2  (-1)
+#define OWS_PIN_STATION_SBL_3  (-1)
+#define OWS_PIN_STATION_POWER  OWS_PIN_CONTACT_POWER

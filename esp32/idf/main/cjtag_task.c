@@ -944,6 +944,77 @@ static void run_sbl_session(const sblprobe_result_t *map)
     ESP_LOGI(TAG, "%s", status_msg);
 }
 
+// How a pad pulls right after a power-up: 0 floating (follows the ESP's pull), 1 pulled high, 2 pulled low, 3 odd
+static int pad_pull(int gpio)
+{
+    gpio_num_t pin = (gpio_num_t)gpio;
+    gpio_set_direction(pin, GPIO_MODE_INPUT);
+    gpio_pullup_dis(pin);
+    gpio_pulldown_en(pin);
+    esp_rom_delay_us(50);
+    int down = gpio_get_level(pin);
+    gpio_pulldown_dis(pin);
+    gpio_pullup_en(pin);
+    esp_rom_delay_us(50);
+    int up = gpio_get_level(pin);
+    gpio_pullup_dis(pin);
+    return down && up ? 1 : !down && !up ? 2 : !down && up ? 0 : 3;
+}
+
+// Experimental W/S check (the user, 2026-11-07: after T/R, which of the two other pads is W and which S, to mark them):
+// the probes on those two pads, the sensor powered up, and 5 ms later (the chip still in its ROM start, its I/O pins
+// untouched) each pad read once with the ESP's pull-down and once with its pull-up, twice. S (RESET_N) is pulled up
+// inside the chip and reads high both ways; an unused DIO (W) floats and follows the ESP's pull. Only one pulled high
+// and one floating, the same both times, is an answer; anything else is reported as seen. Weak: the reset pull-up is
+// about as strong as the ESP's pull-down, so it can read low; to be checked on sensors whose pads are known.
+static void ws_check(const sblprobe_io_t *io)
+{
+    static const char *names[] = {"floating", "pulled high", "pulled low", "odd"};
+    if (!touch_gate(io)) {
+        if (!need_lift) {
+            note("Waiting: hold the two probes on the two pads that are not T/R (W and S)");
+        }
+        return;
+    }
+    int got[2][2];
+    for (int rep = 0; rep < 2; rep++) {
+        release_sbl_pins(true);
+        vTaskDelay(pdMS_TO_TICKS(200));
+        sbl_power(NULL, true);
+        vTaskDelay(pdMS_TO_TICKS(5));
+        got[rep][0] = pad_pull(cfg_sbl_pins[0]);
+        got[rep][1] = pad_pull(cfg_sbl_pins[1]);
+    }
+    release_sbl_pins(true);
+    xSemaphoreTake(lock, portMAX_DELAY);
+    if (state == STATE_ARMED) {
+        bool same = got[0][0] == got[1][0] && got[0][1] == got[1][1];
+        int s_pad = -1;
+        if (same && got[0][0] == 1 && got[0][1] == 0) {
+            s_pad = 0;
+        } else if (same && got[0][0] == 0 && got[0][1] == 1) {
+            s_pad = 1;
+        }
+        if (s_pad >= 0) {
+            snprintf(status_msg, sizeof status_msg,
+                     "W/S (experimental): S = GPIO%d (pulled high: the reset pin's pull-up), W = GPIO%d (floating). "
+                     "The T/R identification is kept.",
+                     cfg_sbl_pins[s_pad], cfg_sbl_pins[1 - s_pad]);
+        } else {
+            snprintf(
+                status_msg, sizeof status_msg,
+                "W/S (experimental): can't tell: GPIO%d %s/%s, GPIO%d %s/%s (two power-ups); the T/R identification "
+                "is kept.",
+                cfg_sbl_pins[0], names[got[0][0]], names[got[1][0]], cfg_sbl_pins[1], names[got[0][1]],
+                names[got[1][1]]);
+        }
+        done_seq++;
+        state = STATE_DONE;
+    }
+    xSemaphoreGive(lock);
+    ESP_LOGI(TAG, "%s", status_msg);
+}
+
 static void identified_done(const char *how)
 {
     xSemaphoreTake(lock, portMAX_DELAY);
@@ -963,7 +1034,11 @@ static void identified_done(const char *how)
 static void identify(cjtag_t *cj, esp_pin_ctx_t *pctx, const sblprobe_io_t *sbl_io)
 {
     cjtag_transport_t tr = cfg_transport;
-    if (tr == CJTAG_TRANSPORT_CJTAG || tr == CJTAG_TRANSPORT_AUTO) {
+    if (tr == CJTAG_TRANSPORT_WS) {
+        ws_check(sbl_io);
+        return;
+    }
+    if (tr == CJTAG_TRANSPORT_CJTAG) {
         if (!sbl_powered) {
             sbl_power(NULL, true);
             vTaskDelay(pdMS_TO_TICKS(50));
@@ -989,9 +1064,9 @@ static void identify(cjtag_t *cj, esp_pin_ctx_t *pctx, const sblprobe_io_t *sbl_
             return;
         }
     }
-    if (tr == CJTAG_TRANSPORT_SBL || tr == CJTAG_TRANSPORT_AUTO || tr == CJTAG_TRANSPORT_SBL2) {
-        int pads = tr == CJTAG_TRANSPORT_SBL2 ? 2 : SBLPROBE_PADS;
-        if (pads == 2 && !touch_gate(sbl_io)) {
+    if (tr == CJTAG_TRANSPORT_SBL2) {
+        const int pads = 2;  // the two probes
+        if (!touch_gate(sbl_io)) {
             if (!need_lift) {
                 note("Waiting: hold the two probes on the sensor's TX and RX pads");
             }
@@ -1036,18 +1111,12 @@ static void identify(cjtag_t *cj, esp_pin_ctx_t *pctx, const sblprobe_io_t *sbl_
                 return;
             }
             note("Not confirmed (the bootloader on %s answered once, then not the same): hold the probes still", where);
-        } else if (pads == 2) {
+        } else {
             note("Nothing answered on these two pads (%s): lift the probes, then try again", found.error);
-        } else if (tr == CJTAG_TRANSPORT_SBL || found.error[0]) {
-            note("Waiting for a sensor (%s)", found.error);
         }
         release_sbl_pins(true);
-        if (pads == 2) {
-            need_lift = true;  // not again while they stay on
-            touch_streak = 0;
-            return;
-        }
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        need_lift = true;  // not again while they stay on
+        touch_streak = 0;
         return;
     }
     vTaskDelay(pdMS_TO_TICKS(150));
@@ -1262,7 +1331,7 @@ bool cjtag_task_arm(cjtag_mode_t new_mode, cjtag_transport_t transport, char *ms
 
     touch_streak = 0;  // two hand-held probes: a fresh start
     need_lift = false;
-    if (new_mode == CJTAG_MODE_IDENTIFY) {  // a new identification replaces the last one
+    if (new_mode == CJTAG_MODE_IDENTIFY && transport != CJTAG_TRANSPORT_WS) {  // a new one replaces the last one
         identified = false;
         id_transport = 0;
         have_sbl_map = false;
@@ -1271,12 +1340,13 @@ bool cjtag_task_arm(cjtag_mode_t new_mode, cjtag_transport_t transport, char *ms
         active_tck = -1;
         active_tms = -1;
         active_transport = 0;
+    }
+    if (new_mode == CJTAG_MODE_IDENTIFY) {  // the W/S check keeps the T/R identification
         cfg_transport = transport;
         mode = new_mode;
-        const char *label = (transport == CJTAG_TRANSPORT_SBL)    ? "SBL pad search"
-                            : (transport == CJTAG_TRANSPORT_AUTO) ? "cJTAG, then SBL pad search"
-                            : (transport == CJTAG_TRANSPORT_SBL2) ? "SBL, two hand probes on TX/RX"
-                                                                  : "cJTAG M/C";
+        const char *label = (transport == CJTAG_TRANSPORT_SBL2) ? "SBL T/R, two probes"
+                            : (transport == CJTAG_TRANSPORT_WS) ? "W/S check (experimental), two probes"
+                                                                : "cJTAG M/C, two probes";
         snprintf(status_msg, sizeof status_msg, "Identify armed [%s]: connect the sensor", label);
         state = STATE_ARMED;
         snprintf(msg, msg_cap, "%s", status_msg);
@@ -1384,7 +1454,7 @@ size_t cjtag_task_json(char *out, size_t cap)
 {
     static const char *state_names[] = {"idle", "armed", "running", "slipped", "done", "error"};
     static const char *mode_names[] = {"none", "dump", "flash", "identify"};
-    static const char *tr_names[] = {"cjtag", "sbl", "auto", "sbl2"};
+    static const char *tr_names[] = {"cjtag", "sbl", "auto", "sbl2", "ws"};
     static const char *act_tr_names[] = {"none", "cjtag", "sbl"};
 
     if (!lock) {
