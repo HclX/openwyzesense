@@ -91,8 +91,10 @@
 // - NV_SENSOR_JOIN (0x20, 12 B): type, flags (bit 0: gateway ours), PAN, coordinator, short address, 00 00, gw_features
 // - NV_CFG (0x21, 8 B): type (0: board default), flags (bit 0: invert INPUT_EVENT), pull (0=up, 1=none, 2=down,
 //   0xFF=board default), 0, debounce_ms (LE16, 0: default 40 ms), 00 00
+// - NV_SENSOR_KEY (0x22, 16 B): the secured link's key from the gateway at the pairing (seclink.h; prototype, #28)
 #define NV_SENSOR_JOIN 0x20
 #define NV_CFG         0x21
+#define NV_SENSOR_KEY  0x22
 
 static void save(void *ctx)
 {
@@ -112,6 +114,15 @@ static void save(void *ctx)
                      (uint8_t)(s->gw_features >> 8)};
     if (a->nv_ok) {
         nv_write(&a->nv, NV_SENSOR_JOIN, 0, r, sizeof r);
+        uint16_t len;
+        if (s->sl.have_key) {
+            const uint8_t *k = nv_find(&a->nv, NV_SENSOR_KEY, 0, &len);
+            if (!k || len != 16 || memcmp(k, s->sl.key, 16) != 0) {  // written only when it changes: a pairing
+                nv_write(&a->nv, NV_SENSOR_KEY, 0, s->sl.key, 16);
+            }
+        } else if (nv_find(&a->nv, NV_SENSOR_KEY, 0, &len)) {
+            nv_delete(&a->nv, NV_SENSOR_KEY, 0);
+        }
     }
 }
 
@@ -200,6 +211,11 @@ static void restore(sensor_app_t *a)
     sensor_restore(&a->sensor, pan, (uint16_t)(r[4] | r[5] << 8), (uint16_t)(r[6] | r[7] << 8), 0, a->now_ms);
     a->sensor.gw_ours = r[1] & 1;
     a->sensor.gw_features = (uint16_t)(r[10] | r[11] << 8);
+    const uint8_t *k = nv_find(&a->nv, NV_SENSOR_KEY, 0, &len);
+    if (k && len == 16) {  // the secured link: a new session at its first report (seclink.h)
+        memcpy(a->sensor.sl.key, k, 16);
+        a->sensor.sl.have_key = true;
+    }
 }
 
 static uint8_t mv_to_raw(uint32_t mv)  // the reports' battery byte: 1/32 V
@@ -656,6 +672,7 @@ static bool command(sensor_app_t *a, char *line)
         sensor_leave(s);
         if (a->nv_ok) {
             nv_delete(&a->nv, NV_SENSOR_JOIN, 0);
+            nv_delete(&a->nv, NV_SENSOR_KEY, 0);
         }
     } else if (!strcmp(line, "join")) {
         join(a);
@@ -720,6 +737,9 @@ static bool command(sensor_app_t *a, char *line)
                          (const char *)s->cfg.mac, s->cfg.type, s->state, s->pan, s->coord, s->short_addr, s->counter);
         if (s->gw_ours && n > 0 && n < (int)sizeof m) {
             n += snprintf(m + n, sizeof m - (size_t)n, " gw ours %04X", s->gw_features);
+        }
+        if (s->sl.have_key && n > 0 && n < (int)sizeof m) {
+            n += snprintf(m + n, sizeof m - (size_t)n, " secure %s", s->sl.session ? "session" : "key");
         }
         if (boot_running_slot() >= 0 && n > 0 && n < (int)sizeof m) {
             n += snprintf(m + n, sizeof m - (size_t)n, " slot %c v%lu", "AB"[boot_running_slot()],

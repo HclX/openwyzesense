@@ -110,7 +110,18 @@ typedef struct {
     bool check_in;         // the A1 queued by sensor_check_in: JOIN_POLLS polls after it, any type
     bool gw_ours;          // the gateway's A6 at the pairing said it is ours (wyze_app.h A6_OURS_*)
     uint16_t gw_features;  // ... and these features
-    struct {               // SENSOR_MOTION_V1 PIR: 12 x 10 s pulse buckets (0xAB) + 120 s retriggerable clear
+    struct {            // the secured link (seclink.h, docs/design/security.md), with a gateway that has A6_OURS_SECURE
+        bool have_key;  // its key, from the gateway at the pairing (kept with the join: the app saves key[])
+        bool session;   // a session with the gateway since this start
+        bool hello_sent;  // waiting for the gateway's SL_SESSION
+        uint8_t key[16];
+        uint8_t sess[16];  // the session key
+        uint8_t snonce[8];
+        uint32_t tx_ctr, rx_ctr;
+        uint8_t fails;      // hellos / secured reports in a row nobody answered: the backoff
+        uint32_t retry_at;  // no hello before this
+    } sl;
+    struct {  // SENSOR_MOTION_V1 PIR: 12 x 10 s pulse buckets (0xAB) + 120 s retriggerable clear
         bool active;
         bool pin_high;
         uint8_t idx;

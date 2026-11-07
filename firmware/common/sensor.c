@@ -5,6 +5,7 @@
 #include "boot_slot.h"
 #include "mac154.h"
 #include "ota.h"
+#include "seclink.h"
 #include "wyze_app.h"
 
 // Timing, from the captured joins (ground_truth/rf/2026-10-22_18*, FACTS.md §3.1) and reports
@@ -45,8 +46,15 @@ enum {
     ACT_REPORT,
     ACT_RESCAN,
     ACT_OTA_REQ,
-    ACT_OTA_DONE
+    ACT_OTA_DONE,
+    ACT_HELLO
 };
+
+// The secured link: no answer to a hello or a sealed report -> keep the reports, try again after these: at once the
+// first time (the gateway restarted and lost our session), then backing off, then with each heartbeat
+// (docs/design/security.md 4.6.1)
+static const uint32_t SL_BACKOFF_MS[] = {0, 60000, 300000, 900000};
+#define SL_BACKOFF_STEPS (sizeof SL_BACKOFF_MS / sizeof SL_BACKOFF_MS[0])
 
 static uint32_t heartbeat_ms(const sensor_t *s);
 
@@ -82,7 +90,14 @@ void sensor_leave(sensor_t *s)
     s->join_tries = 0;
     s->gw_ours = false;
     s->gw_features = 0;
+    memset(&s->sl, 0, sizeof s->sl);
     memset(&s->pir, 0, sizeof s->pir);
+}
+
+// Whether reports must go sealed: a gateway that secures the link, and our key from it
+static bool sl_on(const sensor_t *s)
+{
+    return s->sl.have_key && s->gw_ours && (s->gw_features & A6_OURS_SECURE);
 }
 
 void sensor_restore(sensor_t *s, uint16_t pan, uint16_t coord, uint16_t short_addr, uint16_t counter, uint32_t now)
@@ -169,6 +184,45 @@ static void send_message(sensor_t *s, const uint8_t *pt, size_t n, uint32_t now)
     send(s, f, mac_build_data(f, s->seq++, s->pan, s->coord, s->short_addr, ct, len, true), true, now);
 }
 
+// A report: sealed in an SL_FRAME once the link is secured, else as the stock sensors send it
+static void send_report_msg(sensor_t *s, const uint8_t *pt, size_t n, uint32_t now)
+{
+    uint8_t f[APP_MAX_PAYLOAD];
+    size_t len = s->sl.session ? sl_seal(s->sl.sess, SL_UP, ++s->sl.tx_ctr, pt, n, f) : 0;
+    if (len) {
+        send_message(s, f, len, now);
+    } else {
+        send_message(s, pt, n, now);
+    }
+}
+
+// SL_HELLO: a fresh nonce, proof of the key; the gateway's SL_SESSION comes on the polls after its ACK
+static void sl_hello(sensor_t *s, uint32_t now)
+{
+    uint8_t pt[SL_HELLO_LEN] = {APP_OURS, SL_HELLO};
+    platform_random(s->sl.snonce, SL_NONCE);
+    memcpy(pt + 2, s->cfg.mac, 8);
+    memcpy(pt + 10, s->sl.snonce, SL_NONCE);
+    sl_hello_tag(s->sl.key, s->cfg.mac, s->sl.snonce, pt + 18);
+    s->sl.session = false;
+    s->sl.hello_sent = true;
+    s->step = ACT_HELLO;
+    send_message(s, pt, sizeof pt, now);
+}
+
+// No answer (to a hello, or to a sealed report): keep the reports, no session, try again after the backoff
+static void sl_failed(sensor_t *s, uint32_t now)
+{
+    uint32_t wait = s->sl.fails < SL_BACKOFF_STEPS ? SL_BACKOFF_MS[s->sl.fails] : heartbeat_ms(s);
+    if (s->sl.fails < 255) {
+        s->sl.fails++;
+    }
+    s->sl.session = s->sl.hello_sent = false;
+    s->sl.retry_at = now + wait;
+    s->polls_left = 0;
+    schedule(s, s->n_queued ? ACT_REPORT : ACT_NONE, s->sl.retry_at);
+}
+
 // A1 / A2 / E8: type MAC sensor_type temp battery len(2) data counter(2); AB: AB MAC type buckets(12) 0x01
 static void send_report(sensor_t *s, const sensor_queued_t *q, uint32_t now)
 {
@@ -181,7 +235,7 @@ static void send_report(sensor_t *s, const sensor_queued_t *q, uint32_t now)
         memcpy(pt + n, s->pir.summary, 12);
         n += 12;
         pt[n++] = 0x01;
-        send_message(s, pt, n, now);
+        send_report_msg(s, pt, n, now);
         return;
     }
     uint8_t len = q->msg == APP_CLIMATE ? 3 : 1;
@@ -196,7 +250,7 @@ static void send_report(sensor_t *s, const sensor_queued_t *q, uint32_t now)
     pt[n++] = s->low_battery ? 0x01 : 0x00, pt[n++] = len;
     memcpy(pt + n, q->data, len), n += len;
     pt[n++] = (uint8_t)(s->counter >> 8), pt[n++] = (uint8_t)s->counter;
-    send_message(s, pt, n, now);
+    send_report_msg(s, pt, n, now);
 }
 
 // What comes after a report or an OTA step: reports first, then the update's next block request
@@ -348,6 +402,7 @@ void sensor_join(sensor_t *s, uint32_t now)
     }
     memset(&s->ota, 0, sizeof s->ota);
     memset(&s->pir, 0, sizeof s->pir);
+    memset(&s->sl, 0, sizeof s->sl);  // a new pairing: a new key comes with it
     s->check_in = false;
     s->join_tries = 0;
     s->join_deadline = now + JOIN_TIMEOUT_MS;
@@ -540,6 +595,9 @@ static void on_ack(sensor_t *s, const mac_frame_t *m, uint32_t now)
             schedule(s, ACT_POLL, now + OTA_POLL_MS);
         } else if (s->step == ACT_OTA_DONE) {
             ota_ended(s, now);
+        } else if (s->step == ACT_HELLO) {  // the hello: poll for the gateway's half
+            s->polls_left = JOIN_POLLS;
+            schedule(s, ACT_POLL, now + OTA_POLL_MS);
         } else if (msg) {
             memmove(s->queued, s->queued + 1, (size_t)(--s->n_queued) * sizeof s->queued[0]);
             if (msg == APP_STATUS) {  // after A1: poll for the time / for commands
@@ -552,6 +610,69 @@ static void on_ack(sensor_t *s, const mac_frame_t *m, uint32_t now)
                 next_step(s, now + REPORT_GAP_MS);
             }
         }
+    }
+}
+
+static bool on_message(sensor_t *s, const uint8_t *pt, size_t n, uint32_t now);
+
+// Our messages (4F ..): the key at pairing, the gateway's half of a session, a resync, a sealed downlink frame
+static bool sl_message(sensor_t *s, const uint8_t *pt, size_t n, uint32_t now)
+{
+    uint8_t tag[SL_TAG], inner[APP_MAX_PAYLOAD];
+    size_t len;
+    uint32_t ctr;
+    if (n < 2 || s->state != SENSOR_JOINED || !s->gw_ours || !(s->gw_features & A6_OURS_SECURE)) {
+        return false;
+    }
+    switch (pt[1]) {
+        case SL_KEY:  // after the A6 (4.1 F1: in clear, the pairing window an accepted risk)
+            if (n < 18) {
+                return false;
+            }
+            memcpy(s->sl.key, pt + 2, 16);
+            s->sl.have_key = true;
+            s->sl.fails = 0;
+            s->sl.retry_at = now;
+            if (s->io.save) {
+                s->io.save(s->io.ctx);
+            }
+            s->polls_left = 0;
+            schedule(s, ACT_HELLO, now + REPORT_GAP_MS);
+            return true;
+        case SL_SESSION:
+            if (n < SL_SESSION_LEN || !s->sl.have_key || !s->sl.hello_sent) {
+                return false;
+            }
+            sl_session_tag(s->sl.key, s->sl.snonce, pt + 2, tag);
+            if (!sl_equal(tag, pt + 2 + SL_NONCE, SL_TAG)) {
+                return false;  // not our gateway (or not this hello)
+            }
+            sl_session_key(s->sl.key, s->sl.snonce, pt + 2, s->sl.sess);
+            s->sl.session = true;
+            s->sl.hello_sent = false;
+            s->sl.tx_ctr = s->sl.rx_ctr = 0;
+            s->sl.fails = 0;
+            s->polls_left = 0;
+            next_step(s, now + REPORT_GAP_MS);
+            return true;
+        case SL_RESYNC:  // the gateway lost our session (it restarted, or had too many): a new one first
+            if (!s->sl.have_key) {
+                return false;
+            }
+            s->sl.session = false;
+            s->sl.retry_at = now;
+            s->polls_left = 0;
+            schedule(s, ACT_HELLO, now + REPORT_GAP_MS);
+            return true;
+        case SL_FRAME:  // only a time sync comes sealed so far
+            if (!s->sl.session || !sl_open(s->sl.sess, SL_DOWN, pt, n, inner, &len, &ctr) || ctr <= s->sl.rx_ctr ||
+                !len || inner[0] != APP_TIME_SYNC) {
+                return false;
+            }
+            s->sl.rx_ctr = ctr;
+            return on_message(s, inner, len, now);
+        default:
+            return false;
     }
 }
 
@@ -597,6 +718,8 @@ static bool on_message(sensor_t *s, const uint8_t *pt, size_t n, uint32_t now)
             s->polls_left = 0;
             next_step(s, now + REPORT_GAP_MS);
             return true;
+        case APP_OURS:
+            return sl_message(s, pt, n, now);
         case APP_OTA_OFFER:
             return ota_offered(s, pt, n, now);
         case APP_OTA_BLOCK:
@@ -721,6 +844,8 @@ static void act(sensor_t *s, uint32_t now)
             if (!s->polls_left) {
                 if (s->state == SENSOR_HANDSHAKE) {
                     join_done(s, false, now);
+                } else if (s->sl.hello_sent) {  // no SL_SESSION came
+                    sl_failed(s, now);
                 } else if (s->ota.active) {
                     ota_no_block(s, now);
                 } else {
@@ -744,10 +869,23 @@ static void act(sensor_t *s, uint32_t now)
             send_message(s, pt, 27, now);
             break;
         case ACT_REPORT:
-            if (s->n_queued) {
-                send_report(s, &s->queued[0], now);
-            } else {
+            if (!s->n_queued) {
                 s->step = ACT_NONE;
+            } else if (sl_on(s) && !s->sl.session) {  // a secured link without a session (a start, a resync)
+                if ((int32_t)(now - s->sl.retry_at) < 0) {
+                    schedule(s, ACT_REPORT, s->sl.retry_at);  // still backing off: the reports wait
+                } else {
+                    sl_hello(s, now);
+                }
+            } else {
+                send_report(s, &s->queued[0], now);
+            }
+            break;
+        case ACT_HELLO:
+            if (sl_on(s)) {
+                sl_hello(s, now);
+            } else {
+                next_step(s, now);
             }
             break;
         case ACT_OTA_REQ:
@@ -832,6 +970,15 @@ void sensor_tick(sensor_t *s, uint32_t now)
         }
         if (s->step == ACT_OTA_REQ || (s->ota.active && s->step == ACT_POLL)) {
             ota_no_block(s, now);
+            return;
+        }
+        if (s->step == ACT_HELLO || (s->step == ACT_REPORT && s->sl.session)) {
+            // nobody took the hello or the sealed report (a gateway without its key, or gone): keep the reports
+            if (s->step == ACT_REPORT && s->n_queued && s->queued[0].msg != APP_MOTION_SUMMARY &&
+                s->queued[0].msg != APP_STATUS) {
+                s->counter--;  // send_report advanced it for this event; it goes again with the same number
+            }
+            sl_failed(s, now);
             return;
         }
         if (s->step == ACT_REPORT && s->n_queued) {

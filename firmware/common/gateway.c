@@ -1345,9 +1345,11 @@ void gw_rx(gateway_t *gw, const uint8_t *frame, size_t len, int8_t rssi)
             return;
         }
         aes128_ecb_decrypt(app_key, m.payload, pt, m.payload_len);
-        // a secured frame without the network key (the host has not pushed it since the start): no ACK, so the
-        // sensor keeps the report and tries again later (docs/design/security.md 4.6.1)
-        bool unkeyed = pt[0] == APP_OURS && pt[1] == SL_FRAME && !gw->have_net_key;
+        // a secured frame it cannot open (no network key yet since the start, or no session with that sensor, as
+        // after a restart): no ACK, so the sensor keeps the report, starts a new session and sends it again
+        // (docs/design/security.md 4.6.1)
+        bool unkeyed =
+            pt[0] == APP_OURS && pt[1] == SL_FRAME && (!gw->have_net_key || !session_of(gw, (uint16_t)m.src));
         if (ours && !unkeyed) {
             send_ack(gw, m.seq, false);
         }
