@@ -1,7 +1,21 @@
 # Securing the radio link: design proposal
 
-**Status: proposal for discussion (#28). Nothing here is decided or built.** Each decision area lists the
-alternatives with their pros and cons and a recommendation; the user picks, and this file then becomes the design.
+**Status: proposal for discussion (#28); partly decided (the user, 2026-11-06, on PR #77), nothing built.** Each
+decision area lists the alternatives with their pros and cons and a recommendation; the user picks, and this file then
+becomes the design.
+
+**Decided so far:**
+
+| Area | Decision |
+|---|---|
+| Threat model | An attacker in radio range **while the user is pairing** is an accepted risk |
+| 4.1 Key | "Just works" pairing is acceptable. Open: **F** (per-sensor keys derived from a network key) vs A, and how F's key reaches the sensor |
+| 4.2 Messages | **A**: AES-CCM; confidentiality is nice to have |
+| 4.3 Freshness | **A**: a session per boot |
+| 4.4 OTA | **A**: the authenticated channel is enough; **the button goes** |
+| 4.5 Enabling | **B: on by default between our sensor and our gateway.** The user's general rule (R3 amended, [requirements.md](requirements.md)): once both have verified the other is ours, every feature both support is on. So the A6 "ours" mark must be on by default too (TASK-22 first) |
+| 4.6 Keys | `nv.json` may carry keys in clear. The user prefers **D** (the host holds the keys and pushes them to the gateway's RAM at start: no gateway flash writes). Open: confirm D |
+| 4.7 Stock sensors | **C**: nothing |
 
 ## 1. The problem
 
@@ -35,7 +49,7 @@ On the air today (FACTS.md §4):
 | Attacker | In scope? |
 |---|---|
 | Anyone in radio range: listens, records, transmits, at any time | yes: the main one |
-| Someone in radio range *while the user is pairing a sensor* (a few seconds) | yes, see §4.1 for which alternative resists it |
+| Someone in radio range *while the user is pairing a sensor* (a few seconds) | **accepted risk** (the user) |
 | Physical access to one sensor (JTAG readout of its flash) | partly: it must not expose *other* sensors' keys |
 | Physical access to the gateway, or control of the host (wyzesense2mqtt-rs) | no: they are trusted. §4.6 is about not letting that grow |
 
@@ -72,9 +86,20 @@ On the air today (FACTS.md §4):
 | D | **One network key** for all sensors of a network, sent to each sensor at pairing (in clear, or under a key from A) | simplest table (no per-sensor key); roaming gateways share one secret | reading out one sensor exposes every sensor of the network; replacing the key means re-pairing everything |
 | E | **The key sent in clear at pairing** (the gateway picks it and sends it in the A6) | trivial to build; far better than today | anyone recording during pairing has it, forever; a recorded pairing is enough, no active attack needed |
 
-**Recommendation: A now, B possibly later as an upgrade.** A is the best protection for no extra user effort, and B
-can be added on top without changing the message format: only the gateway checks one more thing. C and D trade a
-safe key exchange for secrets to look after. E is too weak to be worth a format change.
+| F | **Per-sensor keys derived from one network key** (the user's suggestion): `K_sensor = AES-CMAC(K_net, sensor MAC)`. The sensor receives only its own `K_sensor` at pairing; the gateway (and host) keep only `K_net` and derive any sensor's key when needed, on the AES hardware | reading out one sensor exposes that sensor only (unlike D); the gateway and host store and move **one** 16-byte secret, not one per sensor, so roaming, migration and pushing keys to RAM (4.6 D) become trivial; no per-sensor key in the gateway's RAM or flash | compromising the gateway or host exposes every sensor (they are trusted anyway, §2); a re-pair gives the same key (fine, or add a pairing counter to the derivation); replacing `K_net` means re-pairing everything; how `K_sensor` reaches the sensor is a sub-choice (below) |
+
+F's key reaches the sensor at pairing either:
+
+- **F1, in clear** (in a new message after the A6): nothing added to the sensor. But anyone who merely *recorded* that
+  pairing, without being active, can forge that sensor until `K_net` changes.
+- **F2, wrapped by an X25519 exchange** (A's exchange, used only to carry `K_sensor`): a recording is useless.
+  Roughly 5–10 KB of sensor flash and ~1 s more pairing (estimates).
+
+**Recommendation: F2, or F1 if flash or pairing time turns out tight.** With the pairing window an accepted risk, F
+gives A's per-sensor isolation while keeping the gateway's and host's key handling to one secret. F2 also covers
+someone who records a pairing and attacks months later; F1 does not. (Earlier recommendation, before F: A now, B
+possibly later. A and B remain possible, but store a key per sensor. C and D trade a safe key exchange for secrets to
+look after. E is too weak to be worth a format change.)
 
 ### 4.2 Protecting each message
 
@@ -136,8 +161,20 @@ Either way:
 | B | **The host verifies:** gateways forward ciphertext (as they forward overheard frames today); keys live in wyzesense2mqtt-rs | keys in one place; a stolen or replaced gateway holds nothing; roaming needs no key sharing | the gateway cannot ACK by authenticity or answer commands securely without the key; the host protocol grows; a stock-protocol host gets nothing |
 | C | **A, plus keys exported only wrapped:** `nv.json` carries keys encrypted under a key the user sets (or the gateway's own wrapping key, for moves between our gateways) | A's simplicity with a safer export | one more secret to manage; a wrapping key derived from a passphrase on a CH554-limited host link is fiddly |
 
-**Recommendation: A, with C's wrapping as an option for the export.** The gateway must be able to answer sensors on
-its own (ACKs, time sync, OTA), so it needs the keys; B fits poorly with that.
+| D | **The host holds the keys and pushes them to the gateway's RAM** at every gateway start (the user's preference: no gateway flash writes for keys) | keys never in gateway flash; a stolen or replaced gateway holds nothing once unpowered; with 4.1 F, the host pushes a single 16-byte `K_net` | after a restart, the gateway cannot verify or answer secure sensors until its host has connected and pushed the key: a gateway without its host (a relay whose wyzesense2mqtt-rs is down) drops their frames meanwhile; RAM (below) |
+
+**RAM (D).** The gateway holds at most 64 sensors (`GW_MAX_SENSORS`). Its image already reserves 20,472 of the
+CC1310's 20,480 bytes; the largest item is a **6 KB stack** (`STACK_SIZE`), whose real use has not been measured. Needed:
+
+- with F: `K_net` (16 B), plus session state per sensor, re-deriving each session key per frame on the AES hardware:
+  gateway nonce + two counters, ~12–16 B, so **~1 KB** for 64 sensors;
+- with per-sensor keys (A, B, C): another 16 B each, **~1 KB** more.
+
+Both must come out of the stack reservation, after measuring its high-water mark (paint it, run the tests, read it
+back).
+
+**Recommendation: D with 4.1 F** (the user's preference, and F makes the push one key). A remains the fallback if the
+gap after a gateway restart proves a problem. Either way, `nv.json` may carry keys in clear (decided).
 
 ### 4.7 Stock sensors
 
