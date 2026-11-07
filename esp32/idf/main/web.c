@@ -123,25 +123,27 @@ static esp_err_t api_status(httpd_req_t *req)
     static const char *vias[] = {"auto", "cjtag", "sbl"};  // GWSYNC_VIA_*
     bool gw_checked = (g != NULL) || (settings.role == ROLE_STATION);
     const char *relay_state = (settings.role == ROLE_STATION) ? "down" : states[relay_task_state()];
-    int len =
-        snprintf(body, 6144,
-                 "{\"name\":%s,\"mdns\":%s,\"ssid\":%s,\"url\":%s,\"ip\":%s,\"ap\":%s,\"auth\":%s,"
-                 "\"role\":%u,\"skip_gwsync\":%s,\"contact_flash\":\"%s\",\"rssi\":%d,\"relay\":\"%s\",\"connects\":%"
-                 "lu,\"queued\":%lu,"
-                 "\"replayed\":%lu,\"dropped\":%lu,\"waiting\":%u,\"uart_tx\":%lu,\"uart_rx\":%lu,"
-                 "\"uptime\":%lu,\"heap\":%lu,\"log\":%s,\"flash\":%s,\"contact_mac\":%s,"
-                 "\"build\":\"%s\",\"chip\":\"" CHIP "\",\"fw_file\":\"" FW_FILE "\","
-                 "\"gw\":{\"checked\":%s,\"result\":\"%s\",\"via_cjtag\":%s,\"msg\":%s,\"steps\":%s,\"carried\":%s,"
-                 "\"running\":%s},\"sensors\":[",
-                 name, mdns, ssid, url, ip, net_setup_ap() ? "true" : "false",
-                 http_auth_secret(settings.admin_pass, settings.token) ? "true" : "false", (unsigned)settings.role,
-                 settings.skip_gwsync ? "true" : "false", vias[settings.contact_flash % 3], rssi, relay_state,
-                 (unsigned long)(settings.role == ROLE_STATION ? 0 : relay_task_connects()), (unsigned long)queued,
-                 (unsigned long)replayed, (unsigned long)dropped, waiting, (unsigned long)uart_tx,
-                 (unsigned long)uart_rx, (unsigned long)(esp_timer_get_time() / 1000000),
-                 (unsigned long)esp_get_free_heap_size(), log_js, flash, cmac_js, build, gw_checked ? "true" : "false",
-                 g ? results[g->result] : "same", g && g->via_cjtag ? "true" : "false", gwmsg, steps,
-                 g ? carried : "null", g && (g->answered || g->result == GWSYNC_UPDATED) ? running : "null");
+    int len = snprintf(
+        body, 6144,
+        "{\"name\":%s,\"mdns\":%s,\"ssid\":%s,\"url\":%s,\"ip\":%s,\"ap\":%s,\"auth\":%s,"
+        "\"role\":%u,\"skip_gwsync\":%s,\"contact_flash\":\"%s\",\"rssi\":%d,\"relay\":\"%s\",\"connects\":%"
+        "lu,\"queued\":%lu,"
+        "\"replayed\":%lu,\"dropped\":%lu,\"waiting\":%u,\"uart_tx\":%lu,\"uart_rx\":%lu,"
+        "\"uptime\":%lu,\"heap\":%lu,\"log\":%s,\"flash\":%s,\"contact_mac\":%s,"
+        "\"pins\":{\"power\":%d,\"r\":%d,\"t\":%d,\"m\":%d,\"c\":%d,\"s\":%d,\"w\":%d},"
+        "\"build\":\"%s\",\"chip\":\"" CHIP "\",\"fw_file\":\"" FW_FILE "\","
+        "\"gw\":{\"checked\":%s,\"result\":\"%s\",\"via_cjtag\":%s,\"msg\":%s,\"steps\":%s,\"carried\":%s,"
+        "\"running\":%s},\"sensors\":[",
+        name, mdns, ssid, url, ip, net_setup_ap() ? "true" : "false",
+        http_auth_secret(settings.admin_pass, settings.token) ? "true" : "false", (unsigned)settings.role,
+        settings.skip_gwsync ? "true" : "false", vias[settings.contact_flash % 3], rssi, relay_state,
+        (unsigned long)(settings.role == ROLE_STATION ? 0 : relay_task_connects()), (unsigned long)queued,
+        (unsigned long)replayed, (unsigned long)dropped, waiting, (unsigned long)uart_tx, (unsigned long)uart_rx,
+        (unsigned long)(esp_timer_get_time() / 1000000), (unsigned long)esp_get_free_heap_size(), log_js, flash,
+        cmac_js, OWS_PIN_CONTACT_POWER, OWS_PIN_CONTACT_TX, OWS_PIN_CONTACT_RX, OWS_PIN_CONTACT_TMS,
+        OWS_PIN_CONTACT_TCK, OWS_PIN_CONTACT_RESET, OWS_PIN_CONTACT_BOOT, build, gw_checked ? "true" : "false",
+        g ? results[g->result] : "same", g && g->via_cjtag ? "true" : "false", gwmsg, steps, g ? carried : "null",
+        g && (g->answered || g->result == GWSYNC_UPDATED) ? running : "null");
     size_t pos = len > 0 && len < 6140 ? (size_t)len : 0;
     for (unsigned i = 0; i < n_sns && pos + 96 < 6144; i++) {
         uint32_t seen_s = (uint32_t)(sns_now - sns[i].last_seen_ms) / 1000u;

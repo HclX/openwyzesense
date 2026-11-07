@@ -98,6 +98,7 @@ chosen transport (<code>cJTAG</code> on M/C, polarity found; <code>SBL</code>: w
 the backdoor; <code>Auto</code>: cJTAG, then SBL), confirms them, and lets it go. Nothing is read but what identifies
 it, nothing written. <b>2. Dump</b> or <b>Flash</b>: put a sensor back on the same pads; only the identified pins are
 used. Page 31 (CCFG + factory MAC) is never erased or written.</p>
+<details style="margin-top:8px"><summary>Wiring</summary><div class=wiring></div></details>
 <div class=big id=cjstate style="margin-top:8px">Disarmed</div>
 <div class=prog id=cjprog style="display:block;height:12px"><i id=cjbar></i></div>
 <div class=msg id=cjmsg>Start with Identify.</div>
@@ -158,7 +159,9 @@ bootloader without reflashing the ESP.</p>
 <div class=prog id=gwprog><i></i></div><div class=msg id=gwmsg></div></div>
 </div></section>
 
-<section id=setup hidden><div class=grid><div class=card><h2>Setup</h2>
+<section id=setup hidden><div class=grid><div class=card><h2>Wiring (<span class=chip>this relay</span>)</h2>
+<div class=wiring></div></div>
+<div class=card><h2>Setup</h2>
 <p class=note>An empty field leaves that setting unchanged. Saving restarts the relay.</p>
 <form id=setupform><label>Wi-Fi network (2.4 GHz)</label><input type=text name=ssid id=ssid autocomplete=off>
 <label>Wi-Fi password</label><input type=password name=pass autocomplete=new-password>
@@ -192,6 +195,36 @@ const tr=document.createElement('tr'),vals=[x.mac,TYPES[x.type]||('0x'+x.type.to
 x.bat_mv?(x.bat_mv/1000).toFixed(2)+' V ('+x.bat_mv+' mV)':'–',ago(x.seen_s)];
 vals.forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;if(i==2&&x.rssi<-85)td.className='weak';
 tr.appendChild(td)});tb.appendChild(tr)})}
+// The wiring, drawn from the firmware's own pin map (pins.h, reported in /api/status); the ESP8266's pins are fixed
+let wiringKey='';
+function drawWiring(s){const role=s.role==2?2:0,e8=s.chip=='ESP8266',p=s.pins||{};
+const key=s.chip+role+JSON.stringify(p);if(key==wiringKey)return;wiringKey=key;
+const g=n=>n>=0?'GPIO'+n:'–',st=role==2;
+const rows=e8?[['+','3V3',''],['−','G',''],['R','D4','its input (DIO1)'],['T','D7','its output (DIO0)'],
+['S','D2','RESET_N'],['W','D1','bootloader backdoor (DIO10)']]:
+[['+',g(p.power),st?'supply, switched (clip: battery +)':'its supply: a reset is a power cycle'],
+['−','GND',st?'clip: battery −':''],
+['R',g(p.r),st?'SBL pad · hand probe (TX/RX)':'its input (DIO1)'],['T',g(p.t),st?'SBL pad · hand probe (TX/RX)':'its output (DIO0)'],
+['M',g(p.m),st?'cJTAG (TMSC)':'debug port TMSC: updates'],['C',g(p.c),st?'cJTAG (TCKC)':'debug port TCKC'],
+['S',g(p.s),st?'SBL pad':'RESET_N (optional)'],['W',g(p.w),st?'SBL pad':'bootloader backdoor (optional)']];
+const H=30,W=360,top=34,h=top+rows.length*H+6;
+let v='<svg viewBox="0 0 '+W+' '+h+'" width="100%" style="max-width:420px;display:block" role="img" aria-label="wiring">'+
+'<text x="8" y="20" font-size="12" fill="var(--mute)">'+(st?'sensor':'contact')+' pad</text>'+
+'<text x="'+(W-8)+'" y="20" font-size="12" fill="var(--mute)" text-anchor="end">'+s.chip+'</text>';
+rows.forEach((r,i)=>{const y=top+i*H,c=y+H/2-3;
+v+='<rect x="8" y="'+(y)+'" width="34" height="'+(H-8)+'" rx="5" fill="var(--bar)" stroke="var(--line)"/>'+
+'<text x="25" y="'+(c+5)+'" font-size="14" font-weight="600" text-anchor="middle" fill="var(--fg)">'+r[0]+'</text>'+
+'<line x1="42" y1="'+c+'" x2="'+(W-92)+'" y2="'+c+'" stroke="var(--acc)" stroke-width="2"/>'+
+'<text x="52" y="'+(c-5)+'" font-size="11" fill="var(--mute)">'+r[2]+'</text>'+
+'<rect x="'+(W-92)+'" y="'+y+'" width="84" height="'+(H-8)+'" rx="5" fill="var(--card)" stroke="var(--acc)"/>'+
+'<text x="'+(W-50)+'" y="'+(c+5)+'" font-size="13" text-anchor="middle" fill="var(--fg)">'+r[1]+'</text>'});
+v+='</svg><p class=hint>'+(e8?'Nothing on D8 (GPIO15): it must be low at start.':st?
+'Station: cJTAG on <b>M</b>/<b>C</b> (either way round). SBL fixture: the sensor’s four unmarked pads on <b>R</b>, <b>T</b>, '+
+'<b>S</b>, <b>W</b> in any order. Two hand probes (sbl2): the <b>R</b> and <b>T</b> wires on its TX and RX pads, either way '+
+'round. Always <b>+</b> and <b>−</b>; the station switches the supply.':
+'Relay: the contact on all eight. <b>+</b> on 3V3 instead also works (then <b>S</b> resets it); <b>S</b> and <b>W</b> are '+
+'optional with <b>+</b> on its GPIO.')+'</p>';
+document.querySelectorAll('.wiring').forEach(d=>d.innerHTML=v)}
 async function poll(){if(busy)return;try{const r=await fetch('/api/status',{cache:'no-store'});const s=await r.json();
 const role=s.role==2?2:0,relayOnly=role!=2||s.chip=='ESP8266',stationOnly=role==2;
 $('probetab').hidden=relayOnly;$('rolewrap').hidden=s.chip=='ESP8266';
@@ -215,7 +248,7 @@ $('waiting').textContent=s.waiting;$('wifi').textContent=s.ssid||'(not set)';
 $('rssi').textContent=s.ip?s.rssi+' dBm':'–';$('up').textContent=dur(s.uptime);
 $('heap').textContent=(s.heap/1024).toFixed(1)+' KB';$('auth').textContent=s.auth?'password set':'open (set in Setup)';
 $('build').textContent=s.build;renderSensors(s.sensors||[]);
-document.querySelectorAll('.chip').forEach(e=>e.textContent=s.chip);$('fwhint').textContent=s.fw_file;
+document.querySelectorAll('.chip').forEach(e=>e.textContent=s.chip);drawWiring(s);$('fwhint').textContent=s.fw_file;
 if(!filled){filled=true;$('ssid').value=s.ssid;$('seturl').value=s.url;$('setrole').value=String(role);if(s.contact_flash)$('setcflash').value=s.contact_flash}
 }catch(e){pill('bad','relay not answering')}}
 setInterval(poll,2000);poll();
