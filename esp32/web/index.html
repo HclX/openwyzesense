@@ -93,15 +93,17 @@ tr:last-child td{border-bottom:0}
 
 <section id=probe hidden><div class=grid>
 <div class="card wide"><h2>Hands-free provisioning station (2-pin cJTAG &amp; 4-pad SBL)</h2>
-<p class=note>Arm <b>Dump</b> or <b>Flash</b> below. In <code>cJTAG</code> mode, touch two GPIO probes against the sensor's
-<code>M</code> (TMSC) and <code>C</code> (TCKC) pads (polarity auto-detected). In <code>SBL</code> mode, connect 4 probe
-GPIOs + switched power GPIO to unmarked <code>S, W, R, T</code> pads (e.g. Wyze v2 leak sensor) for automatic RX/TX/backdoor
-discovery. <code>Auto</code> tries cJTAG first, then SBL. Page 31 (CCFG + factory MAC) is never erased or written.</p>
+<p class=note>Two separate steps. <b>1. Identify</b>: hold a sensor on the probes; the station finds its pins with the
+chosen transport (<code>cJTAG</code> on M/C, polarity found; <code>SBL</code>: which of four unmarked pads are R, T and
+the backdoor; <code>Auto</code>: cJTAG, then SBL), confirms them, and lets it go. Nothing is read but what identifies
+it, nothing written. <b>2. Dump</b> or <b>Flash</b>: put a sensor back on the same pads; only the identified pins are
+used. Page 31 (CCFG + factory MAC) is never erased or written.</p>
 <div class=big id=cjstate style="margin-top:8px">Disarmed</div>
 <div class=prog id=cjprog style="display:block;height:12px"><i id=cjbar></i></div>
-<div class=msg id=cjmsg>Select Dump or Flash below to arm hands-free probing.</div>
+<div class=msg id=cjmsg>Start with Identify.</div>
 <dl style="margin-top:10px">
 <dt>Sensor MAC</dt><dd id=cjmac>–</dd>
+<dt>Identified pins</dt><dd id=cjident>– (Identify first)</dd>
 <dt>Transport / Pins</dt><dd id=cjpins>–</dd>
 <dt>SBL pad map</dt><dd id=cjsblmap>–</dd>
 <dt>Progress</dt><dd id=cjpages>0 / 0 pages</dd>
@@ -111,14 +113,15 @@ discovery. <code>Auto</code> tries cJTAG first, then SBL. Page 31 (CCFG + factor
 station, <b>M</b>/<b>C</b> for cJTAG; a sensor with 4 unmarked pads on <b>R</b>, <b>T</b>, <b>S</b>, <b>W</b> in any
 order for SBL (roles found).</p>
 <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-top:10px">
-<div><label style="margin-top:0">Transport</label><select id=cjtrans style="width:200px">
+<div><label style="margin-top:0">Identify with</label><select id=cjtrans style="width:200px">
 <option value=cjtag>cJTAG (2-pin M &amp; C)</option>
 <option value=sbl>SBL (4-pad UART + power)</option>
 <option value=auto>Auto (cJTAG then SBL)</option></select></div>
 <label class=check style="margin-top:0"><input type=checkbox id=cjsound checked>Audio cues (lock, page ticks, slip, done)</label>
 </div>
 <div class=btns style="margin-top:14px">
-<button class=btn id=cjarmdump>Arm Hands-Free Dump</button>
+<button class=btn id=cjarmid>1. Identify (hands-free)</button>
+<button class=btn id=cjarmdump disabled>2. Dump</button>
 <button class="btn ghost" id=cjdisarm>Disarm</button>
 <button class="btn ghost" id=cjdlflash hidden>Download flash.bin (128 KB)</button>
 <button class="btn ghost" id=cjdlfcfg1 hidden>Download fcfg1.bin (1 KB)</button>
@@ -126,10 +129,10 @@ order for SBL (roles found).</p>
 
 <div class="card wide"><h2>Hands-free station flash (pages 0–29)</h2>
 <p class=note>Stage a CC1310 binary (up to 120 KB, pages 0–29) and arm hands-free flashing over the selected transport
-(cJTAG, SBL, or Auto). Requires a completed and downloaded stock flash dump for that sensor MAC first.</p>
+on the identified pins (Identify first). Requires a completed and downloaded stock flash dump for that sensor MAC first.</p>
 <label>CC1310 image (.bin)</label><input type=file id=cjfile accept=".bin">
 <label class=check><input type=checkbox id=cjwipe>Wipe NV page 30 (0x1E000)</label>
-<button class=btn id=cjarmflash>Stage &amp; Arm Hands-Free Flash</button>
+<button class=btn id=cjarmflash disabled>2. Stage &amp; Flash</button>
 </div>
 </div></section>
 
@@ -282,8 +285,13 @@ async function pollCjtag(){if($('probe').hidden&&cjLastState=='idle')return;try{
 const r=await fetch('/api/cjtag',{cache:'no-store'});if(!r.ok)return;const c=await r.json();
 if(!cjPinsFilled){cjPinsFilled=true;if(c.transport)$('cjtrans').value=c.transport}
 const tr=c.active_transport&&c.active_transport!='none'?c.active_transport:(c.transport||'cjtag');
-const labels={idle:'Disarmed',armed:'Armed ('+c.mode+' · '+tr+') — connect sensor',running:c.mode=='dump'?'Dumping…':'Flashing…',
-slipped:'Paused (probe slip) — reconnect sensor',done:'Complete!',error:'Error'};
+const labels={idle:'Disarmed',armed:c.mode=='identify'?'Identifying — connect sensor':'Armed ('+c.mode+') — connect sensor',
+running:c.mode=='dump'?'Dumping…':'Flashing…',slipped:'Paused (probe slip) — reconnect sensor',
+done:c.mode=='identify'?'Identified':'Complete!',error:'Error'};
+$('cjident').textContent=!c.identified?'– (Identify first)':c.id_transport=='cjtag'?
+('cJTAG: TCKC (C) = GPIO'+c.id_tck+' · TMSC (M) = GPIO'+c.id_tms):
+('SBL: R = GPIO'+c.sbl_map.r_gpio+' · T = GPIO'+c.sbl_map.t_gpio+' · backdoor = GPIO'+c.sbl_map.backdoor_gpio);
+$('cjarmdump').disabled=$('cjarmflash').disabled=!c.identified;
 $('cjstate').textContent=labels[c.state]||c.state;
 const pct=c.total_pages?Math.round(100*c.pages_done/c.total_pages):0;
 $('cjbar').style.width=pct+'%';
@@ -306,6 +314,9 @@ if(c.mode=='dump'&&c.dump_ready){dlUrl('/cjtag/dump.bin','sensor_'+c.mac+'_flash
 setTimeout(()=>dlUrl('/cjtag/fcfg1.bin','sensor_'+c.mac+'_fcfg1.bin'),600)}}
 cjLastState=c.state;cjLastPage=c.pages_done}catch(_){}}
 setInterval(pollCjtag,350);
+$('cjarmid').onclick=async()=>{tone(520,60,0,'sine');
+const r=await fetch('/cjtag/arm?mode=identify&'+cjQuery(),{method:'POST'});const t=(await r.text()).trim();
+showMsg($('cjmsg'),r.ok,t);cjLastState='armed';cjLastPage=0;pollCjtag()};
 $('cjarmdump').onclick=async()=>{tone(520,60,0,'sine');
 const r=await fetch('/cjtag/arm?mode=dump&'+cjQuery(),{method:'POST'});const t=(await r.text()).trim();
 showMsg($('cjmsg'),r.ok,t);cjLastState='armed';cjLastPage=0;pollCjtag()};

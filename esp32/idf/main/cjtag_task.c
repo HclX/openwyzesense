@@ -65,7 +65,13 @@ static int sbl_active_rx_pad = -1;
 static int sbl_active_tx_pad = -1;
 static bool sbl_powered;
 static bool sbl_pad_released[SBLPROBE_PADS] = {true, true, true, true};
-static bool have_sbl_map;
+// The identification (the user, 2026-11-06: identify, then dump or flash as separate steps): what Identify found and
+// confirmed, the only pins Dump and Flash use; they assume the operator puts a sensor back on the same pads.
+static bool identified;
+static uint8_t id_transport;  // 1 = cjtag, 2 = sbl
+static int id_tck = -1, id_tms = -1;
+static char id_mac[9];
+static bool have_sbl_map;  // id_transport == 2: saved_sbl_map holds the pads
 static sblprobe_result_t saved_sbl_map;
 
 static size_t staged_bytes;
@@ -422,13 +428,14 @@ __attribute__((format(printf, 1, 2))) static void note(const char *fmt, ...)  //
 // only once they are confirmed): identify (a connect: the pins, and who answers: MAC, IEEE MAC, user ID, CCFG CRC),
 // then confirm (the pins released, 100 ms, a second connect from scratch that must find the same chip on the same
 // pins). A bouncing probe, a half-made contact or a second sensor never gets to a read or a write.
-static bool probe_with_polarity(cjtag_t *cj, esp_pin_ctx_t *pctx, int pin_a, int pin_b)
+// pin_a is tried as TCKC first, then (both) the other way round.
+static bool probe_with_polarity(cjtag_t *cj, esp_pin_ctx_t *pctx, int pin_a, int pin_b, bool both)
 {
     if (pin_a < 0 || pin_b < 0) {
         return false;
     }
     int pairs[2][2] = {{pin_a, pin_b}, {pin_b, pin_a}};
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < (both ? 2 : 1); i++) {
         pctx->tck_pin = pairs[i][0];
         pctx->tms_pin = pairs[i][1];
         prepare_cjtag_pins(pctx->tck_pin, pctx->tms_pin);
@@ -445,7 +452,7 @@ static bool probe_with_polarity(cjtag_t *cj, esp_pin_ctx_t *pctx, int pin_a, int
             memcpy(mac, cj->mac, sizeof mac);
             uint64_t ieee = cj->ieee_mac;
             uint32_t uid = cj->user_id, crc = cj->page31_crc;
-            note("Identified %s on cJTAG (TCKC GPIO%d, TMSC GPIO%d): confirming", mac, pctx->tck_pin, pctx->tms_pin);
+            note("Found %s on cJTAG (TCKC GPIO%d, TMSC GPIO%d): confirming", mac, pctx->tck_pin, pctx->tms_pin);
             release_cjtag_pins(pin_a, pin_b);
             vTaskDelay(pdMS_TO_TICKS(100));
             prepare_cjtag_pins(pctx->tck_pin, pctx->tms_pin);
@@ -847,6 +854,100 @@ static void run_sbl_session(const sblprobe_result_t *map)
     ESP_LOGI(TAG, "%s", status_msg);
 }
 
+static void identified_done(const char *how)
+{
+    xSemaphoreTake(lock, portMAX_DELAY);
+    if (state == STATE_ARMED) {
+        identified = true;
+        done_seq++;
+        state = STATE_DONE;
+        snprintf(status_msg, sizeof status_msg,
+                 "Identified %s: %s. Lift it; then Dump or Flash, with a sensor on the same pads.", id_mac, how);
+    }
+    xSemaphoreGive(lock);
+    ESP_LOGI(TAG, "%s", status_msg);
+}
+
+// Identify: find the pins with the chosen transport (cJTAG, SBL, or cJTAG then SBL), confirm them, remember them,
+// and let the sensor go (released, unpowered). Reads nothing but what identifies it; never writes.
+static void identify(cjtag_t *cj, esp_pin_ctx_t *pctx, const sblprobe_io_t *sbl_io)
+{
+    cjtag_transport_t tr = cfg_transport;
+    if (tr == CJTAG_TRANSPORT_CJTAG || tr == CJTAG_TRANSPORT_AUTO) {
+        if (!sbl_powered) {
+            sbl_power(NULL, true);
+            vTaskDelay(pdMS_TO_TICKS(50));
+        }
+        if (probe_with_polarity(cj, pctx, cfg_pin_a, cfg_pin_b, true)) {
+            id_transport = 1;
+            id_tck = pctx->tck_pin;
+            id_tms = pctx->tms_pin;
+            memcpy(id_mac, cj->mac, sizeof id_mac);
+            memcpy(active_mac, cj->mac, sizeof active_mac);
+            active_user_id = cj->user_id;
+            active_bl_config = cj->bl_config;
+            active_ieee_mac = cj->ieee_mac;
+            active_transport = 1;
+            active_tck = id_tck;
+            active_tms = id_tms;
+            cjtag_release_and_reset(cj);  // not left halted
+            release_cjtag_pins(cfg_pin_a, cfg_pin_b);
+            release_sbl_pins(true);
+            char how[64];
+            snprintf(how, sizeof how, "cJTAG, TCKC (C) GPIO%d, TMSC (M) GPIO%d", id_tck, id_tms);
+            identified_done(how);
+            return;
+        }
+    }
+    if (tr == CJTAG_TRANSPORT_SBL || tr == CJTAG_TRANSPORT_AUTO) {
+        sblprobe_result_t found = {0};
+        if (sblprobe_find(sbl_io, &found)) {
+            char pads[24];
+            snprintf(pads, sizeof pads, "R=GPIO%d T=GPIO%d", cfg_sbl_pins[found.r_pad], cfg_sbl_pins[found.t_pad]);
+            note("Found the bootloader on %s, backdoor GPIO%d: confirming", pads, cfg_sbl_pins[found.backdoor_pad]);
+            uint32_t cid = 0;
+            char err[96] = "";
+            release_sbl_pins(true);
+            if (sblprobe_enter(sbl_io, &found, &cid, err, sizeof err) && cid == found.chip_id) {
+                // who it is: the CCFG MAC (or the FCFG1 one), read through the bootloader just entered
+                sbl_t sbl;
+                sbl_io_t sio = {.write = sbl_uart_write, .read = sbl_uart_read, .flush_input = sbl_uart_flush};
+                sbl_init(&sbl, &sio);
+                uint8_t mac[8] = {0}, ieee[8] = {0};
+                bool ccfg = sbl_read_memory(&sbl, CJTAG_CCFG_ADDR + 0x24u, mac, sizeof mac) && is_ascii_hex_mac(mac);
+                sbl_read_memory(&sbl, 0x500012F0u, ieee, sizeof ieee);
+                if (ccfg) {
+                    memcpy(id_mac, mac, 8);
+                } else {
+                    snprintf(id_mac, sizeof id_mac, "%08" PRIX32, le32(ieee));
+                }
+                id_mac[8] = 0;
+                memcpy(active_mac, id_mac, sizeof active_mac);
+                active_ieee_mac = ((uint64_t)le32(ieee + 4) << 32) | le32(ieee);
+                active_transport = 2;
+                xSemaphoreTake(lock, portMAX_DELAY);
+                saved_sbl_map = found;
+                have_sbl_map = true;
+                id_transport = 2;
+                xSemaphoreGive(lock);
+                release_sbl_pins(true);
+                char how[96];
+                snprintf(how, sizeof how, "SBL, %s, backdoor GPIO%d, chip 0x%08" PRIX32, pads,
+                         cfg_sbl_pins[found.backdoor_pad], found.chip_id);
+                identified_done(how);
+                return;
+            }
+            note("Not confirmed (the bootloader on %s answered once, then not the same): hold the probes still", pads);
+        } else if (tr == CJTAG_TRANSPORT_SBL || found.error[0]) {
+            note("Waiting for a sensor (%s)", found.error);
+        }
+        release_sbl_pins(true);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        return;
+    }
+    vTaskDelay(pdMS_TO_TICKS(150));
+}
+
 static void task(void *arg)
 {
     (void)arg;
@@ -872,69 +973,32 @@ static void task(void *arg)
             continue;
         }
 
-        cjtag_transport_t tr = cfg_transport;
-        int pin_a = cfg_pin_a;
-        int pin_b = cfg_pin_b;
-
-        if (tr == CJTAG_TRANSPORT_CJTAG || tr == CJTAG_TRANSPORT_AUTO) {
-            if (!sbl_powered) {  // a sensor on the harness gets its supply here (one with its own battery ignores it)
+        if (mode == CJTAG_MODE_IDENTIFY) {
+            identify(&cj, &pctx, &sbl_io);
+            continue;
+        }
+        // Dump or Flash: only the identified transport and pins, no search (the operator put the sensor back)
+        if (id_transport == 1) {
+            if (!sbl_powered) {
                 sbl_power(NULL, true);
                 vTaskDelay(pdMS_TO_TICKS(50));
             }
-            if (probe_with_polarity(&cj, &pctx, pin_a, pin_b)) {
-                run_cjtag_session(&cj, &pctx, pin_a, pin_b);
+            if (probe_with_polarity(&cj, &pctx, id_tck, id_tms, false)) {
+                run_cjtag_session(&cj, &pctx, id_tck, id_tms);
                 continue;
             }
-        }
-
-        if (tr == CJTAG_TRANSPORT_SBL || tr == CJTAG_TRANSPORT_AUTO) {
-            sblprobe_result_t found = {0};
-            bool connected = false;
-            if (have_sbl_map) {
-                uint32_t cid = 0;
-                if (sblprobe_enter(&sbl_io, &saved_sbl_map, &cid, found.error, sizeof found.error)) {
-                    saved_sbl_map.chip_id = cid;
-                    found = saved_sbl_map;
-                    connected = true;
-                }
-            }
-            if (!connected && (state == STATE_ARMED || state == STATE_SLIPPED)) {
-                if (sblprobe_find(&sbl_io, &found)) {
-                    xSemaphoreTake(lock, portMAX_DELAY);
-                    saved_sbl_map = found;
-                    have_sbl_map = true;
-                    xSemaphoreGive(lock);
-                    connected = true;
-                }
-            }
-            if (connected) {  // step 2: a fresh power cycle into the bootloader on the found pads, the same chip
-                char pads[24];
-                snprintf(pads, sizeof pads, "R=GPIO%d T=GPIO%d", cfg_sbl_pins[found.r_pad], cfg_sbl_pins[found.t_pad]);
-                note("Identified the bootloader on %s, backdoor GPIO%d: confirming", pads,
-                     cfg_sbl_pins[found.backdoor_pad]);
-                uint32_t cid = 0;
-                char err[96] = "";
-                release_sbl_pins(true);
-                if (sblprobe_enter(&sbl_io, &found, &cid, err, sizeof err) && cid == found.chip_id) {
-                    note("Confirmed the bootloader on %s, backdoor GPIO%d", pads, cfg_sbl_pins[found.backdoor_pad]);
-                    run_sbl_session(&found);
-                    continue;
-                }
-                note("Not confirmed (the bootloader on %s answered once, then not the same): hold the probes still",
-                     pads);
-                xSemaphoreTake(lock, portMAX_DELAY);
-                have_sbl_map = false;  // found afresh next time
-                xSemaphoreGive(lock);
+        } else if (id_transport == 2) {
+            uint32_t cid = 0;
+            char err[96] = "";
+            if (sblprobe_enter(&sbl_io, &saved_sbl_map, &cid, err, sizeof err) && cid == saved_sbl_map.chip_id) {
+                run_sbl_session(&saved_sbl_map);
+                continue;
             }
             release_sbl_pins(true);
-            if (tr == CJTAG_TRANSPORT_SBL && found.error[0] && (state == STATE_ARMED || state == STATE_SLIPPED)) {
-                // hands-free: no sensor (or none that answers) yet is not an error; say why, and keep looking
-                note("Waiting for a sensor (%s)", found.error);
-                vTaskDelay(pdMS_TO_TICKS(1000));
-                continue;
-            }
+            note("Waiting for the sensor on the identified pads (%s)", err);
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            continue;
         }
-
         vTaskDelay(pdMS_TO_TICKS(150));
     }
 }
@@ -955,6 +1019,11 @@ bool cjtag_task_stage_begin(bool wipe_nv, char *err, size_t err_cap)
     xSemaphoreTake(lock, portMAX_DELAY);
     if (state == STATE_RUNNING || task_busy) {
         snprintf(err, err_cap, "station operation in progress");
+        xSemaphoreGive(lock);
+        return false;
+    }
+    if (!identified) {
+        snprintf(err, err_cap, "identify the sensor's pins first (Identify)");
         xSemaphoreGive(lock);
         return false;
     }
@@ -1031,12 +1100,10 @@ bool cjtag_task_stage_end(bool rx_ok, cjtag_transport_t transport, char *msg, si
     slip_count = 0;
     active_mac[0] = '\0';
     active_transport = 0;
-    cfg_transport = transport;
+    (void)transport;  // the identification's
     mode = CJTAG_MODE_FLASH;
     state = STATE_ARMED;
-    const char *tr_label = (transport == CJTAG_TRANSPORT_SBL)    ? "SBL 4-pad"
-                           : (transport == CJTAG_TRANSPORT_AUTO) ? "Auto cJTAG+SBL"
-                                                                 : "cJTAG M/C";
+    const char *tr_label = id_transport == 2 ? "SBL, identified pads" : "cJTAG, identified pins";
     snprintf(status_msg, sizeof status_msg, "Armed Station Flash [%s] (%u B, %" PRIu32 " pages%s) — connect sensor!",
              tr_label, (unsigned)staged_bytes, staged_pages, staged_wipe_nv ? " + NV wipe" : "");
     snprintf(msg, msg_cap, "%s", status_msg);
@@ -1073,6 +1140,32 @@ bool cjtag_task_arm(cjtag_mode_t new_mode, cjtag_transport_t transport, char *ms
         return true;
     }
 
+    if (new_mode == CJTAG_MODE_IDENTIFY) {  // a new identification replaces the last one
+        identified = false;
+        id_transport = 0;
+        have_sbl_map = false;
+        id_mac[0] = '\0';
+        active_mac[0] = '\0';
+        active_tck = -1;
+        active_tms = -1;
+        active_transport = 0;
+        cfg_transport = transport;
+        mode = new_mode;
+        const char *label = (transport == CJTAG_TRANSPORT_SBL)    ? "SBL pad search"
+                            : (transport == CJTAG_TRANSPORT_AUTO) ? "cJTAG, then SBL pad search"
+                                                                  : "cJTAG M/C";
+        snprintf(status_msg, sizeof status_msg, "Identify armed [%s]: connect the sensor", label);
+        state = STATE_ARMED;
+        snprintf(msg, msg_cap, "%s", status_msg);
+        xSemaphoreGive(lock);
+        return true;
+    }
+    if (!identified) {
+        snprintf(msg, msg_cap, "identify the sensor's pins first (Identify)");
+        xSemaphoreGive(lock);
+        return false;
+    }
+
     if (!ensure_page_bufs()) {
         snprintf(msg, msg_cap, "out of memory allocating 128 KB page buffers");
         xSemaphoreGive(lock);
@@ -1093,12 +1186,10 @@ bool cjtag_task_arm(cjtag_mode_t new_mode, cjtag_transport_t transport, char *ms
     active_tck = -1;
     active_tms = -1;
     active_transport = 0;
-    cfg_transport = transport;
+    (void)transport;  // Dump and Flash use the identification's transport and pins
     mode = new_mode;
 
-    const char *tr_label = (transport == CJTAG_TRANSPORT_SBL)    ? "SBL 4-pad"
-                           : (transport == CJTAG_TRANSPORT_AUTO) ? "Auto cJTAG+SBL"
-                                                                 : "cJTAG M/C";
+    const char *tr_label = id_transport == 2 ? "SBL, identified pads" : "cJTAG, identified pins";
     if (new_mode == CJTAG_MODE_DUMP) {
         dump_ready = false;
         fcfg1_ready = false;
@@ -1167,7 +1258,7 @@ const char *cjtag_task_mac(void)
 size_t cjtag_task_json(char *out, size_t cap)
 {
     static const char *state_names[] = {"idle", "armed", "running", "slipped", "done", "error"};
-    static const char *mode_names[] = {"none", "dump", "flash"};
+    static const char *mode_names[] = {"none", "dump", "flash", "identify"};
     static const char *tr_names[] = {"cjtag", "sbl", "auto"};
     static const char *act_tr_names[] = {"none", "cjtag", "sbl"};
 
@@ -1190,7 +1281,8 @@ size_t cjtag_task_json(char *out, size_t cap)
                      "\"mac\":%s,\"user_id\":\"0x%08" PRIX32 "\",\"bl_config\":\"0x%08" PRIX32 "\","
                      "\"ieee_mac\":\"%016" PRIX64 "\",\"pages_done\":%" PRIu32 ",\"total_pages\":%" PRIu32 ","
                      "\"current_page\":%" PRIu32 ",\"slips\":%" PRIu32 ",\"done_seq\":%" PRIu32 ",\"dump_ready\":%s,"
-                     "\"fcfg1_ready\":%s,\"staged_bytes\":%u,\"msg\":%s}",
+                     "\"fcfg1_ready\":%s,\"staged_bytes\":%u,\"identified\":%s,\"id_transport\":\"%s\","
+                     "\"id_tck\":%d,\"id_tms\":%d,\"msg\":%s}",
                      state_names[state], mode_names[mode], tr_names[cfg_transport], act_tr_names[active_transport],
                      cfg_pin_a, cfg_pin_b, active_tck, active_tms, cfg_sbl_pins[0], cfg_sbl_pins[1], cfg_sbl_pins[2],
                      cfg_sbl_pins[3], cfg_power_pin, have_sbl_map ? "true" : "false",
@@ -1198,7 +1290,8 @@ size_t cjtag_task_json(char *out, size_t cap)
                      have_sbl_map ? saved_sbl_map.backdoor_pad : -1, r_gpio, t_gpio, bd_gpio,
                      have_sbl_map ? saved_sbl_map.chip_id : 0u, mac_js, active_user_id, active_bl_config,
                      active_ieee_mac, pages_done_count, total_pages_target, current_page, slip_count, done_seq,
-                     dump_ready ? "true" : "false", fcfg1_ready ? "true" : "false", (unsigned)staged_bytes, msg_js);
+                     dump_ready ? "true" : "false", fcfg1_ready ? "true" : "false", (unsigned)staged_bytes,
+                     identified ? "true" : "false", act_tr_names[id_transport], id_tck, id_tms, msg_js);
     xSemaphoreGive(lock);
     return n < 0 ? 0 : ((size_t)n < cap ? (size_t)n : cap - 1);
 }

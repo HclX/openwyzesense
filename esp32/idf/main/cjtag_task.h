@@ -13,6 +13,7 @@ typedef enum {
     CJTAG_MODE_NONE = 0,
     CJTAG_MODE_DUMP = 1,
     CJTAG_MODE_FLASH = 2,
+    CJTAG_MODE_IDENTIFY = 3,  // find and confirm the pins only; dump and flash then use what it found (#81)
 } cjtag_mode_t;
 
 typedef enum {

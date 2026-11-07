@@ -58,9 +58,11 @@ One image, two roles, chosen on the setup page ("Device role"; one at a time, th
 **relay** (the default) or the **provisioning station**, which dumps and flashes other sensors on the same harness (no
 relay meanwhile). On the station, a sensor's `+` hangs on the power GPIO, its `M`/`C` on the same two GPIOs (polarity
 found), and a sensor with four unmarked pads besides `+`/`-` (the v2 leak sensor) goes on `R`, `T`, `S`, `W` in any
-order: the station finds which is which through the TI ROM bootloader (`esp32/contact/sblprobe.c`). Probe tab:
-transport `cjtag`, `sbl` or `auto`; a dump of the unit, downloaded, before any flash of it; pages 0-29 (30 only for an
-NV wipe), every page verified, page 31 never.
+order: the station finds which is which through the TI ROM bootloader (`esp32/contact/sblprobe.c`). Probe tab, two
+separate steps: **Identify** (with `cjtag`, `sbl` or `auto`: the pins found, confirmed by a second independent
+connect, the sensor let go; nothing read but what identifies it, nothing written), then **Dump** or **Flash**, which use
+only the identified pins and wait for a sensor on the same pads (refused before an identification). A dump of the
+unit, downloaded, before any flash of it; pages 0-29 (30 only for an NV wipe), every page verified, page 31 never.
 
 Provision the contact board once over JTAG (`docs/design/v1-contact.md`), backing up its stock flash first:
 `tools/uniflash.py provision --gateway --backup backups/contact_<MAC>` (or step by step:

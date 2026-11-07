@@ -598,7 +598,7 @@ static esp_err_t cjtag_get(httpd_req_t *req)
     if (refused_station_disabled(req)) {
         return ESP_OK;
     }
-    char out[1024];
+    static char out[2048];  // the station's status: a long message and the identification (one request at a time)
     size_t n = cjtag_task_json(out, sizeof out);
     httpd_resp_set_type(req, "application/json");
     return httpd_resp_send(req, out, (ssize_t)n);
@@ -626,6 +626,8 @@ static esp_err_t cjtag_arm_post(httpd_req_t *req)
         m = CJTAG_MODE_DUMP;
     } else if (!strcmp(mode_s, "flash")) {
         m = CJTAG_MODE_FLASH;
+    } else if (!strcmp(mode_s, "identify")) {
+        m = CJTAG_MODE_IDENTIFY;
     }
     cjtag_transport_t tr = parse_transport(tr_s);
     char msg[160] = "";
