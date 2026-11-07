@@ -57,7 +57,8 @@ overflow:hidden;text-overflow:ellipsis;padding-bottom:2px}
 .wdot{flex:none;width:12px;height:12px;border-radius:50%;border:1px solid var(--fg)}
 .wgpio{flex:none;min-width:64px;text-align:center;border:1px solid var(--acc);border-radius:5px;padding:2px 6px;
 font-size:13px;background:var(--card)}
-.wrow input.wcol{flex:none;width:92px;margin:0;padding:3px 6px}
+.wrow select.wsel{flex:none;width:96px;margin:0;padding:3px 4px}
+.wrow input.wcol{flex:none;width:80px;margin:0;padding:3px 6px}
 table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
 th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
 th{color:var(--mute);font-size:12px;font-weight:600}
@@ -129,8 +130,7 @@ powers the sensor up with that pad released and then held low; if holding it kep
 <option value=cjtag>2 probes: cJTAG (M, C)</option>
 <option value=sbl2>2 probes: bootloader T/R</option>
 <option value=ws>2 probes: W/S (probe 1 on T or R, probe 2 on the pad to test)</option></select></div>
-<datalist id=wirecolours><option value=red><option value=black><option value=yellow><option value=green><option value=blue>
-<option value=white><option value=orange><option value=purple><option value=brown><option value=grey></datalist>
+
 <label class=check style="margin-top:0"><input type=checkbox id=cjsound checked>Audio cues (lock, page ticks, slip, done)</label>
 </div>
 <div class=btns style="margin-top:14px">
@@ -207,6 +207,16 @@ const tr=document.createElement('tr'),vals=[x.mac,TYPES[x.type]||('0x'+x.type.to
 x.bat_mv?(x.bat_mv/1000).toFixed(2)+' V ('+x.bat_mv+' mV)':'–',ago(x.seen_s)];
 vals.forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;if(i==2&&x.rssi<-85)td.className='weak';
 tr.appendChild(td)});tb.appendChild(tr)})}
+// Wire colours offered (any other name: "custom…"); text in black or white, whichever reads on it
+const COLOURS=['red','black','white','yellow','green','blue','orange','purple','brown','grey','pink','cyan'];
+const LIGHT={white:1,yellow:1,orange:1,pink:1,cyan:1,grey:1};
+function colourStyle(c){return CSS.supports('color',c)?'background:'+c+';color:'+(LIGHT[c]?'#000':'#fff'):''}
+function colourSelect(k,cur,dflt){const v=cur||dflt,known=COLOURS.includes(v),
+esc=t=>String(t).replace(/[&<>"]/g,c=>'&#'+c.charCodeAt(0)+';');
+return '<select class=wsel data-k='+k+' style="'+colourStyle(v)+'" aria-label="probe colour">'+
+COLOURS.map(c=>'<option value="'+c+'" style="'+colourStyle(c)+'"'+(c==v?' selected':'')+'>'+c+(c==dflt&&!cur?' (default)':'')+'</option>').join('')+
+'<option value="" style="background:var(--card);color:var(--fg)"'+(known?'':' selected')+'>custom…</option></select>'+
+'<input class=wcol data-k='+k+' maxlength=15 value="'+(known?'':esc(v))+'" placeholder="colour"'+(known?' hidden':'')+'>'}
 // The hand probes by the colours of their wires (saved on the station: POST /wires), wherever a GPIO is named
 let WIRES={},wiresFilled=false;
 function wireOf(n){return WIRES[n]||''}
@@ -235,8 +245,7 @@ if(st&&!e8){const w=s.wires||{},esc=t=>String(t).replace(/[&<>"]/g,c=>'&#'+c.cha
 let v=rows.map(r=>{const col=r[4]||wireOf(r[3]),k=r[3]===p.r?'r':r[3]===p.t?'t':'';
 return '<div class=wrow><span class=wpad>'+r[0]+'</span><span class=wdesc>'+r[2]+'</span>'+
 '<span class=wdot style="background:'+(CSS.supports('color',col)?col:'transparent')+'"></span><span class=wgpio>'+r[1]+'</span>'+
-(k?'<input class=wcol data-k='+k+' list=wirecolours maxlength=15 value="'+esc(w[k]||'')+'" placeholder="'+esc(col)+'" aria-label="'+r[2]+' colour">':
-'<span style="flex:none;width:92px"></span>')+'</div>'}).join('');
+(k?colourSelect(k,w[k]||'',k=='r'?'yellow':'green'):'<span style="flex:none;width:96px"></span>')+'</div>'}).join('');
 v+='<p class=hint>The sensor’s <b>+</b> and <b>−</b> clipped to its battery holder (battery out); the two probes on its pads: '+
 '<b>M</b>/<b>C</b> for cJTAG, <b>T</b>/<b>R</b> for the bootloader, either way round. Name each probe’s colour in its box.</p>';
 document.querySelectorAll('.wiring').forEach(d=>d.innerHTML=v);return}
@@ -390,7 +399,9 @@ setInterval(pollCjtag,350);
 $('cjarmid').onclick=async()=>{tone(520,60,0,'sine');
 const r=await fetch('/cjtag/arm?mode=identify&'+cjQuery(),{method:'POST'});const t=(await r.text()).trim();
 showMsg($('cjmsg'),r.ok,t);cjLastState='armed';cjLastPage=0;pollCjtag()};
-document.addEventListener('change',e=>{if(e.target.classList.contains('wcol'))saveWires(e.target.dataset.k,e.target.value)});
+document.addEventListener('change',e=>{const t=e.target;
+if(t.classList.contains('wcol')&&t.value.trim())saveWires(t.dataset.k,t.value);
+if(t.classList.contains('wsel')){if(t.value){saveWires(t.dataset.k,t.value)}else{const i=t.nextElementSibling;i.hidden=false;i.focus()}}});
 $('cjarmdump').onclick=async()=>{tone(520,60,0,'sine');
 const r=await fetch('/cjtag/arm?mode=dump&'+cjQuery(),{method:'POST'});const t=(await r.text()).trim();
 showMsg($('cjmsg'),r.ok,t);cjLastState='armed';cjLastPage=0;pollCjtag()};
