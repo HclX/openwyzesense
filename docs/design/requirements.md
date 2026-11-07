@@ -12,6 +12,13 @@
   - Clarification: **everything that affects the communication protocols is off by default.** Fixes that do
     not change what a stock peer sees (no new message, field value or timing) need no flag and are always on.
     This lets bugs be fixed without breaking compatibility.
+  - **Amended (the user, 2026-11-06, #28):** between **our** sensor and **our** gateway, once each has verified that
+    the other is ours, **every feature both support is on by default**: no flag needed (the link's security first of
+    all, [security.md](security.md)). Flags stay for what a stock peer, or the host, would see: anything aimed at a
+    stock device or carried in stock-visible fields, and host-facing behaviour (`DEDUP`, `ROAM`). Prerequisite: the
+    gateway's "ours" mark in the A6 (`ANNOUNCE`, below) must then be on by default, since it is how our sensor learns
+    its gateway is ours; that goes to stock sensors too, so `TASK-22` (v2 leak and v2 motion with the mark) should
+    be settled first.
   - Status: gateway flags are set by the host with `0x53F0` sub-ID `0x01` (`OWS_SUB_FLAGS`, with legacy 0/4-byte `0x53F0`
     retained for compatibility; FACTS.md §9, `GW_FLAG_*` in `firmware/common/gateway.h`): `DEDUP` (a sensor's retried
     report goes to the host once), `OTA` (updates of our sensors, docs/design/ota.md:
