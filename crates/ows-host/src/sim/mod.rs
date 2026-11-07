@@ -17,6 +17,7 @@ use std::io;
 use std::time::Duration;
 
 use crate::dongle::STOCK_BL_CONFIG;
+use crate::host::{self, ByteLink};
 use crate::{sbl, HidTransport};
 
 /// The spare dongle 77A85A36's stock page 30 (reference/tests/vectors/nv): a network and three sensors, two of them on
@@ -52,6 +53,8 @@ pub struct SimDongle {
     pub radio_silent: bool,
     /// Fail read() with this I/O error kind (e.g. the device gone).
     pub fail_io: Option<io::ErrorKind>,
+    /// The secured link's network key in RAM (set by OWS_SUB_NET_KEY; cleared on reset or replug).
+    pub net_key: Option<[u8; 16]>,
     out: VecDeque<Vec<u8>>,
     status: u8,
     download: (usize, usize),
@@ -113,6 +116,7 @@ impl SimDongle {
             needs_replug: false,
             radio_silent: false,
             fail_io: None,
+            net_key: None,
             out: VecDeque::new(),
             status: 0x40,
             download: (0, 0),
@@ -153,6 +157,7 @@ impl SimDongle {
     /// Unplugged and plugged in: normal mode, nothing pending.
     pub fn replug(&mut self) {
         self.mode = Mode::Normal;
+        self.net_key = None;
         self.out.clear();
     }
 
@@ -173,6 +178,7 @@ impl SimDongle {
             sbl::CMD_GET_STATUS => Some(vec![self.status]),
             sbl::CMD_RESET => {
                 self.resets += 1;
+                self.net_key = None;
                 self.mode = if self.needs_replug { Mode::Stuck } else { Mode::Normal };
                 Some(vec![])
             }
@@ -214,8 +220,16 @@ impl HidTransport for SimDongle {
         match self.mode {
             Mode::Stuck => return Ok(()),
             Mode::Normal => {
+                let raw = if data.starts_with(&host::MAGIC_TO_GATEWAY) {
+                    data
+                } else if data.get(1..3) == Some(&host::MAGIC_TO_GATEWAY) {
+                    &data[1..1 + (data[0] as usize).min(data.len() - 1)]
+                } else {
+                    &[]
+                };
                 if data == sbl::UPDATE_MODE_REQUEST {
                     self.mode = Mode::Update;
+                    self.net_key = None;
                     self.report(&[0x55, 0xAA, 0x43, 0x03, 0x13, 0x01, 0x58]);
                 } else if data == sbl::INQUIRY {
                     self.report(&[0x55, 0xAA, 0x43, 0x04, 0x28, 0x01, 0x01, 0x6A]);
@@ -226,6 +240,25 @@ impl HidTransport for SimDongle {
                     let sum = r.iter().fold(0u16, |a, &b| a.wrapping_add(b as u16));
                     r.extend_from_slice(&sum.to_be_bytes());
                     self.report(&r);
+                } else if let Some(p) = host::parse(raw) {
+                    if p.cmd == host::INQUIRY {
+                        self.report(&[0x55, 0xAA, 0x43, 0x04, 0x28, 0x01, 0x01, 0x6A]);
+                    } else if p.cmd == host::OWS_CMD
+                        && self.runs_ows()
+                        && !self.radio_silent
+                        && p.payload.first() == Some(&host::OWS_SUB_NET_KEY)
+                    {
+                        let sub = &p.payload[1..];
+                        if sub.len() == 16 {
+                            self.net_key = Some(sub.try_into().unwrap());
+                        }
+                        let r = host::build(
+                            host::OWS_RSP,
+                            &[host::OWS_SUB_NET_KEY, u8::from(self.net_key.is_some())],
+                            true,
+                        );
+                        self.report(&r);
+                    }
                 }
                 return Ok(());
             }
@@ -258,5 +291,24 @@ impl HidTransport for SimDongle {
         let r = self.out.pop_front().ok_or_else(|| io::Error::new(io::ErrorKind::TimedOut, "nothing to read"))?;
         buf[..r.len()].copy_from_slice(&r);
         Ok(r.len())
+    }
+}
+
+impl ByteLink for SimDongle {
+    fn write(&mut self, data: &[u8]) -> io::Result<()> {
+        HidTransport::write(self, data)
+    }
+
+    fn read(&mut self, timeout: Duration) -> io::Result<Vec<u8>> {
+        let mut buf = [0u8; 64];
+        match HidTransport::read(self, &mut buf, timeout) {
+            Ok(n) if n > 0 => Ok(buf[1..1 + (buf[0] as usize).min(n - 1)].to_vec()),
+            Ok(_) => Ok(vec![]),
+            Err(e) if e.kind() == io::ErrorKind::TimedOut => {
+                std::thread::sleep(timeout.min(Duration::from_millis(5)));
+                Ok(vec![])
+            }
+            Err(e) => Err(e),
+        }
     }
 }

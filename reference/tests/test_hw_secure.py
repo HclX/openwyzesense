@@ -25,14 +25,8 @@ pytestmark = pytest.mark.skipif(
     reason="transmits: set OWS_HW=1 and OWS_HW_TX=1 (with the user's permission)",
 )
 
-OWS_SUB_NET_KEY = 0x07  # firmware/common/host_proto.h
 A6_OURS_SECURE = 1 << 1  # firmware/common/wyze_app.h
 CONTACT = 0x01
-
-
-def push_key(dongle, key):
-    p = dongle.ows_call(OWS_SUB_NET_KEY, key)
-    return bool(p) and p[-1] == 1
 
 
 def open_dongle(log):
@@ -124,7 +118,7 @@ def test_secured_link_on_hardware():
         if mac in dongle.sensors():
             dongle.call(host.DELETE_SENSOR, mac)
         key = os.urandom(16)
-        assert push_key(dongle, key), 'the gateway did not take the network key'
+        assert dongle.net_key(key), 'the gateway did not take the network key'
         on = dongle.flags(host.FLAG_ANNOUNCE)
         assert on and on[0] & host.FLAG_ANNOUNCE, on
 
@@ -145,7 +139,7 @@ def test_secured_link_on_hardware():
         dongle = None
         restart_gateway()
         dongle = open_dongle(log)
-        assert push_key(dongle, key)
+        assert dongle.net_key(key)
         dongle.flags(host.FLAG_ANNOUNCE)
         mine = []
         for state in (0, 1, 0):  # a few tries: the first may only renew the session
