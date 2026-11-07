@@ -428,9 +428,8 @@ static void cj_delay(void *ctx, uint32_t us)
 // The carried image's pages 0-29 through the debug port: pages already equal skipped, the CCFG's factory MAC checked
 // first (cjtag_flash_page refuses pages 30 and 31 and verifies each page), then a restart into the new firmware.
 // Returns the pages written, or -1 (err says why: not wired, not answering, no MAC, a write failed).
-static int gw_cjtag_flash(void *ctx, uint32_t image_len, char *mac, char *err, size_t cap)
+static int cjtag_flash_now(uint32_t image_len, char *mac, char *err, size_t cap)
 {
-    (void)ctx;
     static cjtag_t cj;
     static uint8_t want[CJTAG_PAGE], have[CJTAG_PAGE];
     const int tck = CONFIG_OWS_CONTACT_TCK, tms = CONFIG_OWS_CONTACT_TMS;
@@ -493,6 +492,37 @@ out:
         contact_reset();  // a clean start of the new firmware (VECTRESET restarts the CPU only)
     }
     return written;
+}
+
+// cjtag.c keeps 4 KB page buffers on the stack, more than the relay task has (6 KB, which gwsync_run runs on): the
+// debug-port work runs in its own task, with room for them, only for as long as it takes (#81: the first bench run
+// overflowed the relay task's stack into the Wi-Fi driver's memory).
+typedef struct {
+    uint32_t image_len;
+    char *mac, *err;
+    size_t cap;
+    int result;
+    TaskHandle_t caller;
+} cj_job_t;
+
+static void cj_worker(void *arg)
+{
+    cj_job_t *job = arg;
+    job->result = cjtag_flash_now(job->image_len, job->mac, job->err, job->cap);
+    xTaskNotifyGive(job->caller);
+    vTaskDelete(NULL);
+}
+
+static int gw_cjtag_flash(void *ctx, uint32_t image_len, char *mac, char *err, size_t cap)
+{
+    (void)ctx;
+    cj_job_t job = {image_len, mac, err, cap, -1, xTaskGetCurrentTaskHandle()};
+    if (xTaskCreate(cj_worker, "gw_cjtag", 12288, &job, uxTaskPriorityGet(NULL), NULL) != pdPASS) {
+        snprintf(err, cap, "out of memory for the debug-port task");
+        return -1;
+    }
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    return job.result;
 }
 
 void contact_gwsync(void)
