@@ -9,12 +9,12 @@ becomes the design.
 | Area | Decision |
 |---|---|
 | Threat model | An attacker in radio range **while the user is pairing** is an accepted risk |
-| 4.1 Key | "Just works" pairing is acceptable. Open: **F** (per-sensor keys derived from a network key) vs A, and how F's key reaches the sensor |
+| 4.1 Key | **F1**: per-sensor keys derived from one network key, the sensor's key sent to it **in clear** at pairing ("just works", the pairing window an accepted risk) |
 | 4.2 Messages | **A**: AES-CCM; confidentiality is nice to have |
 | 4.3 Freshness | **A**: a session per boot |
 | 4.4 OTA | **A**: the authenticated channel is enough; **the button goes** |
-| 4.5 Enabling | **B: on by default between our sensor and our gateway.** The user's general rule (R3 amended, [requirements.md](requirements.md)): once both have verified the other is ours, every feature both support is on. So the A6 "ours" mark must be on by default too (TASK-22 first) |
-| 4.6 Keys | `nv.json` may carry keys in clear. The user prefers **D** (the host holds the keys and pushes them to the gateway's RAM at start: no gateway flash writes). Open: confirm D |
+| 4.5 Enabling | **B: on by default between our sensor and our gateway.** The user's general rule (R3 amended, [requirements.md](requirements.md)): once both have verified the other is ours, every feature both support is on. So the A6 "ours" mark goes on by default too (decided), after TASK-22 (v2 leak and v2 motion with the mark) |
+| 4.6 Keys | **D**: the host holds `K_net` and pushes it to the gateway's RAM at every start (no gateway flash writes); `nv.json` may carry keys in clear. Recovery after a gateway restart: §4.6.1 |
 | 4.7 Stock sensors | **C**: nothing |
 
 ## 1. The problem
@@ -176,6 +176,29 @@ back).
 **Recommendation: D with 4.1 F** (the user's preference, and F makes the push one key). A remains the fallback if the
 gap after a gateway restart proves a problem. Either way, `nv.json` may carry keys in clear (decided).
 
+#### 4.6.1 Recovery after a gateway restart (with D)
+
+A gateway restart loses every session, and until its host pushes `K_net`, the key too. The sensor must recover by
+itself. Today it does not: after `MAX_TRIES` (8) unanswered tries it drops the report (`sensor.c`). Two cases:
+
+- **Key present, session unknown** (the host has pushed `K_net`). A secured frame's header (session ID, counter) is in
+  clear, so the gateway sees "unknown session" before any decryption and in time for the ACK. It ACKs with frame
+  pending. On the sensor's poll it answers **"new session"**; the sensor redoes the hello / nonce exchange and resends.
+  One extra round trip (~100 ms); nothing lost.
+- **No key yet** (the host has not connected). The gateway cannot verify anything, so it **does not ACK** secured
+  frames (an ACK would tell the sensor its report was delivered). The sensor, instead of dropping a report after its
+  tries, **keeps it and retries with backoff** (e.g. 1, 5, 15 min, then with each heartbeat; the queue holds 4 reports,
+  keeping the latest state per type). The first retry after the key arrives goes through the first case. Reports are
+  delayed, not lost, and the backoff bounds the battery cost.
+
+How long "no key" lasts:
+
+- **USB dongle:** a dongle restart is a replug or a host restart, so it lasts until wyzesense2mqtt-rs reconnects
+  (seconds). The host pushes the key right after its handshake.
+- **ESP relay gateway:** the relay is on the host side. It can keep `K_net` in its own flash and push it whenever the
+  contact board starts, so the gap disappears even while wyzesense2mqtt-rs is down. The contact board itself still
+  never stores the key.
+
 ### 4.7 Stock sensors
 
 They cannot be fixed, but two cheap partial defences exist, both host-visible and opt-in:
@@ -191,45 +214,43 @@ sensor), so if anything, B is safer.
 
 ## 5. A strawman combination
 
-4.1 A (X25519 at pairing) · 4.2 A (AES-CCM, 8-byte tag) · 4.3 A (per-boot session) · 4.4 A, then B · 4.5 to decide ·
-4.6 A (+ optional wrapping) · 4.7 to decide.
+As decided: 4.1 F1 (derived keys, sent in clear at pairing) · 4.2 A (AES-CCM, 8-byte tag) · 4.3 A (per-boot session) ·
+4.4 A (no button) · 4.5 B (on by default between our devices) · 4.6 D (host-held key in gateway RAM, §4.6.1) · 4.7 C
+(nothing for stock sensors).
 
 Messages, all in our own range, only between our sensor and our gateway after an "OW" A6 that advertises the feature:
 
 | Step | Direction | Content |
 |---|---|---|
-| Pairing, after A6 | sensor → gateway | its X25519 public key (32 B) |
-| | gateway → sensor | its X25519 public key (32 B), then a confirmation tag under the derived key |
-| After every boot (sensor) or gateway restart | sensor → gateway | hello: key ID, sensor nonce |
-| | gateway → sensor | gateway nonce; both derive the session key |
+| Pairing, after A6 | gateway → sensor | its key `K_sensor = AES-CMAC(K_net, MAC)` (16 B, in clear: 4.1 F1) |
+| | sensor → gateway | a confirmation tag under `K_sensor` (proves it has the key); both mark the pairing secure |
+| After every boot (sensor), or on "new session" from the gateway (§4.6.1) | sensor → gateway | hello: sensor nonce |
+| | gateway → sensor | gateway nonce; both derive the session key from `K_sensor` and the two nonces |
 | Every later frame | both | type, counter, AES-CCM ciphertext and 8-byte tag |
 
 **Phases**, each one usable on its own:
 
-1. Pairing key exchange and the table's "secure" mark; reports authenticated and encrypted (4.1, 4.2, 4.5,
-   downgrade protection).
-2. Sessions and the replay check (4.3).
-3. OTA over the channel, without the button (4.4 A); `nv.json` and roaming carry keys (4.6).
-4. Optional: signed images (4.4 B), provisioning-authenticated pairing (4.1 B), stock-sensor flags (4.7).
+0. TASK-22 (v2 leak and v2 motion take the A6 "ours" mark), then the mark on by default (4.5).
+1. `K_net` from the host into the gateway's RAM (4.6 D); the key at pairing and the table's "secure" mark; reports
+   authenticated and encrypted (4.1 F1, 4.2, downgrade protection).
+2. Sessions and the replay check (4.3), and recovery after a gateway restart: "new session", the sensor's backoff
+   (4.6.1); the ESP relay keeps `K_net` for its contact board.
+3. OTA over the channel, without the button (4.4 A).
+4. Optional, later: signed images (4.4 B).
 
 ## 6. Costs (estimates, to measure on a board)
 
 | What | Cost |
 |---|---|
-| Sensor flash | X25519 ~5–10 KB; CCM uses the hardware (a few hundred bytes of glue) |
-| Pairing | ~1 s more (X25519 on both sides, in software) |
+| Sensor flash | small: no public-key code (F1); CCM and CMAC use the hardware (a few hundred bytes of glue) |
+| Pairing | one more exchange (the key and its confirmation) |
 | Each frame | +8–12 bytes, ~13–19 ms more on the air (~1.6 ms per byte, measured) |
 | After a boot | one round trip (hello / nonce) before the first report |
-| Gateway | 16 B per sensor in NV; a session key and two counters per sensor in RAM (~40 B × sensors) |
-| Host | `nv.json` carries keys; wyzesense2mqtt-rs must store and move them carefully |
+| Gateway | nothing in flash; `K_net` (16 B) and ~12–16 B of session state per sensor in RAM (~1 KB for 64), from the stack reservation once measured |
+| Host | keeps `K_net` (and pushes it at every gateway start); `nv.json` may carry it in clear |
 | Unattended OTA of 100 sensors | each starts at its next check-in (≤ 4 h for v1 contacts); one at a time, ~2.5 min each, so ~4–5 h in all |
 
 ## 7. Questions for the user
 
-1. 4.1: is "just works" pairing (A) acceptable, or is provisioning-authenticated pairing (B) wanted from the start?
-2. 4.2: is confidentiality (G4) wanted, or authentication only?
-3. 4.4: is the authenticated channel enough to drop the button for OTA, or do we want signed images too, and where
-   should the signing key live?
-4. 4.5: off by default behind a flag (R3), or on by default between our devices?
-5. 4.6: may `nv.json` carry keys in clear for a trusted host, or wrapped only?
-6. 4.7: anything for stock sensors (replay check, anomaly flags), or leave them?
+All six answered on PR #77 (see the table at the top). Still to settle before phase 0: nothing from the user; TASK-22 on
+the bench.
