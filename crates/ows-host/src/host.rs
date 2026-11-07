@@ -36,6 +36,7 @@ pub const OWS_RSP: u16 = 0x53F1;
 
 pub const OWS_SUB_FLAGS: u8 = 0x01;
 pub const OWS_SUB_BUILD_INFO: u8 = 0x02;
+pub const OWS_SUB_NET_KEY: u8 = 0x07;
 pub const OWS_SUB_OTA_OFFER: u8 = 0x10;
 pub const OWS_SUB_OTA_NEED: u8 = 0x11;
 pub const OWS_SUB_OTA_DATA: u8 = 0x12;
@@ -272,6 +273,13 @@ impl<L: ByteLink> Link<L> {
             .ows_call(OWS_SUB_FLAGS, &p, Duration::from_secs(1))?
             .filter(|r| r.len() == 8)
             .map(|r| (u32::from_be_bytes(r[..4].try_into().unwrap()), u32::from_be_bytes(r[4..].try_into().unwrap()))))
+    }
+
+    /// Our gateway's secured-link network key (RAM only), set to `key` if given: whether a key is set. None: no answer
+    /// (a stock dongle).
+    pub fn net_key(&mut self, key: Option<[u8; 16]>) -> Result<Option<bool>, Error> {
+        let p = key.map(|k| k.to_vec()).unwrap_or_default();
+        Ok(self.ows_call(OWS_SUB_NET_KEY, &p, Duration::from_secs(1))?.filter(|r| r.len() == 1).map(|r| r[0] != 0))
     }
 
     /// The paired sensors' MACs (8 ASCII bytes each).

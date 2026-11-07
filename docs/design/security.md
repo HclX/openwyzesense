@@ -268,9 +268,11 @@ Built on the host board and tested end to end (`test_secure_link` in `firmware/t
 - **OTA** moved to `4F 10`–`13`, sealed for a secured sensor, which then takes the offer **without the button** at its
   next check-in (`test_secure_ota_without_button`: staged, no press, an A1, updated). Blocks shrink to 80 bytes so a
   sealed block fits one frame (a 9 KB update: 48 s instead of ~43 s in the simulation).
+- **Host library:** `HostLink.net_key` (`tools/host_link.py`) and `host::Link::net_key` (`crates/ows-host`) query or
+  push `K_net` over `OWS_SUB_NET_KEY`.
 - **Not yet:** the `secure` flag persisted in the gateway's table (now RAM only: after a gateway restart, a
   forged stock-format report is accepted until the sensor's next hello); a plain B0 still accepted by a secured
-  sensor; the host side (wyzesense2mqtt-rs pushing `K_net`, `ows-flash`), the ESP relay keeping `K_net`.
+  sensor; wyzesense2mqtt-rs pushing `K_net` at every start; the ESP relay keeping `K_net`.
 
 ## 8. Questions for the user
 
