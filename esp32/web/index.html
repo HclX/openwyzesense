@@ -119,6 +119,8 @@ order for SBL (roles found).</p>
 <option value=sbl>SBL (4-pad UART + power)</option>
 <option value=auto>Auto (cJTAG then SBL)</option>
 <option value=sbl2>SBL, two hand probes on TX/RX (+/− clipped)</option></select></div>
+<div><label style="margin-top:0">Colour of the <b>R</b> wire (<span class=pinr>GPIO</span>)</label><input type=text id=wirer maxlength=15 placeholder="e.g. red" style="width:110px"></div>
+<div><label style="margin-top:0">Colour of the <b>T</b> wire (<span class=pint>GPIO</span>)</label><input type=text id=wiret maxlength=15 placeholder="e.g. white" style="width:110px"></div>
 <label class=check style="margin-top:0"><input type=checkbox id=cjsound checked>Audio cues (lock, page ticks, slip, done)</label>
 </div>
 <div class=btns style="margin-top:14px">
@@ -195,16 +197,27 @@ const tr=document.createElement('tr'),vals=[x.mac,TYPES[x.type]||('0x'+x.type.to
 x.bat_mv?(x.bat_mv/1000).toFixed(2)+' V ('+x.bat_mv+' mV)':'–',ago(x.seen_s)];
 vals.forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;if(i==2&&x.rssi<-85)td.className='weak';
 tr.appendChild(td)});tb.appendChild(tr)})}
+// The hand probes by the colours of their wires (saved on the station: POST /wires), wherever a GPIO is named
+let WIRES={},wiresFilled=false;
+function wireOf(n){return WIRES[n]||''}
+function withWire(t){return String(t||'').replace(/GPIO(\d+)/g,(m,n)=>wireOf(n)?wireOf(n)+' wire '+m:m)}
+function noteWires(s){const p=s.pins||{},w=s.wires||{};WIRES={};if(p.r>=0&&w.r)WIRES[p.r]=w.r;if(p.t>=0&&w.t)WIRES[p.t]=w.t;
+if(p.r>=0){document.querySelectorAll('.pinr').forEach(e=>e.textContent='GPIO'+p.r);document.querySelectorAll('.pint').forEach(e=>e.textContent='GPIO'+p.t)}
+if(!wiresFilled&&s.wires){wiresFilled=true;$('wirer').value=w.r||'';$('wiret').value=w.t||''}}
+async function saveWires(){const b=new URLSearchParams({r:$('wirer').value.trim(),t:$('wiret').value.trim()});
+try{const r=await fetch('/wires',{method:'POST',body:b});showMsg($('cjmsg'),r.ok,(await r.text()).trim());wiringKey='';poll()}
+catch(e){showMsg($('cjmsg'),false,'saving the wire colours failed')}}
 // The wiring, drawn from the firmware's own pin map (pins.h, reported in /api/status); the ESP8266's pins are fixed
 let wiringKey='';
 function drawWiring(s){const role=s.role==2?2:0,e8=s.chip=='ESP8266',p=s.pins||{};
-const key=s.chip+role+JSON.stringify(p);if(key==wiringKey)return;wiringKey=key;
+const key=s.chip+role+JSON.stringify(p)+JSON.stringify(s.wires||{});if(key==wiringKey)return;wiringKey=key;
+const wcol=(g,txt)=>wireOf(g)?txt+' · '+wireOf(g):txt;
 const g=n=>n>=0?'GPIO'+n:'–',st=role==2;
 const rows=e8?[['+','3V3',''],['−','G',''],['R','D4','its input (DIO1)'],['T','D7','its output (DIO0)'],
 ['S','D2','RESET_N'],['W','D1','bootloader backdoor (DIO10)']]:
 [['+',g(p.power),st?'supply, switched (clip: battery +)':'its supply: a reset is a power cycle'],
 ['−','GND',st?'clip: battery −':''],
-['R',g(p.r),st?'SBL pad · hand probe (TX/RX)':'its input (DIO1)'],['T',g(p.t),st?'SBL pad · hand probe (TX/RX)':'its output (DIO0)'],
+['R',g(p.r),wcol(p.r,st?'hand probe / SBL pad':'its input (DIO1)'),p.r],['T',g(p.t),wcol(p.t,st?'hand probe / SBL pad':'its output (DIO0)'),p.t],
 ['M',g(p.m),st?'cJTAG (TMSC)':'debug port TMSC: updates'],['C',g(p.c),st?'cJTAG (TCKC)':'debug port TCKC'],
 ['S',g(p.s),st?'SBL pad':'RESET_N (optional)'],['W',g(p.w),st?'SBL pad':'bootloader backdoor (optional)']];
 const H=30,W=360,top=34,h=top+rows.length*H+6;
@@ -217,7 +230,8 @@ v+='<rect x="8" y="'+(y)+'" width="34" height="'+(H-8)+'" rx="5" fill="var(--bar
 '<line x1="42" y1="'+c+'" x2="'+(W-92)+'" y2="'+c+'" stroke="var(--acc)" stroke-width="2"/>'+
 '<text x="52" y="'+(c-5)+'" font-size="11" fill="var(--mute)">'+r[2]+'</text>'+
 '<rect x="'+(W-92)+'" y="'+y+'" width="84" height="'+(H-8)+'" rx="5" fill="var(--card)" stroke="var(--acc)"/>'+
-'<text x="'+(W-50)+'" y="'+(c+5)+'" font-size="13" text-anchor="middle" fill="var(--fg)">'+r[1]+'</text>'});
+'<text x="'+(W-50)+'" y="'+(c+5)+'" font-size="13" text-anchor="middle" fill="var(--fg)">'+r[1]+'</text>'+
+(r[3]!==undefined&&wireOf(r[3])&&CSS.supports('color',wireOf(r[3]))?'<circle cx="'+(W-100)+'" cy="'+c+'" r="6" fill="'+wireOf(r[3])+'" stroke="var(--fg)"/>':'')});
 v+='</svg><p class=hint>'+(e8?'Nothing on D8 (GPIO15): it must be low at start.':st?
 'Station: cJTAG on <b>M</b>/<b>C</b> (either way round). SBL fixture: the sensor’s four unmarked pads on <b>R</b>, <b>T</b>, '+
 '<b>S</b>, <b>W</b> in any order. Two hand probes (sbl2): the <b>R</b> and <b>T</b> wires on its TX and RX pads, either way '+
@@ -248,7 +262,7 @@ $('waiting').textContent=s.waiting;$('wifi').textContent=s.ssid||'(not set)';
 $('rssi').textContent=s.ip?s.rssi+' dBm':'–';$('up').textContent=dur(s.uptime);
 $('heap').textContent=(s.heap/1024).toFixed(1)+' KB';$('auth').textContent=s.auth?'password set':'open (set in Setup)';
 $('build').textContent=s.build;renderSensors(s.sensors||[]);
-document.querySelectorAll('.chip').forEach(e=>e.textContent=s.chip);drawWiring(s);$('fwhint').textContent=s.fw_file;
+document.querySelectorAll('.chip').forEach(e=>e.textContent=s.chip);noteWires(s);drawWiring(s);$('fwhint').textContent=s.fw_file;
 if(!filled){filled=true;$('ssid').value=s.ssid;$('seturl').value=s.url;$('setrole').value=String(role);if(s.contact_flash)$('setcflash').value=s.contact_flash}
 }catch(e){pill('bad','relay not answering')}}
 setInterval(poll,2000);poll();
@@ -329,18 +343,18 @@ running:c.mode=='dump'?'Dumping…':'Flashing…',slipped:'Paused (probe slip) �
 done:c.mode=='identify'?'Identified':'Complete!',error:'Error'};
 $('cjident').textContent=!c.identified?'– (Identify first)':c.id_transport=='cjtag'?
 ('cJTAG: TCKC (C) = GPIO'+c.id_tck+' · TMSC (M) = GPIO'+c.id_tms):
-('SBL: R = GPIO'+c.sbl_map.r_gpio+' · T = GPIO'+c.sbl_map.t_gpio+' · backdoor = GPIO'+c.sbl_map.backdoor_gpio);
+withWire('SBL: the sensor’s RX = GPIO'+c.sbl_map.r_gpio+' · its TX = GPIO'+c.sbl_map.t_gpio+' · backdoor = GPIO'+c.sbl_map.backdoor_gpio);
 $('cjarmdump').disabled=$('cjarmflash').disabled=!c.identified;
 $('cjstate').textContent=labels[c.state]||c.state;
 const pct=c.total_pages?Math.round(100*c.pages_done/c.total_pages):0;
 $('cjbar').style.width=pct+'%';
 $('cjmsg').className='msg '+(c.state=='done'?'ok':c.state=='error'||c.state=='slipped'?'bad':'');
-$('cjmsg').textContent=c.msg||'';
+$('cjmsg').textContent=withWire(c.msg);
 $('cjmac').textContent=c.mac||'–';
 $('cjpins').textContent=c.tck_pin>=0?'cJTAG: TCKC (C) = GPIO'+c.tck_pin+' · TMSC (M) = GPIO'+c.tms_pin:
 (tr=='sbl'?'SBL 4-pad + power GPIO':'cJTAG GPIO'+c.pin_a+' / GPIO'+c.pin_b+' (auto-polarity)');
 const m=c.sbl_map;
-$('cjsblmap').textContent=m&&m.found?('R=pad '+m.r_pad+' (GPIO'+m.r_gpio+') · T=pad '+m.t_pad+' (GPIO'+m.t_gpio+') · backdoor=pad '+m.backdoor_pad+' (GPIO'+m.backdoor_gpio+') · chip '+m.chip_id):'–';
+$('cjsblmap').textContent=m&&m.found?withWire(('R=pad '+m.r_pad+' (GPIO'+m.r_gpio+') · T=pad '+m.t_pad+' (GPIO'+m.t_gpio+') · backdoor=pad '+m.backdoor_pad+' (GPIO'+m.backdoor_gpio+') · chip '+m.chip_id)):'–';
 $('cjpages').textContent=c.pages_done+' / '+c.total_pages+' pages ('+pct+'%)'+(c.slips?' · '+c.slips+' slip(s)':'');
 $('cjchip').textContent=c.mac?('USER_ID '+c.user_id+' · BL_CONFIG '+c.bl_config+' · IEEE '+c.ieee_mac):'–';
 $('cjdlflash').hidden=!c.dump_ready;$('cjdlfcfg1').hidden=!(c.fcfg1_ready||c.dump_ready);
@@ -356,6 +370,7 @@ setInterval(pollCjtag,350);
 $('cjarmid').onclick=async()=>{tone(520,60,0,'sine');
 const r=await fetch('/cjtag/arm?mode=identify&'+cjQuery(),{method:'POST'});const t=(await r.text()).trim();
 showMsg($('cjmsg'),r.ok,t);cjLastState='armed';cjLastPage=0;pollCjtag()};
+$('wirer').onchange=$('wiret').onchange=saveWires;
 $('cjarmdump').onclick=async()=>{tone(520,60,0,'sine');
 const r=await fetch('/cjtag/arm?mode=dump&'+cjQuery(),{method:'POST'});const t=(await r.text()).trim();
 showMsg($('cjmsg'),r.ok,t);cjLastState='armed';cjLastPage=0;pollCjtag()};

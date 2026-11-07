@@ -119,6 +119,9 @@ static esp_err_t api_status(httpd_req_t *req)
     js(ip, sizeof ip, net_connected() ? net_ip() : "");
     js(log_js, sizeof log_js, log_raw);
     js(flash, sizeof flash, last_flash);
+    char wr_js[40], wt_js[40];
+    js(wr_js, sizeof wr_js, settings.wire_r);
+    js(wt_js, sizeof wt_js, settings.wire_t);
     js(cmac_js, sizeof cmac_js, g && g->mac[0] ? g->mac : gw_mac);
     static const char *vias[] = {"auto", "cjtag", "sbl"};  // GWSYNC_VIA_*
     bool gw_checked = (g != NULL) || (settings.role == ROLE_STATION);
@@ -130,7 +133,7 @@ static esp_err_t api_status(httpd_req_t *req)
         "lu,\"queued\":%lu,"
         "\"replayed\":%lu,\"dropped\":%lu,\"waiting\":%u,\"uart_tx\":%lu,\"uart_rx\":%lu,"
         "\"uptime\":%lu,\"heap\":%lu,\"log\":%s,\"flash\":%s,\"contact_mac\":%s,"
-        "\"pins\":{\"power\":%d,\"r\":%d,\"t\":%d,\"m\":%d,\"c\":%d,\"s\":%d,\"w\":%d},"
+        "\"wires\":{\"r\":%s,\"t\":%s},\"pins\":{\"power\":%d,\"r\":%d,\"t\":%d,\"m\":%d,\"c\":%d,\"s\":%d,\"w\":%d},"
         "\"build\":\"%s\",\"chip\":\"" CHIP "\",\"fw_file\":\"" FW_FILE "\","
         "\"gw\":{\"checked\":%s,\"result\":\"%s\",\"via_cjtag\":%s,\"msg\":%s,\"steps\":%s,\"carried\":%s,"
         "\"running\":%s},\"sensors\":[",
@@ -140,7 +143,7 @@ static esp_err_t api_status(httpd_req_t *req)
         (unsigned long)(settings.role == ROLE_STATION ? 0 : relay_task_connects()), (unsigned long)queued,
         (unsigned long)replayed, (unsigned long)dropped, waiting, (unsigned long)uart_tx, (unsigned long)uart_rx,
         (unsigned long)(esp_timer_get_time() / 1000000), (unsigned long)esp_get_free_heap_size(), log_js, flash,
-        cmac_js, OWS_PIN_CONTACT_POWER, OWS_PIN_CONTACT_TX, OWS_PIN_CONTACT_RX, OWS_PIN_CONTACT_TMS,
+        cmac_js, wr_js, wt_js, OWS_PIN_CONTACT_POWER, OWS_PIN_CONTACT_TX, OWS_PIN_CONTACT_RX, OWS_PIN_CONTACT_TMS,
         OWS_PIN_CONTACT_TCK, OWS_PIN_CONTACT_RESET, OWS_PIN_CONTACT_BOOT, build, gw_checked ? "true" : "false",
         g ? results[g->result] : "same", g && g->via_cjtag ? "true" : "false", gwmsg, steps, g ? carried : "null",
         g && (g->answered || g->result == GWSYNC_UPDATED) ? running : "null");
@@ -332,6 +335,27 @@ static void rig_field(const char *body, const char *key, uint32_t *v)
     if (form_value(body, key, s, sizeof s) && s[0]) {
         *v = (uint32_t)strtoul(s, NULL, 10);
     }
+}
+
+// The colours of the harness's R and T wires (POST /wires r=..&t=..; no restart): the page names a probe by its colour
+static esp_err_t wires_post(httpd_req_t *req)
+{
+    if (!require_auth(req)) {
+        return ESP_OK;
+    }
+    char body[128];
+    int n =
+        req->content_len > 0 && req->content_len < (int)sizeof body ? httpd_req_recv(req, body, req->content_len) : -1;
+    if (n <= 0) {
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "r=<colour>&t=<colour>");
+    }
+    body[n] = 0;
+    set_field(body, "r", settings.wire_r, sizeof settings.wire_r, true);
+    set_field(body, "t", settings.wire_t, sizeof settings.wire_t, true);
+    if (!settings_save()) {
+        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "saving failed");
+    }
+    return httpd_resp_sendstr(req, "wire colours saved");
 }
 
 static esp_err_t rig_post(httpd_req_t *req)
@@ -749,7 +773,7 @@ void web_start(void)
     httpd_config_t cfg = HTTPD_DEFAULT_CONFIG();
     cfg.stack_size = 8192;
     cfg.recv_wait_timeout = 30;
-    cfg.max_uri_handlers = 20;
+    cfg.max_uri_handlers = 24;
     httpd_handle_t h;
     if (httpd_start(&h, &cfg) != ESP_OK) {
         ESP_LOGE(TAG, "the web server did not start");
@@ -774,6 +798,7 @@ void web_start(void)
         {.uri = "/cjtag/stage", .method = HTTP_POST, .handler = cjtag_stage_post},
         {.uri = "/cjtag/dump.bin", .method = HTTP_GET, .handler = cjtag_dump_get},
         {.uri = "/cjtag/fcfg1.bin", .method = HTTP_GET, .handler = cjtag_fcfg1_get},
+        {.uri = "/wires", .method = HTTP_POST, .handler = wires_post},
     };
     for (size_t i = 0; i < sizeof uris / sizeof uris[0]; i++) {
         httpd_register_uri_handler(h, &uris[i]);
