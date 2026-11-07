@@ -270,7 +270,8 @@ Built on the host board and tested end to end (`test_secure_link` in `firmware/t
   `A6_OURS_SECURE` and `4F 01` carries the sensor's key; sessions in RAM; a secured sensor's stock-format reports are
   dropped; an SL_FRAME is ACKed only with the key **and** a session for that sensor, so a report is never lost to a
   gateway that cannot open it.
-- **Sensor:** the key in NV item `0x22`; a hello after each start or a resync; reports sealed; nobody answering a hello
+- **Sensor:** the key in NV item `0x22`; a hello before its first report after a start or a resync (idle, it sends
+  nothing, as the stock sensors); reports sealed; nobody answering a hello
   or a sealed report: reports kept, a hello at once, then after 60 s, 5 min, 15 min, then with each heartbeat.
 - **Flash cost:** ~2.6 KB on the gateway and on the sensor.
 - **OTA** moved to `4F 10`–`13`, sealed for a secured sensor, which then takes the offer **without the button** at its

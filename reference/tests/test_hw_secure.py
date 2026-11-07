@@ -148,6 +148,16 @@ def test_secured_link_on_hardware():
                 break
         assert mine, 'no event after the gateway restarted'
         assert ' secure session' in secure_session(board, dongle, 10)
+
+        # the sensor restarts: its key is in flash (NV item 0x22), its session is not. Idle, it sends nothing (as the
+        # stock sensors); its next report goes after a hello (a new session), sealed, without pairing again
+        assert reset_board(board)
+        time.sleep(0.5)
+        line = info(board)
+        assert ' state 4 ' in line and ' secure key' in line, line
+        mine = event_arrives(board, dongle, mac, 1, 8)
+        assert mine and mine[-1][14] == 1, 'no event after the sensor restarted'
+        assert ' secure session' in secure_session(board, dongle, 5)
     finally:
         try:
             if dongle is None:  # failed between the restart and reopening it
