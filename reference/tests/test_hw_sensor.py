@@ -220,7 +220,7 @@ def survives_a_reset(board, dongle, mac):
     board.say('info')
     after = board.wait('info', 2, since=t0)
     assert after and ' state 4 ' in after and after.split('pan ')[1][:4] == '65FE', after
-    assert int(after.split('counter ')[1]) == 0
+    assert int(after.split('counter ')[1].split()[0]) == 0  # more fields may follow (gw ours, secure, slot)
     dongle.packets(1)  # what the dongle resent while we were not reading
     os.write(board.fd, b'event 1\n')
     pkts = dongle.packets(5)
