@@ -257,8 +257,8 @@ Built on the host board and tested end to end (`test_secure_link` in `firmware/t
   six types, no key) too.
 - A forged sensor (a one-off check): the secured LaunchPad reflashed with firmware without the secured link
   (`main`, 620b5eb), its NV page kept, so the same MAC and join; its four stock-format events were each acknowledged
-  by the gateway's radio (frame level) and **none reached the host**. The gateway keeps "secured" in RAM, so this
-  holds until it restarts (the persisted flag is still to do, below).
+  by the gateway's radio (frame level) and **none reached the host**, also when the gateway was restarted (RAM gone,
+  its key pushed again) between the pairing and the forgery: the persisted mark.
 - On air (`ground_truth/rf/2026-11-07_1146_906.7M_250k_g0_secure_ota`, during that update): all 564 data frames between
   the two, 282 each way, are `4F 04` sealed frames once the stock layer is removed; none of the sensor's outside them.
 
@@ -272,7 +272,8 @@ Built on the host board and tested end to end (`test_secure_link` in `firmware/t
   CC1310's TRNG.
 - **Gateway:** the A6 mark on by default; `OWS_SUB_NET_KEY` (`0x53F0 0x07`) puts `K_net` in RAM; with it, A6 advertises
   `A6_OURS_SECURE` and `4F 01` carries the sensor's key; sessions in RAM; a secured sensor's stock-format reports are
-  dropped; an SL_FRAME is ACKed only with the key **and** a session for that sensor, so a report is never lost to a
+  dropped, its "secured" mark kept in its NV record (byte 18 bit 0, across restarts; cleared when it is paired again,
+  so a sensor back on stock firmware reports again); an SL_FRAME is ACKed only with the key **and** a session for that sensor, so a report is never lost to a
   gateway that cannot open it.
 - **Sensor:** the key in NV item `0x22`; a hello before its first report after a start or a resync (idle, it sends
   nothing, as the stock sensors); reports sealed; nobody answering a hello
@@ -283,9 +284,7 @@ Built on the host board and tested end to end (`test_secure_link` in `firmware/t
   sealed block fits one frame (a 9 KB update: 48 s instead of ~43 s in the simulation).
 - **Host library:** `HostLink.net_key` (`tools/host_link.py`) and `host::Link::net_key` (`crates/ows-host`) query or
   push `K_net` over `OWS_SUB_NET_KEY`.
-- **Not yet:** the `secure` flag persisted in the gateway's table (now RAM only: after a gateway restart, a
-  forged stock-format report is accepted until the sensor's next hello); a plain B0 still accepted by a secured
-  sensor; wyzesense2mqtt-rs pushing `K_net` at every start; the ESP relay keeping `K_net`.
+- **Not yet:** a plain B0 still accepted by a secured sensor; wyzesense2mqtt-rs pushing `K_net` at every start; the ESP relay keeping `K_net`.
 
 ## 8. Questions for the user
 
