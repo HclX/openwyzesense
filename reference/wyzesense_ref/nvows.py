@@ -103,9 +103,10 @@ def network_data(pan, short, ext):
     return pan.to_bytes(2, 'little') + short.to_bytes(2, 'little') + ext.to_bytes(8, 'little') + b'\x17\x00\xbe\xbe'
 
 
-def sensor_data(pan, short, mac):
+def sensor_data(pan, short, mac, secure=False):
     r = bytearray(24)
     r[0:2], r[2:4], r[4:12], r[17] = pan.to_bytes(2, 'little'), short.to_bytes(2, 'little'), mac, 0x01
+    r[18] = 1 if secure else 0
     return bytes(r)
 
 
@@ -196,7 +197,10 @@ def export(page):
             out['dropped'][-1]['mac'] = mac.decode()
         else:
             by_mac[mac], by_short[s] = sub, mac.decode()
-            out['sensors'].append({'sub': sub, 'mac': mac.decode(), 'short': h16(s)})
+            entry = {'sub': sub, 'mac': mac.decode(), 'short': h16(s)}
+            if d[18] & 1:
+                entry['secure'] = True
+            out['sensors'].append(entry)
     j = items.get((ITEM_JOIN, 0)) if layout == 'ows' else None
     if j is not None:
         p, c, s = (int.from_bytes(j[k : k + 2], 'little') for k in (2, 4, 6))
@@ -263,10 +267,13 @@ def import_(doc):
             s_short = int(s['short'], 16)
             if not 0x0001 <= s_short <= 0xFFFD or s_short == net_short or s_short in seen_shorts:
                 raise ValueError(f'sensor {s}: invalid or duplicate short address')
+            secure = s.get('secure', False)
+            if not isinstance(secure, bool):
+                raise ValueError(f'sensor {s}: secure must be a bool')
             seen_subs.add(sub)
             seen_macs.add(mac)
             seen_shorts.add(s_short)
-            items[(ITEM_SENSOR, sub)] = sensor_data(pan, s_short, mac)
+            items[(ITEM_SENSOR, sub)] = sensor_data(pan, s_short, mac, secure=secure)
         items[(ITEM_COUNT, 0)] = bytes([len(sensors), 0, 0, 0])
     elif doc.get('sensors'):
         raise ValueError('sensors without a network')
