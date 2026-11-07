@@ -75,7 +75,8 @@ typedef struct {
     uint8_t mac[8];  // ASCII
     uint16_t short_addr;
     uint16_t nv_sub;  // its record in the NV page (item 5, this sub-ID)
-    bool secure;      // it proved its key (SL_HELLO): its stock-format reports are dropped (RAM only, prototype)
+    bool secure;      // it proved its key (SL_HELLO): its stock-format reports are dropped; kept in its NV record
+                      // (byte 18 bit 0, NV_SENSOR_SECURE) until it is paired again
 } gw_sensor_t;
 
 // The secured link (seclink.h, docs/design/security.md): sessions in RAM, the oldest replaced when full (that sensor

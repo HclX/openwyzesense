@@ -64,6 +64,7 @@ static uint32_t next_random(gateway_t *gw)
 // --- the NV page (stock records) ---
 
 enum { NV_NETWORK = 1, NV_COUNT = 4, NV_SENSOR = 5 };
+enum { NV_SENSOR_SECURE = 0x01 };  // a sensor record's byte 18 (ours, #28): it proved its secured-link key
 
 static bool nv_save_count(gateway_t *gw)
 {
@@ -84,6 +85,7 @@ static bool nv_save_sensor(gateway_t *gw, const gw_sensor_t *s)
     r[3] = (uint8_t)(s->short_addr >> 8);
     memcpy(r + 4, s->mac, 8);
     r[17] = 0x01;
+    r[18] = s->secure ? NV_SENSOR_SECURE : 0;  // ours (#28): a stock page has 0 there
     return nv_write(gw->nv, NV_SENSOR, s->nv_sub, r, sizeof r);
 }
 
@@ -112,6 +114,7 @@ static bool load_sensor(void *arg, uint16_t item, uint16_t sub, const uint8_t *d
     memcpy(s->mac, d + 4, 8);
     s->short_addr = (uint16_t)(d[2] | d[3] << 8);
     s->nv_sub = sub;
+    s->secure = (d[18] & NV_SENSOR_SECURE) != 0;
     return true;
 }
 
@@ -175,6 +178,7 @@ bool gw_add_sensor(gateway_t *gw, const uint8_t mac[8], uint16_t short_addr)
         }
         s = &gw->sensors[gw->n_sensors];
         memcpy(s->mac, mac, 8);
+        s->secure = false;  // not a stale mark from the slot's last sensor
         s->nv_sub = free_sub(gw);
         gw->n_sensors++;
     } else if (s->short_addr == short_addr) {
@@ -772,7 +776,10 @@ static void secure_hello(gateway_t *gw, uint16_t src, const uint8_t *pt, size_t 
     platform_random(reply + 2, SL_NONCE);
     sl_session_key(ks, pt + 10, reply + 2, x->key);
     sl_session_tag(ks, pt + 10, reply + 2, reply + 2 + SL_NONCE);
-    ps->secure = true;
+    if (!ps->secure) {  // saved once: a secured sensor says hello after each of its starts
+        ps->secure = true;
+        nv_save_sensor(gw, ps);
+    }
     queue_ours(gw, src, reply, sizeof reply);
 }
 
@@ -1858,8 +1865,9 @@ void gw_host(gateway_t *gw, const uint8_t *pkt, size_t len)
             if (s >= 0) {  // a (re)pairing: no session until it says hello with the key it gets now
                 drop_session(gw, (uint16_t)s);
                 for (size_t i = 0; i < gw->n_sensors; i++) {
-                    if (gw->sensors[i].short_addr == (uint16_t)s) {
-                        gw->sensors[i].secure = false;
+                    if (gw->sensors[i].short_addr == (uint16_t)s && gw->sensors[i].secure) {
+                        gw->sensors[i].secure = false;  // a sensor back on stock firmware reports again
+                        nv_save_sensor(gw, &gw->sensors[i]);
                     }
                 }
             }

@@ -1283,6 +1283,15 @@ static void test_secure_link(void)
     run(500);
     handshake();
     push_net_key();
+    // the mark came back from its NV record: before the sensor's next hello, a forged stock-format report is dropped
+    CHECK(gw_app.gw.sensors[0].secure);
+    from = n_got;
+    forged[16] = 0x42;
+    clen = app_encrypt(forged, sizeof forged, ct);
+    inject(f,
+           mac_build_data(f, 0x79, gw_app.gw.pan, gw_app.gw.short_addr, sensor_app.sensor.short_addr, ct, clen, true));
+    run(1000);
+    CHECK(alarms_since(from, mac, APP_EVENT) == 0);
     from = n_got;
     CHECK(say("event 1", "ok", 100));
     r = alarm_from(mac, APP_EVENT, 15000);
