@@ -132,3 +132,25 @@ void aes128_ecb_decrypt(const uint8_t key[16], const uint8_t *in, uint8_t *out, 
         decrypt_block(rk, out + b);
     }
 }
+
+// The host's random source for the secured link (seclink.h platform_random): xorshift64, seeded per process from
+// OWS_RANDOM_SEED if set (tests that need a fixed run), else from a fixed value. Not for anything real: the chip's
+// version reads its TRNG (soc/cc13x0/aes_cc13x0.c).
+#include <stdlib.h>
+
+#include "seclink.h"
+
+void platform_random(uint8_t *out, size_t n)
+{
+    static uint64_t x;
+    if (!x) {
+        const char *seed = getenv("OWS_RANDOM_SEED");
+        x = seed ? strtoull(seed, NULL, 0) | 1 : 0x9E3779B97F4A7C15ull;
+    }
+    for (size_t i = 0; i < n; i++) {
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        out[i] = (uint8_t)(x >> 24);
+    }
+}
