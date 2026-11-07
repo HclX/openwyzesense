@@ -125,7 +125,7 @@ order for SBL (roles found).</p>
 <button class=btn id=cjarmid>1. Identify (hands-free)</button>
 <button class=btn id=cjarmdump disabled>2. Dump</button>
 <button class="btn ghost" id=cjdisarm>Disarm</button>
-<button class="btn ghost" id=cjdlflash hidden>Download flash.bin (128 KB)</button>
+<button class="btn ghost" id=cjdlflash hidden>Save flash.bin again (128 KB)</button>
 <button class="btn ghost" id=cjdlfcfg1 hidden>Download fcfg1.bin (1 KB)</button>
 </div></div>
 
@@ -311,8 +311,13 @@ const o=actx.createOscillator(),g=actx.createGain(),t0=actx.currentTime+(delayMs
 o.type=type||'sine';o.frequency.setValueAtTime(freq,t0);
 g.gain.setValueAtTime(0.15,t0);g.gain.exponentialRampToValueAtTime(0.001,t0+ms/1000);
 o.connect(g);g.connect(actx.destination);o.start(t0);o.stop(t0+ms/1000)}catch(_){}}
-function dlUrl(url,name){const a=document.createElement('a');a.href=url;if(name)a.download=name;
-document.body.appendChild(a);a.click();a.remove()}
+// Saved from a blob made here, not as a direct http download: Chrome flags those as unsafe and holds them unconfirmed
+// (2026-11-07, the leak sensor's 128 KB dump). `want`: the size it must have, or it is not saved.
+async function dlUrl(url,name,want){try{const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error(r.status+' '+(await r.text()).trim());
+const b=await r.blob();if(want&&b.size!=want)throw new Error(b.size+' bytes, not '+want);
+const u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=name||url.split('/').pop();
+document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),30000);return true}
+catch(e){showMsg($('cjmsg'),false,'Saving '+(name||url)+' failed: '+e.message+' (the dump is kept: save it again)');return false}}
 function cjQuery(){
 return 'transport='+encodeURIComponent($('cjtrans').value)}
 async function pollCjtag(){if($('probe').hidden&&cjLastState=='idle')return;try{
@@ -344,8 +349,8 @@ if(c.state=='running'&&c.pages_done>cjLastPage){tone(900+c.pages_done*22,30,0,'s
 if(c.state=='slipped'&&cjLastState!='slipped'){tone(330,140,0,'sawtooth');tone(260,180,160,'sawtooth')}
 if(c.state=='done'&&c.done_seq!=cjLastDoneSeq){
 cjLastDoneSeq=c.done_seq;tone(523,110,0,'triangle');tone(659,110,120,'triangle');tone(1046,260,240,'triangle');
-if(c.mode=='dump'&&c.dump_ready){dlUrl('/cjtag/dump.bin','sensor_'+c.mac+'_flash.bin');
-setTimeout(()=>dlUrl('/cjtag/fcfg1.bin','sensor_'+c.mac+'_fcfg1.bin'),600)}}
+if(c.mode=='dump'&&c.dump_ready){dlUrl('/cjtag/dump.bin','sensor_'+c.mac+'_flash.bin',131072).then(()=>
+dlUrl('/cjtag/fcfg1.bin','sensor_'+c.mac+'_fcfg1.bin',1024))}}
 cjLastState=c.state;cjLastPage=c.pages_done}catch(_){}}
 setInterval(pollCjtag,350);
 $('cjarmid').onclick=async()=>{tone(520,60,0,'sine');
@@ -361,6 +366,6 @@ if(!f){showMsg($('cjmsg'),false,'Pick a CC1310 .bin file first.');return}
 tone(520,60,0,'sine');
 const q=cjQuery()+($('cjwipe').checked?'&nv=wipe':'');
 upload('/cjtag/stage?'+q,'image',f,$('cjprog'),$('cjmsg'),$('cjarmflash'),()=>{cjLastState='armed';cjLastPage=0;pollCjtag()})};
-$('cjdlflash').onclick=()=>dlUrl('/cjtag/dump.bin');
-$('cjdlfcfg1').onclick=()=>dlUrl('/cjtag/fcfg1.bin');
+$('cjdlflash').onclick=()=>dlUrl('/cjtag/dump.bin','sensor_'+($('cjmac').textContent||'unknown')+'_flash.bin',131072);
+$('cjdlfcfg1').onclick=()=>dlUrl('/cjtag/fcfg1.bin','sensor_'+($('cjmac').textContent||'unknown')+'_fcfg1.bin',1024);
 </script></body></html>

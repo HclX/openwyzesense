@@ -1366,12 +1366,12 @@ void cjtag_task_note_dump_downloaded(void)
     if (!lock) {
         return;
     }
+    // The dump stays (until the next Dump, a staged image, or Disarm): a download sent is not a file saved (2026-11-07:
+    // Chrome held the 128 KB file as an unconfirmed download, and the dump was already gone), so it can be saved again
     xSemaphoreTake(lock, portMAX_DELAY);
     if (dump_ready && active_mac[0] != '\0') {
         memcpy(backed_up_mac, active_mac, sizeof backed_up_mac);
     }
-    dump_ready = false;
-    free_page_bufs();
     xSemaphoreGive(lock);
 }
 
