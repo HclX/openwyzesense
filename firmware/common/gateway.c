@@ -983,7 +983,7 @@ static void sensor_message(gateway_t *gw, uint16_t src, const uint8_t *pt, size_
             }
             break;
         }
-        case APP_ALARM2: {  // 0xEA: keypad/leak secondary event -> 0x5355, exactly as the stock dongle's E8 path
+        case APP_ALARM2: {  // 0xEA: keypad event -> 0x5355, exactly as the stock dongle's 0xEA path (0x04166, FACTS §4.0)
             // Plaintext: [EA][MAC(8)][type][len][constant][battery][reserved][subtype][data...]
             //             [constant][sequence]. The stock dongle copies through the sequence byte
             // (pt[10] + 11) and appends -RSSI.

@@ -59,6 +59,14 @@ the evidence.
 by side); the battery image's button and magnet by hand; a unit kept on stock firmware for remaining stock checks,
 with the SDR running.
 
+## Stock compatibility (R1)
+
+- Forward what the stock gateway v1.8 forwards and ours does not yet (FACTS.md §4.0, #79): `0xD1` / `0xD3` / `0xE1` /
+  `0xE3` → `0x5319` (18 / 15 / 21 / 19 plaintext bytes, MAC in the table), `0xB2` → `0x5359`, `0xB4` → `0x535B`
+  (repeated sequence number → `0x535E`), `0xB6` → `0x535D`, `0xAE` → `0x5338`, `0xAF` → `0x533B`, and the downlink
+  `0xB3` / `0xB5` (unencrypted), `0xC0`, `0xD0`, `0xD2`, `0xE0`, `0xE2`. For devices we do not have (keypad, chime?):
+  what they are is unknown, so test only against the binary's layouts.
+
 ## Hardware research
 
 - `TASK-20`: the dongle's CH554 with frames over 63 bytes, and leaving update mode (`0x4312`) without a replug (#64).

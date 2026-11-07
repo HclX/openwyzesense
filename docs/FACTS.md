@@ -99,6 +99,62 @@ IQ: `rf/2026-10-22_1821_*/snip_182141_059.cu8`, `rf/2026-10-22_1823_*/snip_18260
 | The same key on every network seen (4 coordinators) | verified | |
 | Payloads are 16 or 32 bytes; v2 sensors and `contact_v1` (`0x0EA90`) zero-pad the plaintext; `motion_v1` `Sensor_sendChallengeRsp_A5` (`0x0F764`) omits `memset(sp, 0, 0x20)` so `0xA5` bytes `27..31` leak uninitialized stack words (`…0020` SRAM pointer pattern). In both sensor (`0x0C5F0` / `0x086BC`) and gateway (`0x0D5A4` / `0x0924C`), `AES_encryptBuffer` and `AES_decryptBuffer` omit the `else` after `if (len <= 16)` (`known-issues.md` §3) | **verified** | decrypted payloads; `motion_v1` `0x0F764`; `contact_v1` `0x0C5F0`, `0x086BC`; `gateway_v1.8` `0x0D5A4`, `0x0924C` ([`docs/stock-re/stock_common.h`](stock-re/stock_common.h)) |
 
+### 4.0 Every RF message type the stock firmware handles
+
+The first plaintext byte is the type. Read from the binaries (2026-11-06, #79): the stock gateway's receive dispatch
+(`gateway_v1.8` `0x03f4c..0x03fda`, a compare / subtract chain; `gateway_v1.4` `0x06c72`), its downlink builders (each
+writes its type into the frame buffer at `[sp, #0x1c]`), and both v1 sensors' downlink dispatch (`contact_v1`
+`0x03d90..0x03e32`, `motion_v1` `0x043c0..0x04472`) and uplink builders. Nothing else is handled. Our own messages use
+`0x4F` (`firmware/common/seclink.h`), which no stock firmware uses.
+
+| Type | Direction | What | Gateway handling (v1.8) | Since | Seen on air |
+|---|---|---|---|---|---|
+| `0x02` | → gateway | TI Collector example: config response (length 13) | `0x040ea`, no host message | v1.4 | no |
+| `0x04` | → gateway | TI Collector example: tracking response (length 1) | `0x040b0`, no host message | v1.4 | no |
+| `0x08` | → gateway | TI Collector example: ramp data | `0x0430e`: only counts | v1.4 | no |
+| `0xA1` | sensor → | status / heartbeat | `0x0e7ec` → `0x5319` | v1.4 | yes |
+| `0xA2` | sensor → | event | `0x07b10` → `0x5319` | v1.4 | yes |
+| `0xA3` | sensor → | join announce | `0x042b4` → `0x5320` (pairing only) | v1.4 | yes |
+| `0xA4` | → sensor | join challenge (host `0x5321`) | built at `0x0f8a8` | v1.4 | yes |
+| `0xA5` | sensor → | join response | `0x0f114` → `0x5322` | v1.4 | yes |
+| `0xA6` | → sensor | join done / verify (`ff 04`; `ff 05` decommissions a v1 motion) | built at `0x0c646` | v1.4 | yes |
+| `0xA9` | sensor → | factory link-quality test reply | `0x09f5c` | v1.4 | no |
+| `0xAA` | → sensor | factory link-quality test packet (the v1 sensors answer `0xA9`) | built at `0x0cc06` | v1.4 | no |
+| `0xAB` | sensor → | v1 motion PIR summary | `0x1226c` → `0x5319` | v1.4 | no |
+| `0xAD` | sensor → | v1 offline log record | `0x0ad0c` → `0x5319` as an `0xA2` | v1.4 | no |
+| `0xAE` | → gateway | unknown | `0x0428c` → host `0x5338` | v1.4 | no |
+| `0xAF` | → gateway | unknown | `0x12bc4` → raw host packet `55 AA 53 0E 3B` + `pt[1..11]` (`0x533B`, template at `0x17104`; `0x533B` is also the reply to host `0x533A`) | v1.4 | no |
+| `0xB0` | → sensor | time sync | built at `0x0e8c8` | v1.4 | yes |
+| `0xB1` | sensor → | v1 motion decommission ACK | none (not in the dispatch) | | no |
+| `0xB2` | → gateway | unknown, answer in the `0xB3` exchange | `0x0406e` → `0x5359` (17 bytes + −RSSI) | v1.8 | no |
+| `0xB3` | → sensor | **unencrypted** 37-byte frame (host `0x535A`) | built at `0x12916` | v1.8 | no |
+| `0xB4` | → gateway | unknown, `0xB5` exchange | `0x03fdc` → `0x535B`, a repeated sequence number → `0x535E` | v1.8 | no |
+| `0xB5` | → sensor | **unencrypted** 131-byte frame (host `0x535C`) | built at `0x1234a` | v1.8 | no |
+| `0xB6` | → gateway | unknown, `0xB5` exchange | `0x0425c` → `0x535D` (18 bytes + −RSSI) | v1.8 | no |
+| `0xC0` | → sensor | command (host `0x5380`) | built at `0x11fa2` | v1.8 | no |
+| `0xD0` | → sensor | config, 3 bytes (host `0x5370`) | built at `0x11674` | v1.8 | no |
+| `0xD1` | → gateway | unknown report | `0x041ee` → `0x5319` (18 bytes), MAC in the table only | v1.8 | no |
+| `0xD2` | → sensor | config, 3 bytes (host `0x5372`) | built at `0x11f42` | v1.8 | no |
+| `0xD3` | → gateway | unknown report | `0x041a0` → `0x5319` (15 bytes), MAC in the table only | v1.8 | no |
+| `0xE0` | → sensor | command (host `0x5390`) | built at `0x12002` | v1.8 | no |
+| `0xE1` | → gateway | unknown report | `0x041a0` → `0x5319` (21 bytes), MAC in the table only | v1.8 | no |
+| `0xE2` | → sensor | command (host `0x5392`) | built at `0x12064` | v1.8 | no |
+| `0xE3` | → gateway | unknown report | `0x041a0` → `0x5319` (19 bytes), MAC in the table only | v1.8 | no |
+| `0xE8` | sensor → | climate | `0x0424a` → `0x5319` (19 bytes) | v1.8 | yes |
+| `0xE9` | → sensor | variable payload (host `0x5353`; keypad replies, PR #76) | built at `0x10dc4` | v1.8 | no |
+| `0xEA` | → gateway | keypad report (PR #76) | `0x04166` → `0x5355`: `pt[0 .. 10 + pt[10]]` + −RSSI | v1.8 | no |
+
+- An unknown short address: only `0xA3` and `0xA5` go on (`0x03f2a..0x03f40`).
+- The v1 sensors (`contact_v1`, `motion_v1`) handle only `0xB0`, `0xA4`, `0xA6` and `0xAA` from the gateway, and send
+  `0xA1`, `0xA2`, `0xA3`, `0xA5`, `0xA9`, `0xAD`, plus `0xAB` and `0xB1` from the motion sensor.
+- **Corrections** to earlier readings (and to `docs/stock-re/stock_gateway.c`, fixed with this): `0xE8` goes to the host
+  as `0x5319` (it was given as `0x5355`); `0xEA` as `0x5355` (it was given as answered with `0x5354`); there is no
+  `0xA7` handling at all (no `#0xa7` anywhere in the gateway binary; the cited `0x0ef20` / `0x03504` are unrelated),
+  nor `0xAA`, `0xDF` or `0xE6` reports.
+- Host commands, for completeness: the gateway's host dispatch (`0x02c4c..0x02d22`) takes `0x53` + `02 04 06 08 0A 14
+  16 1C 21 23 25 27 2A 2D 2E 30 33 34 36 3A 3C 3D 3F 41 53 57 5A 5C 70 72 80 90 92 D0 E9`. All have rows in §9 except
+  `0x5302` and `0x5304` (hypothesis: async twins of the CH554's sync `0x4302` / `0x4304`).
+
 ### 4.1 Sensor → dongle reports: 0xA1, 0xA2, 0xE8
 
 | Offset | Size | Field | Status / check |
@@ -241,7 +297,7 @@ What remains open (mostly v2 sensor internals and CH554 firmware): `docs/stock-u
 8. MCU of the v2 sensors (`contact_v1` and `motion_v1` are both CC1310F128 5x5 RHB, §5).
 9. (resolved: flashing the dongle via `0x4312` and `tools/dongle_sbl.py`, §9.2.)
 10. GET_ENR (0x4302 → 0x4303): the 16-byte reply is a per-dongle function of the host's token computed by the CH554.
-11. (resolved in `gateway_v1.8` binary: `0x535E` = UART RX checksum error / `ApiMac_mcpsDataReq` status `0xF1` / duplicate `0xB4` seq; `0x5335` = diagnostic log dump from `0x20001867`; `0x5355` = RF opcode `0xE8` report; `0x5337` = 30-entry offline `0xA2` buffer drain; §9.2 & [`docs/stock-re/stock_gateway.c`](stock-re/stock_gateway.c).)
+11. (resolved in `gateway_v1.8` binary: `0x535E` = UART RX checksum error / `ApiMac_mcpsDataReq` status `0xF1` / duplicate `0xB4` seq; `0x5335` = diagnostic log dump from `0x20001867`; `0x5355` = RF opcode `0xEA` (keypad) report (corrected, §4.0); `0x5337` = 30-entry offline `0xA2` buffer drain; §9.2 & [`docs/stock-re/stock_gateway.c`](stock-re/stock_gateway.c).)
 
 ## 9. Host ↔ dongle protocol
 
@@ -278,7 +334,7 @@ Evidence: the gateway dump (§5: UART0, packets in RAM), and host-side captures 
 | 0x532E → 0x532F | Sensor count (`0x03220` → `0x038ee`) | → 1 byte (`Csf_getNumDeviceListEntries` at `0x13088`) | **verified** (`gateway_v1.8` `0x038ee`) |
 | 0x5330 → 0x5331 × n | Sensor list (`0x0321c` → `0x038e0` → `0x0dc24`) | count → one 8-byte ASCII MAC per `0x5331` packet (10 ms apart), followed immediately by `0x5332` (`0x13e90`) | **verified** (`gateway_v1.8` `0x0dc24`) |
 | 0x5332 / 0x5333 | Time sync (`0x13e90` / `0x02f4c`) | dongle asks right after host ACKs `0x5315` (`0x07380`), after `0x5331` sensor list (`0x038e6`), and every 11 minutes (`11 × 60 s` ticks at `0x02070`); host answers 8-byte Unix ms, big-endian (`0x20001340`, incremented `+10 ms` every 10 ms at `0x01e42`) | **verified** (`gateway_v1.8` `0x02f4c`, `0x01e42`, `0x02070`); `test_time_sync` |
-| 0x5319 | Alarm (`0x0359e`, dongle → host) | dongle clock (8 bytes, Unix ms) + decrypted RF plaintext (`0xA1`/`0xA2`/`0xAA`/`0xE1`: 16B; `0xAB`: 22B; `0xAD`: converted to `0xA2` at `0x08e10`; `0xDF`/`0xE6`: 11B) + 1 byte signal strength (−dBm) | **verified** (`gateway_v1.8` `0x0359e`, `0x08e10`); `test_alarm_is_rf_plaintext_plus_clock_and_rssi` |
+| 0x5319 | Alarm (`0x0359e`, dongle → host) | dongle clock (8 bytes, Unix ms) + decrypted RF plaintext + 1 byte signal strength (−dBm). Plaintext bytes copied per type (the compare chain at `0x035f0`): `0xA1` 17, `0xA2` 17, `0xAB` 23, `0xD1` 18, `0xD3` 15, `0xE1` 21, `0xE3` 19, `0xE8` 19; `0xAD` converted to `0xA2` (`0x08e10`). (An earlier reading listed `0xAA`, `0xDF`, `0xE6`: no such case exists, re-checked 2026-11-06) | **verified** (`gateway_v1.8` `0x0359e`, `0x035f0`, `0x08e10`); `test_alarm_is_rf_plaintext_plus_clock_and_rssi` |
 | 0x531C → 0x531D | Scan (pairing) on/off (`0x0312c` → `0x038bc`) | `01` (`g_joinPollState = 3`, 60 s association permit) / `00` (`g_joinPollState = 4`) → **empty** | **verified** (`gateway_v1.8` `0x0312c`, `0x01c02`, `0x01cae`) |
 | 0x5320 | Scan result (`0x03542`, when a sensor's A3 arrives) | `A3[1..11]` + `0x00` (12B: 8B MAC, sensor type, fw version, boot battery, `0x00`; gated by `scanInclusionEnable == 0xFF && permitJoinActive == 1`) | **verified** (`gateway_v1.8` `0x03542`) |
 | 0x5321 → 0x5322 | Get sensor R1 (`0x030d0` → `0x03512`) | MAC + 16-byte token (queued in `0xA4` via `g_joinPollState = 1` at `0x0f878`) → `A5[1..26]` + `0xFF` (27B) when sensor's `0xA5` arrives | **verified** (`gateway_v1.8` `0x030d0`, `0x03512`) |
@@ -294,8 +350,8 @@ Evidence: the gateway dump (§5: UART0, packets in RAM), and host-side captures 
 | 0x533D → 0x533E | Set inclusion mode (`0x02eb2` → `0x03464`) | `ff` (enable `scanInclusionEnable = 0xFF`, LED1 ON, NV `0x13 = 1`) or `00` (disable) → `ff` / `00` (or `77` if `finishAuthDone == 0`) | **verified** (`gateway_v1.8` `0x02eb2`) |
 | 0x533F → 0x5340 | Delete all / factory reset (`0x03202` → `0x038ca` → `0x11310`) | empty → `ff`, then disassociates all (`0x14b84`), wipes RAM tables, and calls `SysCtrlSystemReset()` (`0x16184`) | **verified** (`gateway_v1.8` `0x11310`) |
 | 0x5341 → 0x5342 | Read GPIO factory test (`0x031fe` → `0x03456`) | empty → 1B `GPIO_readDio(0xFF)` (`0x00` or `0xFF`) | **verified** (`gateway_v1.8` `0x03456`) |
-| 0x5353 → 0x5354 | Send RF `0xE9` (`0x02e80` → `0x10d9c` → `0x042d4`) | `[8B MAC][rsvd][len][payload...]` → queues 32B AES-encrypted RF `0xE9` (`g_joinPollState = 10`); replies `0x5354` (`ff`) when sensor answers `0xEA` | **verified** (`gateway_v1.8` `0x02e80`, `0x10d9c`, `0x042d4`) |
-| 0x5355 | Secondary leak / `0xE8` packet (`0x04166`) | `pkt[0..pkt[10]+10]` + `-rssi` | **verified** (`gateway_v1.8` `0x04166`) |
+| 0x5353 → 0x5354 | Send RF `0xE9` (`0x02e80` → `0x10d9c` → `0x042d4`) | `[8B MAC][rsvd][len][payload...]` → queues 32B AES-encrypted RF `0xE9` (`g_joinPollState = 10`); replies `0x5354` (`ff`). (An earlier reading tied `0x5354` to a sensor's `0xEA` via `0x042d4`: wrong, `0x042d4` is in the `0xA3` handler and `0xEA` goes to the host as `0x5355`, §4.0; when `0x5354` is sent is **open**) | **verified** for the queuing (`gateway_v1.8` `0x02e80`, `0x10d9c`) |
+| 0x5355 | Keypad / `0xEA` packet (`0x04166`; an earlier reading said `0xE8`: §4.0) | `pkt[0..pkt[10]+10]` + `-rssi` | **verified** (`gateway_v1.8` `0x04166`) |
 | 0x5357 → 0x5358 | Get RF noise floor (`0x031c4` → `0x11bbc`) | empty → 4-byte big-endian `uint32_t` (`noise * 1e6`) | **verified** (`gateway_v1.8` `0x031c4`) |
 | 0x535A / 0x5359 | Send RF `0xB3` / recv `0xB2` (`0x02e58` → `0x128f0` / `0x0406e`) | `[8B MAC][36B payload]` → queues 37B unencrypted RF `0xB3` (`g_joinPollState = 11`); `0xB2` forwarded as `0x5359` | **verified** (`gateway_v1.8` `0x02e58`, `0x128f0`, `0x0406e`) |
 | 0x535C / 0x535B / 0x535D | Send RF `0xB5` / recv `0xB4` & `0xB6` (`0x02e26` → `0x12324`) | `[8B MAC][130B payload]` → queues 131B unencrypted RF `0xB5` (`g_joinPollState = 12`); `0xB4` forwarded as `0x535B`, `0xB6` as `0x535D` | **verified** (`gateway_v1.8` `0x02e26`, `0x12324`, `0x03fdc`, `0x0425c`) |
