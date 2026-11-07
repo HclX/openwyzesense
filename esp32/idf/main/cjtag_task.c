@@ -641,6 +641,24 @@ static bool sbl_dump_fcfg1(sbl_t *sbl, uint8_t *out_1k)
     return true;
 }
 
+// A lost contact during an SBL dump or flash (lock held): slipped, resumed hands-free when the same sensor is back
+// (a dump from the page it stopped at, a flash from the start); at the 10th of a run, an error, so a fault that is not a
+// slip does not retry forever.
+static void sbl_slipped(const char *where, const char *why)
+{
+    slip_count++;
+    if (slip_count >= 10) {
+        state = STATE_ERROR;
+        snprintf(status_msg, sizeof status_msg, "SBL %s failed %" PRIu32 " times at %s: %s",
+                 mode == CJTAG_MODE_DUMP ? "dump" : "flash", slip_count, where, why);
+        return;
+    }
+    state = STATE_SLIPPED;
+    snprintf(status_msg, sizeof status_msg,
+             "Contact lost at %s (%s): put the sensor back on the pads to resume (%" PRIu32 "/%" PRIu32 " done)", where,
+             why, pages_done_count, total_pages_target);
+}
+
 static void run_sbl_session(const sblprobe_result_t *map)
 {
     sbl_t sbl;
@@ -673,8 +691,7 @@ static void run_sbl_session(const sblprobe_result_t *map)
         !sbl_dump_page(&sbl, CJTAG_CCFG_PAGE_IDX, p31)) {
         xSemaphoreTake(lock, portMAX_DELAY);
         task_busy = false;
-        state = STATE_ERROR;
-        snprintf(status_msg, sizeof status_msg, "SBL failed reading FCFG1/CCFG: %s", sbl.error);
+        sbl_slipped("reading FCFG1/CCFG", sbl.error);
         xSemaphoreGive(lock);
         release_sbl_pins(true);
         return;
@@ -712,6 +729,20 @@ static void run_sbl_session(const sblprobe_result_t *map)
         return;
     }
 
+    // resuming after a slip: only the same sensor (hands-free: the operator put it back)
+    if (state == STATE_SLIPPED && active_mac[0] != '\0' && strcmp(active_mac, found_mac) != 0) {
+        task_busy = false;
+        snprintf(status_msg, sizeof status_msg, "Another sensor (%s, not %s): put %s back on the pads, or Disarm",
+                 found_mac, active_mac, active_mac);
+        xSemaphoreGive(lock);
+        release_sbl_pins(true);
+        vTaskDelay(pdMS_TO_TICKS(500));
+        return;
+    }
+    if (mode == CJTAG_MODE_FLASH) {  // a flash starts over after a slip (the bootloader writes it as one stream)
+        pages_done_mask = 0;
+        pages_done_count = 0;
+    }
     active_transport = 2;
     memcpy(active_mac, found_mac, sizeof active_mac);
     active_user_id = user_id;
@@ -825,10 +856,9 @@ static void run_sbl_session(const sblprobe_result_t *map)
         return;
     }
     if (!ok) {
-        state = STATE_ERROR;
-        snprintf(status_msg, sizeof status_msg, "SBL %s failed at page %" PRIu32 ": %s",
-                 mode == CJTAG_MODE_DUMP ? "dump" : "flash", current_page,
-                 sbl.error[0] ? sbl.error : "verification error");
+        char where[32];
+        snprintf(where, sizeof where, "page %" PRIu32, current_page);
+        sbl_slipped(where, sbl.error[0] ? sbl.error : "verification error");
         xSemaphoreGive(lock);
         ESP_LOGW(TAG, "%s", status_msg);
         return;
