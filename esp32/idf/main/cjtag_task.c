@@ -1,6 +1,7 @@
 #include "cjtag_task.h"
 
 #include <inttypes.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -402,6 +403,25 @@ static uint32_t le32(const uint8_t *p)
     return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
 }
 
+__attribute__((format(printf, 1, 2))) static void note(const char *fmt, ...)  // a step, shown as it happens
+{
+    char line[sizeof status_msg];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(line, sizeof line, fmt, ap);
+    va_end(ap);
+    xSemaphoreTake(lock, portMAX_DELAY);
+    if (state == STATE_ARMED || state == STATE_SLIPPED) {
+        memcpy(status_msg, line, sizeof status_msg);
+    }
+    xSemaphoreGive(lock);
+    ESP_LOGI(TAG, "%s", line);
+}
+
+// Step 1 and 2 of every sensor (the user, 2026-11-06: hands-free, the pins identified first, flash read or written
+// only once they are confirmed): identify (a connect: the pins, and who answers: MAC, IEEE MAC, user ID, CCFG CRC),
+// then confirm (the pins released, 100 ms, a second connect from scratch that must find the same chip on the same
+// pins). A bouncing probe, a half-made contact or a second sensor never gets to a read or a write.
 static bool probe_with_polarity(cjtag_t *cj, esp_pin_ctx_t *pctx, int pin_a, int pin_b)
 {
     if (pin_a < 0 || pin_b < 0) {
@@ -421,11 +441,21 @@ static bool probe_with_polarity(cjtag_t *cj, esp_pin_ctx_t *pctx, int pin_a, int
         };
         cjtag_init(cj, &io);
         if (cjtag_connect(cj, true)) {
-            // Debounce hand-held contact: wait 40 ms and verify connection holds steady
-            vTaskDelay(pdMS_TO_TICKS(40));
-            if (cjtag_connect(cj, true)) {
+            char mac[9];
+            memcpy(mac, cj->mac, sizeof mac);
+            uint64_t ieee = cj->ieee_mac;
+            uint32_t uid = cj->user_id, crc = cj->page31_crc;
+            note("Identified %s on cJTAG (TCKC GPIO%d, TMSC GPIO%d): confirming", mac, pctx->tck_pin, pctx->tms_pin);
+            release_cjtag_pins(pin_a, pin_b);
+            vTaskDelay(pdMS_TO_TICKS(100));
+            prepare_cjtag_pins(pctx->tck_pin, pctx->tms_pin);
+            cjtag_init(cj, &io);
+            if (cjtag_connect(cj, true) && !strcmp(cj->mac, mac) && cj->ieee_mac == ieee && cj->user_id == uid &&
+                cj->page31_crc == crc) {
+                note("Confirmed %s on cJTAG (TCKC GPIO%d, TMSC GPIO%d)", mac, pctx->tck_pin, pctx->tms_pin);
                 return true;
             }
+            note("Not confirmed (%s answered once, then not the same): hold the probes still", mac);
         }
         release_cjtag_pins(pin_a, pin_b);
     }
@@ -877,17 +907,30 @@ static void task(void *arg)
                     connected = true;
                 }
             }
-            if (connected) {
-                run_sbl_session(&found);
-                continue;
+            if (connected) {  // step 2: a fresh power cycle into the bootloader on the found pads, the same chip
+                char pads[24];
+                snprintf(pads, sizeof pads, "R=GPIO%d T=GPIO%d", cfg_sbl_pins[found.r_pad], cfg_sbl_pins[found.t_pad]);
+                note("Identified the bootloader on %s, backdoor GPIO%d: confirming", pads,
+                     cfg_sbl_pins[found.backdoor_pad]);
+                uint32_t cid = 0;
+                char err[96] = "";
+                release_sbl_pins(true);
+                if (sblprobe_enter(&sbl_io, &found, &cid, err, sizeof err) && cid == found.chip_id) {
+                    note("Confirmed the bootloader on %s, backdoor GPIO%d", pads, cfg_sbl_pins[found.backdoor_pad]);
+                    run_sbl_session(&found);
+                    continue;
+                }
+                note("Not confirmed (the bootloader on %s answered once, then not the same): hold the probes still",
+                     pads);
+                xSemaphoreTake(lock, portMAX_DELAY);
+                have_sbl_map = false;  // found afresh next time
+                xSemaphoreGive(lock);
             }
             release_sbl_pins(true);
-            if (state == STATE_ARMED && tr == CJTAG_TRANSPORT_SBL) {
-                xSemaphoreTake(lock, portMAX_DELAY);
-                state = STATE_ERROR;
-                snprintf(status_msg, sizeof status_msg, "%s", found.error);
-                xSemaphoreGive(lock);
-                ESP_LOGW(TAG, "%s", status_msg);
+            if (tr == CJTAG_TRANSPORT_SBL && found.error[0] && (state == STATE_ARMED || state == STATE_SLIPPED)) {
+                // hands-free: no sensor (or none that answers) yet is not an error; say why, and keep looking
+                note("Waiting for a sensor (%s)", found.error);
+                vTaskDelay(pdMS_TO_TICKS(1000));
                 continue;
             }
         }
