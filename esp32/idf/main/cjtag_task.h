@@ -28,6 +28,7 @@ bool cjtag_task_arm(cjtag_mode_t mode, int pin_a, int pin_b, char *msg, size_t m
 // Copy out a 4 KB page from the completed dump buffer, or the 1 KB FCFG1 buffer.
 bool cjtag_task_get_dump_page(uint32_t page_idx, uint8_t *out_4k);
 bool cjtag_task_get_fcfg1(uint8_t *out_1k);
+void cjtag_task_note_dump_downloaded(void);
 const char *cjtag_task_mac(void);
 
 // Format current hands-free state and progress as JSON for GET /api/cjtag.

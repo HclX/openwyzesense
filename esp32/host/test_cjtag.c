@@ -494,7 +494,27 @@ static void sim_set_pins(void *ctx, bool tck, bool tms)
 static void sim_set_tms_dir(void *ctx, bool output)
 {
     sim_cc1310_t *s = ctx;
+    if (s->disconnected) {
+        s->tms_dir_out = output;
+        return;
+    }
+    // Changing TMSC direction while TCKC is high when TMSC is low causes a pull-up edge on TMSC
+    if (s->tck && !s->swap_pins && output != s->tms_dir_out && !s->tms_out) {
+        s->high_tck_toggles++;
+        if (s->high_tck_toggles >= 8) {
+            s->in_oscan1 = false;
+            s->jscan0_clocks = 0;
+            s->oscan1_phase = 0;
+            s->tap = TAP_RESET;
+            s->icepick_ir = 0x04u;
+            s->icepick_connected = false;
+            s->dap_linked = false;
+        }
+    }
     s->tms_dir_out = output;
+    if (!s->tck && s->in_oscan1 && s->oscan1_phase == 2 && !output) {
+        s->tdo_line = (s->shift_reg & 1ULL) != 0;
+    }
 }
 
 static bool sim_get_tms(void *ctx)
@@ -622,17 +642,20 @@ int main(void)
     memset(bad_page0, 0x11, sizeof bad_page0);
     CHECK(!cjtag_flash_page(&cj, 0, bad_page0, false));
 
-    // 6. Flash pages 0 and 1, verify readback and confirm page 31 is untouched
+    // 6. Flash pages 0 and 1, verify readback, VIMS_CTL restoration, and confirm page 31 is untouched
     uint8_t orig_page31[CJTAG_PAGE];
     memcpy(orig_page31, sim.flash + (size_t)CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, CJTAG_PAGE);
+    sim.vims_ctl = 0x00000001u;  // CACHE mode (0x1)
 
     CHECK(cjtag_flash_page(&cj, 0, new_page, false));
     CHECK(memcmp(sim.flash, new_page, CJTAG_PAGE) == 0);
+    CHECK(sim.vims_ctl == 0x00000001u);
 
     memset(new_page, 0x5A, sizeof new_page);
     CHECK(cjtag_flash_page(&cj, 1, new_page, false));
     CHECK(memcmp(sim.flash + CJTAG_PAGE, new_page, CJTAG_PAGE) == 0);
     CHECK(memcmp(sim.flash + (size_t)CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, orig_page31, CJTAG_PAGE) == 0);
+    CHECK(sim.vims_ctl == 0x00000001u);
 
     // 7. Clean release and VECTRESET (0x05FA0001)
     cjtag_release_and_reset(&cj);

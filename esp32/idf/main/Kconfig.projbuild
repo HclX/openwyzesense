@@ -26,9 +26,11 @@ config OWS_STATUS_LED
     default -1
 config OWS_CJTAG_PIN_A
     int "GPIO for cJTAG probe A (M/TMSC or C/TCKC, auto-detected)"
-    default 19
+    default 19 if IDF_TARGET_ESP32
+    default 13
 config OWS_CJTAG_PIN_B
     int "GPIO for cJTAG probe B (C/TCKC or M/TMSC, auto-detected)"
-    default 21
+    default 21 if IDF_TARGET_ESP32
+    default 14
 
 endmenu

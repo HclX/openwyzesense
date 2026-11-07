@@ -599,8 +599,10 @@ static esp_err_t cjtag_stage_post(httpd_req_t *req)
     httpd_query_key_value(query, "pin_b", pb_s, sizeof pb_s);
     int pin_a = pa_s[0] ? (int)strtol(pa_s, NULL, 10) : -1;
     int pin_b = pb_s[0] ? (int)strtol(pb_s, NULL, 10) : -1;
-    if (pin_a >= 0 && pin_b >= 0) {
-        (void)cjtag_task_arm(CJTAG_MODE_NONE, pin_a, pin_b, msg, sizeof msg);
+    if (pin_a >= 0 || pin_b >= 0) {
+        if (!cjtag_task_arm(CJTAG_MODE_NONE, pin_a, pin_b, msg, sizeof msg)) {
+            return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, msg);
+        }
     }
     if (!cjtag_task_stage_begin(!strcmp(nv, "wipe"), msg, sizeof msg)) {
         return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, msg);
@@ -637,6 +639,7 @@ static esp_err_t cjtag_dump_get(httpd_req_t *req)
         }
     }
     free(page);
+    cjtag_task_note_dump_downloaded();
     return httpd_resp_send_chunk(req, NULL, 0);
 }
 

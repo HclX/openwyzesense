@@ -31,6 +31,7 @@ typedef struct {
 
 typedef struct {
     cjtag_io_t io;
+    uint8_t cjtag_mode;  // 7 = OScan1, 8 = OScan0 (MScan)
     bool dap_at_tdo;     // true if CS_DAP is closest to TDO, false if ICEPick-C is closest to TDO
     uint8_t cur_dap_ir;  // cached 4-bit JTAG-DP IR (0xFF when unknown)
     uint32_t ap_csw;     // cached AHB-AP CSW register

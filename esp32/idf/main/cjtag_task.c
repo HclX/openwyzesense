@@ -52,10 +52,63 @@ static uint32_t done_seq;
 static bool dump_ready;
 
 static char active_mac[9];
+static char backed_up_mac[9];
 static uint32_t active_user_id;
 static uint32_t active_bl_config;
 static uint64_t active_ieee_mac;
 static char status_msg[224] = "Disarmed — select Dump or Flash to arm hands-free probing.";
+
+static void json_str(char *out, size_t cap, const char *s)
+{
+    size_t n = 0;
+    out[n++] = '"';
+    for (; *s && n + 8 < cap; s++) {
+        if (*s == '"' || *s == '\\') {
+            out[n++] = '\\';
+            out[n++] = *s;
+        } else if ((unsigned char)*s < 0x20) {
+            n += (size_t)snprintf(out + n, cap - n, "\\u%04x", (unsigned char)*s);
+        } else {
+            out[n++] = *s;
+        }
+    }
+    out[n++] = '"';
+    out[n] = 0;
+}
+
+static bool valid_cjtag_pin(int pin, char *err, size_t err_cap)
+{
+    if (pin < 0 || !GPIO_IS_VALID_OUTPUT_GPIO(pin)) {
+        snprintf(err, err_cap, "GPIO%d is not a valid output-capable GPIO", pin);
+        return false;
+    }
+    if (pin == 1 || pin == 3) {
+        snprintf(err, err_cap, "GPIO%d is reserved for the console UART", pin);
+        return false;
+    }
+#if CONFIG_IDF_TARGET_ESP32
+    if (pin >= 6 && pin <= 11) {
+        snprintf(err, err_cap, "GPIO%d is reserved for the ESP32 SPI flash", pin);
+        return false;
+    }
+#elif CONFIG_IDF_TARGET_ESP32S3
+    if (pin == 19 || pin == 20) {
+        snprintf(err, err_cap, "GPIO%d is reserved for ESP32-S3 USB D-/D+", pin);
+        return false;
+    }
+    if (pin >= 26 && pin <= 32) {
+        snprintf(err, err_cap, "GPIO%d is reserved for the ESP32-S3 SPI flash/PSRAM", pin);
+        return false;
+    }
+#endif
+    if (pin == CONFIG_OWS_CONTACT_UART_TX || pin == CONFIG_OWS_CONTACT_UART_RX || pin == CONFIG_OWS_CONTACT_RESET ||
+        pin == CONFIG_OWS_CONTACT_BOOT || (CONFIG_OWS_RIG_SUPPLY_GPIO >= 0 && pin == CONFIG_OWS_RIG_SUPPLY_GPIO) ||
+        (CONFIG_OWS_STATUS_LED >= 0 && pin == CONFIG_OWS_STATUS_LED)) {
+        snprintf(err, err_cap, "GPIO%d is already assigned to the gateway contact/rig/LED", pin);
+        return false;
+    }
+    return true;
+}
 
 static bool ensure_page_bufs(void)
 {
@@ -92,21 +145,26 @@ static void prepare_pins(int tck_pin, int tms_pin)
 
     gpio_reset_pin((gpio_num_t)tms_pin);
     gpio_set_pull_mode((gpio_num_t)tms_pin, GPIO_PULLUP_ONLY);
-    gpio_set_direction((gpio_num_t)tms_pin, GPIO_MODE_OUTPUT);
+    gpio_set_direction((gpio_num_t)tms_pin, GPIO_MODE_INPUT_OUTPUT);
     gpio_set_level((gpio_num_t)tms_pin, 1);
 }
 
 static void io_set_pins(void *ctx, bool tck, bool tms)
 {
     const esp_pin_ctx_t *p = (const esp_pin_ctx_t *)ctx;
-    gpio_set_level((gpio_num_t)p->tck_pin, tck ? 1 : 0);
-    gpio_set_level((gpio_num_t)p->tms_pin, tms ? 1 : 0);
+    if (!tck) {
+        gpio_set_level((gpio_num_t)p->tck_pin, 0);
+        gpio_set_level((gpio_num_t)p->tms_pin, tms ? 1 : 0);
+    } else {
+        gpio_set_level((gpio_num_t)p->tms_pin, tms ? 1 : 0);
+        gpio_set_level((gpio_num_t)p->tck_pin, 1);
+    }
 }
 
 static void io_set_tms_dir(void *ctx, bool output)
 {
     const esp_pin_ctx_t *p = (const esp_pin_ctx_t *)ctx;
-    gpio_set_direction((gpio_num_t)p->tms_pin, output ? GPIO_MODE_OUTPUT : GPIO_MODE_INPUT);
+    gpio_set_direction((gpio_num_t)p->tms_pin, output ? GPIO_MODE_INPUT_OUTPUT : GPIO_MODE_INPUT);
 }
 
 static bool io_get_tms(void *ctx)
@@ -118,7 +176,9 @@ static bool io_get_tms(void *ctx)
 static void io_delay_us(void *ctx, uint32_t us)
 {
     (void)ctx;
-    esp_rom_delay_us(us);
+    if (us > 1) {
+        esp_rom_delay_us(us);
+    }
 }
 
 static uint32_t popcount32(uint32_t x)
@@ -180,6 +240,7 @@ static void task(void *arg)
         xSemaphoreTake(lock, portMAX_DELAY);
         if (state != STATE_ARMED && state != STATE_SLIPPED) {
             xSemaphoreGive(lock);
+            cjtag_release_and_reset(&cj);
             release_pins(pin_a, pin_b);
             continue;
         }
@@ -189,6 +250,7 @@ static void task(void *arg)
             snprintf(status_msg, sizeof status_msg, "Sensor MAC changed (%s != %s) — re-touch %s or re-arm", cj.mac,
                      active_mac, active_mac);
             xSemaphoreGive(lock);
+            cjtag_release_and_reset(&cj);
             release_pins(pin_a, pin_b);
             vTaskDelay(pdMS_TO_TICKS(500));
             continue;
@@ -205,6 +267,17 @@ static void task(void *arg)
             state = STATE_ERROR;
             snprintf(status_msg, sizeof status_msg, "Refused: sensor %s has no factory MAC in CCFG (page 31)", cj.mac);
             xSemaphoreGive(lock);
+            cjtag_release_and_reset(&cj);
+            release_pins(pin_a, pin_b);
+            continue;
+        }
+
+        if (mode == CJTAG_MODE_FLASH && strcmp(backed_up_mac, cj.mac) != 0) {
+            state = STATE_ERROR;
+            snprintf(status_msg, sizeof status_msg,
+                     "Refused: dump & download %s's stock flash first before flashing (CLAUDE.md backup rule)", cj.mac);
+            xSemaphoreGive(lock);
+            cjtag_release_and_reset(&cj);
             release_pins(pin_a, pin_b);
             continue;
         }
@@ -238,6 +311,8 @@ static void task(void *arg)
                 snprintf(status_msg, sizeof status_msg, "Dumping %s: page %" PRIu32 " / 32 verified", active_mac,
                          pages_done_count);
                 xSemaphoreGive(lock);
+                ESP_LOGI(TAG, "%s", status_msg);
+                vTaskDelay(1);
             }
         } else if (mode == CJTAG_MODE_FLASH) {
             for (uint32_t p = 0; p < total_pages_target; p++) {
@@ -260,10 +335,13 @@ static void task(void *arg)
                 snprintf(status_msg, sizeof status_msg, "Flashing %s: page %" PRIu32 " / %" PRIu32 " verified",
                          active_mac, pages_done_count, total_pages_target);
                 xSemaphoreGive(lock);
+                ESP_LOGI(TAG, "%s", status_msg);
+                vTaskDelay(1);
             }
         }
 
         if (state != STATE_RUNNING) {
+            cjtag_release_and_reset(&cj);
             release_pins(pin_a, pin_b);
             continue;
         }
@@ -306,7 +384,6 @@ static void task(void *arg)
 void cjtag_task_start(void)
 {
     lock = xSemaphoreCreateMutex();
-    release_pins(cfg_pin_a, cfg_pin_b);
     xTaskCreate(task, "cjtag", 8192, NULL, 6, NULL);
 }
 
@@ -397,10 +474,24 @@ bool cjtag_task_stage_end(bool rx_ok, char *msg, size_t msg_cap)
 bool cjtag_task_arm(cjtag_mode_t new_mode, int pin_a, int pin_b, char *msg, size_t msg_cap)
 {
     xSemaphoreTake(lock, portMAX_DELAY);
-    if (pin_a >= 0 && pin_b >= 0 && pin_a != pin_b) {
-        release_pins(cfg_pin_a, cfg_pin_b);
+    if (pin_a >= 0 || pin_b >= 0) {
+        if (pin_a == pin_b) {
+            snprintf(msg, msg_cap, "probe A and probe B must be different GPIOs");
+            xSemaphoreGive(lock);
+            return false;
+        }
+        if (!valid_cjtag_pin(pin_a, msg, msg_cap) || !valid_cjtag_pin(pin_b, msg, msg_cap)) {
+            xSemaphoreGive(lock);
+            return false;
+        }
+        if (state != STATE_IDLE) {
+            release_pins(cfg_pin_a, cfg_pin_b);
+        }
         cfg_pin_a = pin_a;
         cfg_pin_b = pin_b;
+    } else if (!valid_cjtag_pin(cfg_pin_a, msg, msg_cap) || !valid_cjtag_pin(cfg_pin_b, msg, msg_cap)) {
+        xSemaphoreGive(lock);
+        return false;
     }
 
     if (new_mode == CJTAG_MODE_NONE) {
@@ -436,6 +527,8 @@ bool cjtag_task_arm(cjtag_mode_t new_mode, int pin_a, int pin_b, char *msg, size
 
     if (new_mode == CJTAG_MODE_DUMP) {
         dump_ready = false;
+        staged_bytes = 0;
+        staged_pages = 0;
         total_pages_target = CJTAG_TOTAL_PAGES;
         snprintf(status_msg, sizeof status_msg,
                  "Armed Hands-Free Dump (GPIO%d / GPIO%d, auto-polarity) — touch probes to M & C pads!", cfg_pin_a,
@@ -477,6 +570,15 @@ bool cjtag_task_get_fcfg1(uint8_t *out_1k)
     return ok;
 }
 
+void cjtag_task_note_dump_downloaded(void)
+{
+    xSemaphoreTake(lock, portMAX_DELAY);
+    if (dump_ready && active_mac[0] != '\0') {
+        memcpy(backed_up_mac, active_mac, sizeof backed_up_mac);
+    }
+    xSemaphoreGive(lock);
+}
+
 const char *cjtag_task_mac(void)
 {
     return active_mac[0] ? active_mac : "UNKNOWN";
@@ -488,16 +590,18 @@ size_t cjtag_task_json(char *out, size_t cap)
     static const char *mode_names[] = {"none", "dump", "flash"};
 
     xSemaphoreTake(lock, portMAX_DELAY);
-    int n =
-        snprintf(out, cap,
-                 "{\"state\":\"%s\",\"mode\":\"%s\",\"pin_a\":%d,\"pin_b\":%d,\"tck_pin\":%d,\"tms_pin\":%d,"
-                 "\"mac\":\"%s\",\"user_id\":\"0x%08" PRIX32 "\",\"bl_config\":\"0x%08" PRIX32 "\","
-                 "\"ieee_mac\":\"%016" PRIX64 "\",\"pages_done\":%" PRIu32 ",\"total_pages\":%" PRIu32 ","
-                 "\"current_page\":%" PRIu32 ",\"slips\":%" PRIu32 ",\"done_seq\":%" PRIu32 ",\"dump_ready\":%s,"
-                 "\"staged_bytes\":%u,\"msg\":\"%s\"}",
-                 state_names[state], mode_names[mode], cfg_pin_a, cfg_pin_b, active_tck, active_tms, active_mac,
-                 active_user_id, active_bl_config, active_ieee_mac, pages_done_count, total_pages_target, current_page,
-                 slip_count, done_seq, dump_ready ? "true" : "false", (unsigned)staged_bytes, status_msg);
+    char mac_js[24], msg_js[480];
+    json_str(mac_js, sizeof mac_js, active_mac);
+    json_str(msg_js, sizeof msg_js, status_msg);
+    int n = snprintf(out, cap,
+                     "{\"state\":\"%s\",\"mode\":\"%s\",\"pin_a\":%d,\"pin_b\":%d,\"tck_pin\":%d,\"tms_pin\":%d,"
+                     "\"mac\":%s,\"user_id\":\"0x%08" PRIX32 "\",\"bl_config\":\"0x%08" PRIX32 "\","
+                     "\"ieee_mac\":\"%016" PRIX64 "\",\"pages_done\":%" PRIu32 ",\"total_pages\":%" PRIu32 ","
+                     "\"current_page\":%" PRIu32 ",\"slips\":%" PRIu32 ",\"done_seq\":%" PRIu32 ",\"dump_ready\":%s,"
+                     "\"staged_bytes\":%u,\"msg\":%s}",
+                     state_names[state], mode_names[mode], cfg_pin_a, cfg_pin_b, active_tck, active_tms, mac_js,
+                     active_user_id, active_bl_config, active_ieee_mac, pages_done_count, total_pages_target,
+                     current_page, slip_count, done_seq, dump_ready ? "true" : "false", (unsigned)staged_bytes, msg_js);
     xSemaphoreGive(lock);
     return n < 0 ? 0 : ((size_t)n < cap ? (size_t)n : cap - 1);
 }

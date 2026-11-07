@@ -1,10 +1,12 @@
 #include "cjtag.h"
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 
 // ICEPick-C 6-bit IR instructions (ti/icepick.cfg)
 #define ICEPICK_IR_ROUTER  0x02u
+#define ICEPICK_IR_IDCODE  0x04u
 #define ICEPICK_IR_CONNECT 0x07u
 #define ICEPICK_IR_BYPASS  0x3Fu
 
@@ -102,10 +104,12 @@ void cjtag_reset_escape(cjtag_t *c)
 // Standard 2-pin JScan0 TMS clock sequence (0xf184 in XDS110): 1 TCKC clock per TMS bit (LSB-first).
 static void jscan0_tms(cjtag_t *c, uint64_t bits, unsigned count)
 {
-    c->io.set_tms_dir(c->io.ctx, true);
     for (unsigned i = 0; i < count; i++) {
         bool tms = ((bits >> i) & 1u) != 0;
         c->io.set_pins(c->io.ctx, false, tms);
+        if (i == 0) {
+            c->io.set_tms_dir(c->io.ctx, true);
+        }
         c->io.delay_us(c->io.ctx, 1);
         c->io.set_pins(c->io.ctx, true, tms);
         c->io.delay_us(c->io.ctx, 1);
@@ -113,13 +117,14 @@ static void jscan0_tms(cjtag_t *c, uint64_t bits, unsigned count)
 }
 
 // OScan1 TMS-only navigation packet (0xf1c8 in XDS110, mode=7): 3 TCKC clocks per bit (!TDI=0, TMS, TDO).
+// All TMSC level and direction changes occur strictly while TCKC = 0 so no escape edges occur while TCKC = 1.
 static void oscan1_tms(cjtag_t *c, uint32_t bits, unsigned count)
 {
     for (unsigned i = 0; i < count; i++) {
         bool tms = ((bits >> i) & 1u) != 0;
         // Clock 1: !TDI = 0 (TDI = 1)
-        c->io.set_tms_dir(c->io.ctx, true);
         c->io.set_pins(c->io.ctx, false, false);
+        c->io.set_tms_dir(c->io.ctx, true);
         c->io.delay_us(c->io.ctx, 1);
         c->io.set_pins(c->io.ctx, true, false);
         c->io.delay_us(c->io.ctx, 1);
@@ -128,14 +133,13 @@ static void oscan1_tms(cjtag_t *c, uint32_t bits, unsigned count)
         c->io.delay_us(c->io.ctx, 1);
         c->io.set_pins(c->io.ctx, true, tms);
         c->io.delay_us(c->io.ctx, 1);
-        // Clock 3: TDO (TMSC tri-stated)
+        // Clock 3: TDO (tri-state TMSC while TCKC is low and keep tri-stated while TCKC is high)
+        c->io.set_pins(c->io.ctx, false, tms);
         c->io.set_tms_dir(c->io.ctx, false);
-        c->io.set_pins(c->io.ctx, false, false);
         c->io.delay_us(c->io.ctx, 1);
-        c->io.set_pins(c->io.ctx, true, false);
+        c->io.set_pins(c->io.ctx, true, tms);
         c->io.delay_us(c->io.ctx, 1);
     }
-    c->io.set_tms_dir(c->io.ctx, true);
 }
 
 // OScan1 Shift-IR / Shift-DR packet (0xfd70 in XDS110): shifts count bits (1..64) LSB-first.
@@ -147,8 +151,8 @@ static uint64_t oscan1_shift(cjtag_t *c, uint64_t tdi_bits, unsigned count, bool
         bool ntdi = ((tdi_bits >> i) & 1u) == 0;
         bool tms = (i + 1 == count) && exit_tms;
         // Clock 1: !TDI (inverted TDI)
-        c->io.set_tms_dir(c->io.ctx, true);
         c->io.set_pins(c->io.ctx, false, ntdi);
+        c->io.set_tms_dir(c->io.ctx, true);
         c->io.delay_us(c->io.ctx, 1);
         c->io.set_pins(c->io.ctx, true, ntdi);
         c->io.delay_us(c->io.ctx, 1);
@@ -158,67 +162,139 @@ static uint64_t oscan1_shift(cjtag_t *c, uint64_t tdi_bits, unsigned count, bool
         c->io.set_pins(c->io.ctx, true, tms);
         c->io.delay_us(c->io.ctx, 1);
         // Clock 3: TDO (target drives TMSC while TCKC is low; sample before rising edge)
+        c->io.set_pins(c->io.ctx, false, tms);
         c->io.set_tms_dir(c->io.ctx, false);
-        c->io.set_pins(c->io.ctx, false, false);
         c->io.delay_us(c->io.ctx, 1);
         if (c->io.get_tms(c->io.ctx)) {
             rx |= (1ULL << i);
         }
-        c->io.set_pins(c->io.ctx, true, false);
+        c->io.set_pins(c->io.ctx, true, tms);
         c->io.delay_us(c->io.ctx, 1);
     }
-    c->io.set_tms_dir(c->io.ctx, true);
     return rx;
+}
+
+// XDS110 0x1113c (Dormant-to-JTAG wakeup sequence) before 0x10db2.
+static void xds110_cjtag_reset_1113c(cjtag_t *c)
+{
+    static const uint8_t alert[16] = {
+        0x92, 0xf3, 0x09, 0x62, 0x95, 0x2d, 0x85, 0x86, 0xe9, 0xaf, 0xdd, 0xe3, 0xa2, 0x0e, 0xbc, 0x19,
+    };
+    c->io.set_pins(c->io.ctx, false, true);
+    c->io.set_tms_dir(c->io.ctx, false);
+    for (int i = 0; i < 60; i++) {
+        c->io.set_pins(c->io.ctx, false, true);
+        c->io.delay_us(c->io.ctx, 1);
+        c->io.set_pins(c->io.ctx, true, true);
+        c->io.delay_us(c->io.ctx, 1);
+    }
+    c->io.set_pins(c->io.ctx, false, true);
+    c->io.set_tms_dir(c->io.ctx, true);
+    jscan0_tms(c, ~0ULL, 60);
+    jscan0_tms(c, 0x33BBBBBAULL, 32);
+    for (int i = 0; i < 16; i++) {
+        jscan0_tms(c, alert[i], 8);
+    }
+    jscan0_tms(c, 0, 4);
+    jscan0_tms(c, 0x0Au, 8);
+    jscan0_tms(c, 0x00u, 8);
+    jscan0_tms(c, ~0ULL, 60);
+    jscan0_tms(c, 0, 8);
+}
+
+// XDS110 CJTAG_Connect(mode) (0x10db2..0x10fa4 in firmware_3.0.0.45.bin), supporting mode=7 (OScan1) and mode=8 (OScan0).
+static void xds110_enter_mode(cjtag_t *c, int mode, bool with_escape)
+{
+    c->cjtag_mode = (uint8_t)mode;
+    if (with_escape) {
+        cjtag_reset_escape(c);
+    }
+
+    jscan0_tms(c, 0xFFu, 8);
+    jscan0_tms(c, 0x00u, 1);
+    jscan0_tms(c, 0x03u, 3);
+    jscan0_tms(c, 0x00u, 64);
+    jscan0_tms(c, 0x03u, 3);
+    jscan0_tms(c, 0x05u, 4);
+    jscan0_tms(c, 0x03u, 2);
+    jscan0_tms(c, 0x05u, 4);
+    jscan0_tms(c, 0x03u, 2);
+    jscan0_tms(c, 0x05u, 4);
+    jscan0_tms(c, 0x0Du, 4);
+    jscan0_tms(c, 0x05u, 4);
+    jscan0_tms(c, 0x0Du, 4);
+    jscan0_tms(c, 0x05u, 4);
+    jscan0_tms(c, 0x0Du, 4);
+    jscan0_tms(c, 0x05u, 4);
+    jscan0_tms(c, 0x31u, 6);
+    jscan0_tms(c, 0x05u, 4);
+    if (mode == 8) {
+        jscan0_tms(c, 0x3801u, 14);
+    } else {
+        jscan0_tms(c, 0x1C01u, 13);
+    }
+    jscan0_tms(c, 0x00u, 4);
+
+    if (mode == 8) {
+        jscan0_tms(c, 0x02u, 3);
+        jscan0_tms(c, 0x03u, 2);
+        jscan0_tms(c, 0x15u, 6);
+        oscan1_tms(c, 0x08u, 4);
+        jscan0_tms(c, 0x01u, 2);
+        jscan0_tms(c, 0x00u, 7);
+        jscan0_tms(c, 0x05u, 4);
+        jscan0_tms(c, 0x01u, 2);
+        oscan1_tms(c, 0x40u, 7);
+        jscan0_tms(c, 0x01u, 1);
+        jscan0_tms(c, 0x05u, 4);
+        jscan0_tms(c, 0x03u, 3);
+        jscan0_tms(c, 0x00u, 7);
+        jscan0_tms(c, 0x05u, 4);
+        jscan0_tms(c, 0x03u, 2);
+        jscan0_tms(c, 0x05u, 4);
+        jscan0_tms(c, 0x01u, 2);
+        oscan1_tms(c, 0x01u, 1);
+        jscan0_tms(c, 0x01u, 2);
+        jscan0_tms(c, 0x00u, 7);
+    } else {
+        oscan1_tms(c, 0x02u, 3);
+        oscan1_tms(c, 0x03u, 2);
+        oscan1_tms(c, 0x15u, 6);
+        oscan1_tms(c, 0x08u, 4);
+        oscan1_tms(c, 0x01u, 2);
+        jscan0_tms(c, 0x00u, 7);
+        oscan1_tms(c, 0x05u, 4);
+        oscan1_tms(c, 0x01u, 2);
+        oscan1_tms(c, 0x40u, 7);
+        oscan1_tms(c, 0x01u, 1);
+        oscan1_tms(c, 0x05u, 4);
+        oscan1_tms(c, 0x03u, 3);
+        jscan0_tms(c, 0x00u, 7);
+        oscan1_tms(c, 0x05u, 4);
+        oscan1_tms(c, 0x03u, 2);
+        oscan1_tms(c, 0x05u, 4);
+        oscan1_tms(c, 0x01u, 2);
+        oscan1_tms(c, 0x01u, 1);
+        oscan1_tms(c, 0x01u, 2);
+        jscan0_tms(c, 0x00u, 7);
+    }
 }
 
 // Exact XDS110 CJTAG_Connect(7) OScan1 activation sequence (0x10db2..0x10fa4 in firmware_3.0.0.45.bin).
 static void oscan1_enter(cjtag_t *c)
 {
-    cjtag_reset_escape(c);
+    xds110_enter_mode(c, 7, true);
+}
 
-    // Step B: JScan0 Zero-Bit Scan (ZBS) command level 2 unlock and OScan1 mode selection
-    jscan0_tms(c, 0xFFu, 8);   // Test-Logic-Reset (8 clocks TMS=1)
-    jscan0_tms(c, 0x00u, 1);   // Run-Test/Idle
-    jscan0_tms(c, 0x03u, 3);   // Select-DR, Select-IR, Capture-IR
-    jscan0_tms(c, 0x00u, 64);  // Shift-IR 64 clocks (internal TDI=1 pull-up -> BYPASS)
-    jscan0_tms(c, 0x03u, 3);   // Exit1-IR, Update-IR, Run-Test/Idle
-    jscan0_tms(c, 0x05u, 4);   // ZBS #1
-    jscan0_tms(c, 0x03u, 2);   // Select-DR, Select-IR (Command Level 1)
-    jscan0_tms(c, 0x05u, 4);   // ZBS #2
-    jscan0_tms(c, 0x03u, 2);   // Select-DR, Select-IR (Command Level 2)
-    jscan0_tms(c, 0x05u, 4);   // ZBS #3 (lock Command Level 2)
-    jscan0_tms(c, 0x0Du, 4);   // 1-bit DR scan #1
-    jscan0_tms(c, 0x05u, 4);
-    jscan0_tms(c, 0x0Du, 4);  // 1-bit DR scan #2
-    jscan0_tms(c, 0x05u, 4);
-    jscan0_tms(c, 0x0Du, 4);  // 1-bit DR scan #3
-    jscan0_tms(c, 0x05u, 4);
-    jscan0_tms(c, 0x31u, 6);  // 3-bit DR scan
-    jscan0_tms(c, 0x05u, 4);
-    jscan0_tms(c, 0x1C01u, 13);  // 8-bit DR scan (OScan1 format = mode 7)
-    jscan0_tms(c, 0x00u, 4);     // 4 clocks TMS=0
-
-    // Step C: OScan1 control register finalization (0x10eee..0x10f9a)
-    oscan1_tms(c, 0x02u, 3);
-    oscan1_tms(c, 0x03u, 2);
-    oscan1_tms(c, 0x15u, 6);
-    oscan1_tms(c, 0x08u, 4);
-    oscan1_tms(c, 0x01u, 2);
-    jscan0_tms(c, 0x00u, 7);
-    oscan1_tms(c, 0x05u, 4);
-    oscan1_tms(c, 0x01u, 2);
-    oscan1_tms(c, 0x40u, 7);
-    oscan1_tms(c, 0x01u, 1);
-    oscan1_tms(c, 0x05u, 4);
-    oscan1_tms(c, 0x03u, 3);
-    jscan0_tms(c, 0x00u, 7);
-    oscan1_tms(c, 0x05u, 4);
-    oscan1_tms(c, 0x03u, 2);
-    oscan1_tms(c, 0x05u, 4);
-    oscan1_tms(c, 0x01u, 2);
-    oscan1_tms(c, 0x01u, 1);
-    oscan1_tms(c, 0x01u, 2);
-    jscan0_tms(c, 0x00u, 7);
+// Navigate TAP state machine outside Shift-DR/Shift-IR:
+// mode=8 (OScan0/MScan) uses 1-clock JScan0 TMS packets outside Shift-xR; mode=7 (OScan1) uses 3-clock OScan1 TMS.
+static void nav_tms(cjtag_t *c, uint32_t bits, unsigned count)
+{
+    if (c->cjtag_mode == 8) {
+        jscan0_tms(c, bits, count);
+    } else {
+        oscan1_tms(c, bits, count);
+    }
 }
 
 // --- Layer 2: TI ICEPick-C Router Unlock ---
@@ -229,13 +305,13 @@ static void icepick_ir_dr_no_idle(cjtag_t *c, bool from_idle, uint8_t ir6, uint3
 {
     // Enter Shift-IR from either Run-Test/Idle (1,1,0,0) or Update-DR (1,1,0,0)
     (void)from_idle;
-    oscan1_tms(c, 0x03u, 4);
+    nav_tms(c, 0x03u, 4);
     oscan1_shift(c, ir6 & 0x3Fu, 6, true);
     // Exit1-IR -> Pause-IR (0) -> Exit2-IR (1) -> Update-IR (1) -> Select-DR (1) -> Capture-DR (0) -> Shift-DR (0)
-    oscan1_tms(c, 0x0Eu, 6);
+    nav_tms(c, 0x0Eu, 6);
     oscan1_shift(c, dr, dr_bits, true);
     // Exit1-DR -> Pause-DR (0) -> Exit2-DR (1) -> Update-DR (1)
-    oscan1_tms(c, 0x06u, 3);
+    nav_tms(c, 0x06u, 3);
 }
 
 // Shift 10-bit combined IR (CS_DAP 4 bits + ICEPick-C 6 bits in BYPASS) from Run-Test/Idle -> Run-Test/Idle.
@@ -246,9 +322,9 @@ static void chain_shift_ir(cjtag_t *c, uint8_t dap_ir)
     }
     uint32_t tx_ir = c->dap_at_tdo ? ((ICEPICK_IR_BYPASS << 4) | (dap_ir & 0x0Fu))
                                    : (((uint32_t)(dap_ir & 0x0Fu) << 6) | ICEPICK_IR_BYPASS);
-    oscan1_tms(c, 0x03u, 4);  // Idle -> Select-DR (1), Select-IR (1), Capture-IR (0), Shift-IR (0)
+    nav_tms(c, 0x03u, 4);  // Idle -> Select-DR (1), Select-IR (1), Capture-IR (0), Shift-IR (0)
     oscan1_shift(c, tx_ir, 10, true);
-    oscan1_tms(c, 0x01u, 2);  // Exit1-IR -> Update-IR (1), Run-Test/Idle (0)
+    nav_tms(c, 0x01u, 2);  // Exit1-IR -> Update-IR (1), Run-Test/Idle (0)
     c->cur_dap_ir = dap_ir;
 }
 
@@ -256,23 +332,33 @@ static void chain_shift_ir(cjtag_t *c, uint8_t dap_ir)
 static uint64_t chain_shift_dr(cjtag_t *c, uint64_t dap_tx, unsigned dap_bits)
 {
     uint64_t tx_dr = c->dap_at_tdo ? dap_tx : (dap_tx << 1);
-    oscan1_tms(c, 0x01u, 3);  // Idle -> Select-DR (1), Capture-DR (0), Shift-DR (0)
+    nav_tms(c, 0x01u, 3);  // Idle -> Select-DR (1), Capture-DR (0), Shift-DR (0)
     uint64_t rx_dr = oscan1_shift(c, tx_dr, dap_bits + 1, true);
-    oscan1_tms(c, 0x01u, 2);  // Exit1-DR -> Update-DR (1), Run-Test/Idle (0)
+    nav_tms(c, 0x01u, 2);  // Exit1-DR -> Update-DR (1), Run-Test/Idle (0)
     uint64_t mask = (dap_bits == 64) ? ~0ULL : ((1ULL << dap_bits) - 1ULL);
     return c->dap_at_tdo ? (rx_dr & mask) : ((rx_dr >> 1) & mask);
 }
 
 static bool icepick_connect_dap(cjtag_t *c)
 {
-    // Read 32-bit ICEPick-C IDCODE (default DR in Run-Test/Idle right after OScan1 entry)
-    oscan1_tms(c, 0x01u, 3);  // Idle -> Select-DR, Capture-DR, Shift-DR
+    // Read 32-bit ICEPick-C IDCODE (if xds110_enter_mode left IR=BYPASS, shift ICEPICK_IR_IDCODE=0x04 first)
+    nav_tms(c, 0x01u, 3);  // Idle -> Select-DR, Capture-DR, Shift-DR
     uint32_t idcode = (uint32_t)oscan1_shift(c, 0, 32, true);
-    oscan1_tms(c, 0x01u, 2);  // Exit1-DR -> Update-DR, Idle
+    nav_tms(c, 0x01u, 2);  // Exit1-DR -> Update-DR, Idle
+
+    if ((idcode & 0x0FFFFFFFu) != CJTAG_ICEPICK_IDCODE) {
+        nav_tms(c, 0x03u, 4);  // Idle -> Select-DR, Select-IR, Capture-IR, Shift-IR
+        oscan1_shift(c, ICEPICK_IR_IDCODE, 6, true);
+        nav_tms(c, 0x01u, 2);  // Exit1-IR -> Update-IR, Idle
+        nav_tms(c, 0x01u, 3);  // Idle -> Select-DR, Capture-DR, Shift-DR
+        idcode = (uint32_t)oscan1_shift(c, 0, 32, true);
+        nav_tms(c, 0x01u, 2);  // Exit1-DR -> Update-DR, Idle
+    }
 
     c->icepick_id = idcode;
     if ((idcode & 0x0FFFFFFFu) != CJTAG_ICEPICK_IDCODE) {
-        return fail(c, "no CC1310 ICEPick-C IDCODE on probe pins");
+        snprintf(c->error, sizeof c->error, "no CC1310 ICEPick-C IDCODE on probe pins (got 0x%08" PRIX32 ")", idcode);
+        return false;
     }
 
     // Unlock ICEPick-C and link Debug TAP 0 (Cortex-M3 CS_DAP) without touching Run-Test/Idle on the way
@@ -283,15 +369,15 @@ static bool icepick_connect_dap(cjtag_t *c)
     icepick_ir_dr_no_idle(c, false, ICEPICK_IR_ROUTER, 0xA0112148u, 32);  // TAP 0: select & link into chain
 
     // From Update-DR, load ICEPick BYPASS (0x3F) and enter Run-Test/Idle for 10 clocks
-    oscan1_tms(c, 0x03u, 4);  // Update-DR -> Select-DR (1), Select-IR (1), Capture-IR (0), Shift-IR (0)
+    nav_tms(c, 0x03u, 4);  // Update-DR -> Select-DR (1), Select-IR (1), Capture-IR (0), Shift-IR (0)
     oscan1_shift(c, ICEPICK_IR_BYPASS, 6, true);
-    oscan1_tms(c, 0x01u, 2);   // Exit1-IR -> Update-IR (1), Run-Test/Idle (0)
-    oscan1_tms(c, 0x00u, 10);  // 10 Run-Test/Idle clocks
+    nav_tms(c, 0x01u, 2);   // Exit1-IR -> Update-IR (1), Run-Test/Idle (0)
+    nav_tms(c, 0x00u, 10);  // 10 Run-Test/Idle clocks
 
     // Auto-detect whether CS_DAP (32-bit IDCODE = 0x4BA00477) or ICEPick-C (1-bit bypass) is closest to TDO
-    oscan1_tms(c, 0x01u, 3);
+    nav_tms(c, 0x01u, 3);
     uint64_t raw33 = oscan1_shift(c, 0, 33, true);
-    oscan1_tms(c, 0x01u, 2);
+    nav_tms(c, 0x01u, 2);
 
     if ((uint32_t)((raw33 >> 1) & 0xFFFFFFFFULL) == CJTAG_DAP_IDCODE) {
         c->dap_at_tdo = false;
@@ -317,7 +403,9 @@ static bool icepick_connect_dap(cjtag_t *c)
             return true;
         }
     }
-    return fail(c, "ICEPick connected, but ARM CS_DAP IDCODE (0x4BA00477) not found");
+    snprintf(c->error, sizeof c->error,
+             "ICEPick (0x%08" PRIX32 ") connected, but CS_DAP IDCODE not found (raw33=0x%09" PRIX64 ")", idcode, raw33);
+    return false;
 }
 
 // --- Layer 3: ARM CoreSight JTAG-DP & AHB-AP ---
@@ -608,8 +696,51 @@ bool cjtag_connect(cjtag_t *c, bool halt_cpu)
     c->error[0] = 0;
     c->cur_dap_ir = 0xFFu;
     c->ap_csw = 0;
+    uint32_t ids[4] = {0};
+    char icepick_err[96] = {0};
     oscan1_enter(c);
-    if (!icepick_connect_dap(c) || !dap_power_up(c)) {
+    bool connected = icepick_connect_dap(c);
+    ids[0] = c->icepick_id;
+    if (!connected && (ids[0] & 0x0FFFFFFFu) == CJTAG_ICEPICK_IDCODE) {
+        snprintf(icepick_err, sizeof icepick_err, "%s", c->error);
+    }
+    if (!connected) {
+        xds110_cjtag_reset_1113c(c);
+        xds110_enter_mode(c, 7, false);
+        connected = icepick_connect_dap(c);
+        ids[1] = c->icepick_id;
+        if (!connected && (ids[1] & 0x0FFFFFFFu) == CJTAG_ICEPICK_IDCODE) {
+            snprintf(icepick_err, sizeof icepick_err, "%s", c->error);
+        }
+    }
+    if (!connected) {
+        xds110_enter_mode(c, 8, true);
+        connected = icepick_connect_dap(c);
+        ids[2] = c->icepick_id;
+        if (!connected && (ids[2] & 0x0FFFFFFFu) == CJTAG_ICEPICK_IDCODE) {
+            snprintf(icepick_err, sizeof icepick_err, "%s", c->error);
+        }
+    }
+    if (!connected) {
+        xds110_cjtag_reset_1113c(c);
+        xds110_enter_mode(c, 8, false);
+        connected = icepick_connect_dap(c);
+        ids[3] = c->icepick_id;
+        if (!connected && (ids[3] & 0x0FFFFFFFu) == CJTAG_ICEPICK_IDCODE) {
+            snprintf(icepick_err, sizeof icepick_err, "%s", c->error);
+        }
+    }
+    if (!connected) {
+        if (icepick_err[0] != 0) {
+            snprintf(c->error, sizeof c->error, "%s", icepick_err);
+        } else {
+            snprintf(c->error, sizeof c->error,
+                     "no IDCODE (m7=0x%08" PRIX32 " r7=0x%08" PRIX32 " m8=0x%08" PRIX32 " r8=0x%08" PRIX32 ")", ids[0],
+                     ids[1], ids[2], ids[3]);
+        }
+        return false;
+    }
+    if (!dap_power_up(c)) {
         return false;
     }
     if (halt_cpu && !cpu_halt(c)) {
@@ -719,8 +850,10 @@ bool cjtag_flash_page(cjtag_t *c, uint32_t page_idx, const uint8_t *data_4k, boo
         return false;
     }
 
-    // Disable VIMS flash cache so flash reads and ROM flash operations see raw flash state
-    if (!cjtag_mem_write32(c, CC1310_VIMS_CTL, 0x00000001u)) {  // MODE = OFF (0x1) or GPRAM (0x0)
+    // Disable VIMS flash cache (MODE = OFF = 0x3) so flash reads and ROM flash operations see raw flash state
+    uint32_t orig_vims = 0;
+    if (!cjtag_mem_read32(c, CC1310_VIMS_CTL, &orig_vims) ||
+        !cjtag_mem_write32(c, CC1310_VIMS_CTL, (orig_vims & ~3u) | 3u)) {
         return false;
     }
 
@@ -729,22 +862,26 @@ bool cjtag_flash_page(cjtag_t *c, uint32_t page_idx, const uint8_t *data_4k, boo
     if (!cjtag_mem_write32(c, CC1310_FLASH_FWLOCK, 0x00000005u) || !cjtag_mem_read32(c, CC1310_FLASH_FWFLAG, &fwflag) ||
         !cjtag_mem_write32(c, CC1310_FLASH_FWFLAG, fwflag & ~1u) ||
         !cjtag_mem_write32(c, CC1310_FLASH_FWLOCK, 0x00000000u)) {
+        (void)cjtag_mem_write32(c, CC1310_VIMS_CTL, orig_vims);
         return false;
     }
 
     uint32_t sector_addr = page_idx * CJTAG_PAGE;
     uint32_t status = 0xFFFFFFFFu;
     if (!rom_hapi_call(c, CC1310_ROM_HAPI_ERASE, sector_addr, 0, 0, 500, &status) || status != 0) {
+        (void)cjtag_mem_write32(c, CC1310_VIMS_CTL, orig_vims);
         return fail(c, "CC1310 HapiSectorErase failed");
     }
 
     if (!is_all_ff(data_4k, CJTAG_PAGE)) {
         if (!cjtag_mem_write_block(c, CC1310_SRAM_BUF, data_4k, CJTAG_PAGE)) {
+            (void)cjtag_mem_write32(c, CC1310_VIMS_CTL, orig_vims);
             return fail(c, "failed to load 4 KB page buffer into CC1310 SRAM");
         }
         status = 0xFFFFFFFFu;
         if (!rom_hapi_call(c, CC1310_ROM_HAPI_PROG, CC1310_SRAM_BUF, sector_addr, CJTAG_PAGE, 500, &status) ||
             status != 0) {
+            (void)cjtag_mem_write32(c, CC1310_VIMS_CTL, orig_vims);
             return fail(c, "CC1310 HapiProgramFlash failed");
         }
     }
@@ -754,20 +891,23 @@ bool cjtag_flash_page(cjtag_t *c, uint32_t page_idx, const uint8_t *data_4k, boo
     if (cjtag_mem_read32(c, CC1310_FLASH_CFG, &fcfg)) {
         (void)cjtag_mem_write32(c, CC1310_FLASH_CFG, fcfg & ~0x02u);
     }
-    // Re-enable VIMS cache
-    (void)cjtag_mem_write32(c, CC1310_VIMS_CTL, 0x00000000u);
 
-    // Read back the 4 KB page and verify every byte matches
+    // Read back the 4 KB page while VIMS cache is still OFF and verify every byte matches
     uint8_t verify_buf[CJTAG_PAGE] = {0};
     if (!cjtag_mem_read_block(c, sector_addr, verify_buf, CJTAG_PAGE) || memcmp(verify_buf, data_4k, CJTAG_PAGE) != 0) {
+        (void)cjtag_mem_write32(c, CC1310_VIMS_CTL, orig_vims);
         return fail(c, "flash readback verification failed");
     }
 
     // Verify page 31 (CCFG) is completely untouched
     if (!cjtag_mem_read_block(c, CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, verify_buf, CJTAG_PAGE) ||
         crc32_ieee(verify_buf, CJTAG_PAGE) != c->page31_crc) {
+        (void)cjtag_mem_write32(c, CC1310_VIMS_CTL, orig_vims);
         return fail(c, "page 31 CRC changed!");
     }
+
+    // Restore original VIMS cache mode
+    (void)cjtag_mem_write32(c, CC1310_VIMS_CTL, orig_vims);
     return true;
 }
 
