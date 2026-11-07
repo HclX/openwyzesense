@@ -252,8 +252,8 @@ Built on the host board and tested end to end (`test_secure_link` in `firmware/t
 
 - **Our messages share one first byte, `0x4F`, then a sub-ID** (the user's suggestion): no stock message uses `0x4F`.
   Stock gateways send `0xC0`, `0xD0`, `0xD2`, `0xE0` and `0xE2` to sensors (FACTS.md §9, host commands 0x5370–0x5393),
-  so our OTA's `C0`–`C3` collide with one of them; OTA moves to `4F 10`–`13` (next step; no compatibility with
-  earlier images needed: the user reflashes them by JTAG). Sub-IDs: `01` key, `02` hello, `03` session, `04` sealed
+  so our OTA's `C0`–`C3` collided with one of them; OTA is now `4F 10`–`13` (no compatibility with earlier images
+  needed: the user reflashes them by JTAG). Sub-IDs: `01` key, `02` hello, `03` session, `04` sealed
   frame, `05` new session (`firmware/common/seclink.h`).
 - **Crypto** (`firmware/common/seclink.c`): AES-CMAC and AES-CCM built on the platform's AES-ECB (the CC1310's
   engine; `tests/aes_ref.c` on the host), checked against RFC 4493 and RFC 3610 vectors; `platform_random()` from the
@@ -265,8 +265,10 @@ Built on the host board and tested end to end (`test_secure_link` in `firmware/t
 - **Sensor:** the key in NV item `0x22`; a hello after each start or a resync; reports sealed; nobody answering a hello
   or a sealed report: reports kept, a hello at once, then after 60 s, 5 min, 15 min, then with each heartbeat.
 - **Flash cost:** ~2.6 KB on the gateway and on the sensor.
-- **Not yet:** OTA under `0x4F` and over the sealed channel without the button (blocks shrink to 80 bytes so a sealed
-  block fits a frame); the `secure` flag persisted in the gateway's table (now RAM only: after a gateway restart, a
+- **OTA** moved to `4F 10`–`13`, sealed for a secured sensor, which then takes the offer **without the button** at its
+  next check-in (`test_secure_ota_without_button`: staged, no press, an A1, updated). Blocks shrink to 80 bytes so a
+  sealed block fits one frame (a 9 KB update: 48 s instead of ~43 s in the simulation).
+- **Not yet:** the `secure` flag persisted in the gateway's table (now RAM only: after a gateway restart, a
   forged stock-format report is accepted until the sensor's next hello); a plain B0 still accepted by a secured
   sensor; the host side (wyzesense2mqtt-rs pushing `K_net`, `ows-flash`), the ESP relay keeping `K_net`.
 

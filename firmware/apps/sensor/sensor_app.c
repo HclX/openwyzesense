@@ -329,7 +329,7 @@ static uint8_t ota_offer(void *ctx, sensor_ota_offer_t *o)
     int slot = boot_running_slot();
     o->slot = slot == 0 ? 1 : 0;  // the build for the slot not running
     const char *why = slot < 0                               ? "not a slot image"
-                      : !a->ota_window                       ? "no window"
+                      : !a->ota_window && !o->sealed         ? "no window"  // sealed: from our own gateway (#28)
                       : o->board_id != boot_board()          ? "another board"
                       : o->version <= boot_running_version() ? "not newer"
                       : mv < OTA_MIN_MV                      ? "battery low"
@@ -339,7 +339,7 @@ static uint8_t ota_offer(void *ctx, sensor_ota_offer_t *o)
     uart_puts(m);
     if (!why) {
         led_blink(a, 100, 2);
-    } else if (mv < OTA_MIN_MV && a->ota_window && slot >= 0 && o->board_id == boot_board() &&
+    } else if (mv < OTA_MIN_MV && (a->ota_window || o->sealed) && slot >= 0 && o->board_id == boot_board() &&
                o->version > boot_running_version()) {
         led_blink(a, 200, 5);
     }

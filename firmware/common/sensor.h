@@ -21,6 +21,7 @@ typedef struct {
     uint32_t board_id, version;
     uint32_t size[2], crc[2];  // of the slot-A and slot-B builds, as their slot headers have them
     uint8_t slot;              // the build to take (ota_offer sets it: the slot not running)
+    bool sealed;               // it came in an SL_FRAME, from the gateway the sensor shares a session with (#28)
 } sensor_ota_offer_t;
 
 typedef struct {

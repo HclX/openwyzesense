@@ -7,6 +7,7 @@
 
 #include "build_info.h"
 #include "gateway.h"
+#include "seclink.h"
 #include "host_proto.h"
 #include "mac154.h"
 #include "wyze_app.h"
@@ -1304,11 +1305,11 @@ static void test_ota_queue_and_wildcard(void)
     // Sensor 0x10 ("77000001") finishes with C3 -> marked in wildcard_done; subsequent poll gets no second C0,
     // while sensor 0x11 ("77000002") immediately gets C0!
     memset(pt, 0, sizeof pt);
-    pt[0] = APP_OTA_DONE;
-    memcpy(pt + 1, "77000001", 8);
-    pt[9] = OTA_DONE_OK;
-    ota_put_be32(pt + 10, 16u);
-    app_encrypt(pt, 14, ct);
+    pt[0] = APP_OURS, pt[1] = APP_OTA_DONE;
+    memcpy(pt + 2, "77000001", 8);
+    pt[10] = OTA_DONE_OK;
+    ota_put_be32(pt + 11, 16u);
+    app_encrypt(pt, 15, ct);
     n_host = 0;
     gw_rx(&gw, f, mac_build_data(f, 4, PAN, SHORT, 0x10, ct, 16, true), -50);
     CHECK(n_host == 1 && host_parse(host[0].b, host[0].n, &h) && h.cmd == HOST_OWS_RSP &&
@@ -1328,11 +1329,11 @@ static void test_ota_queue_and_wildcard(void)
         gw.sensors[i].nv_sub = (uint16_t)((i + 1) * 2);  // sub 2, 4, 6, ... so sub 1 inserts at index 0
     }
     memset(pt, 0, sizeof pt);
-    pt[0] = APP_OTA_DONE;
-    memcpy(pt + 1, "77000002", 8);
-    pt[9] = OTA_DONE_REFUSED;
-    ota_put_be32(pt + 10, 15u);
-    app_encrypt(pt, 14, ct);
+    pt[0] = APP_OURS, pt[1] = APP_OTA_DONE;
+    memcpy(pt + 2, "77000002", 8);
+    pt[10] = OTA_DONE_REFUSED;
+    ota_put_be32(pt + 11, 15u);
+    app_encrypt(pt, 15, ct);
     gw_rx(&gw, f, mac_build_data(f, 5, PAN, SHORT, 0x11, ct, 16, true), -50);
     gw_host(&gw, ack, host_build_ack(ack, HOST_OWS_RSP, false));
     CHECK(gw.ota.wildcard_done == (1ull << 0) && gw.ota.wildcard_skip == (1ull << 1));

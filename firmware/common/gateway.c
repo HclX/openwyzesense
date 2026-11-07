@@ -852,7 +852,7 @@ static bool ota_target_for(const gateway_t *gw, uint16_t src, uint8_t mac_out[8]
     return true;
 }
 
-// Serializes the single 96-byte block buffer to one active sensor at a time; yields if the active sensor goes silent.
+// Serializes the single block buffer (OTA_BLOCK bytes) to one active sensor at a time; yields if the active sensor goes silent.
 static bool ota_acquire_for(gateway_t *gw, uint16_t src, uint8_t mac_out[8])
 {
     if (!ota_target_for(gw, src, mac_out)) {
@@ -930,7 +930,7 @@ static void ota_request(gateway_t *gw, uint16_t src, const uint8_t *pt)
 // Returns whether a frame went.
 static bool ota_poll(gateway_t *gw, uint16_t src, uint8_t seq)
 {
-    uint8_t pt[6 + OTA_BLOCK], mac[8];
+    uint8_t pt[1 + 6 + OTA_BLOCK] = {APP_OURS}, mac[8];
     if (!ota_acquire_for(gw, src, mac)) {
         return false;
     }
@@ -940,21 +940,21 @@ static bool ota_poll(gateway_t *gw, uint16_t src, uint8_t seq)
         gw->ota.active_ms = gw->now_ms;
         gw->ota.started = false;
         gw->ota.want_len = gw->ota.filled = 0;
-        pt[0] = APP_OTA_OFFER;
-        memcpy(pt + 1, gw->ota.offer, OTA_OFFER_LEN);
+        pt[1] = APP_OTA_OFFER;
+        memcpy(pt + 2, gw->ota.offer, OTA_OFFER_LEN);
         send_ack(gw, seq, true);
-        send_data(gw, src, pt, 1 + OTA_OFFER_LEN);
+        send_app(gw, src, pt, 2 + OTA_OFFER_LEN);  // sealed for a secured sensor: then no button needed (#28)
         return true;
     }
     if (!gw->ota.want_len || gw->ota.filled != gw->ota.want_len) {
         return false;
     }
-    pt[0] = APP_OTA_BLOCK;
-    ota_put_be32(pt + 1, gw->ota.want);
-    pt[5] = gw->ota.want_len;
-    memcpy(pt + 6, gw->ota.block, gw->ota.want_len);
+    pt[1] = APP_OTA_BLOCK;
+    ota_put_be32(pt + 2, gw->ota.want);
+    pt[6] = gw->ota.want_len;
+    memcpy(pt + 7, gw->ota.block, gw->ota.want_len);
     send_ack(gw, seq, true);
-    send_data(gw, src, pt, 6u + gw->ota.want_len);
+    send_app(gw, src, pt, 7u + gw->ota.want_len);
     return true;
 }
 
@@ -1058,8 +1058,9 @@ static void secure_frame(gateway_t *gw, uint16_t src, const uint8_t *pt, size_t 
         queue_ours(gw, src, resync, sizeof resync);
         return;
     }
-    if (!sl_open(x->key, SL_UP, pt, n, inner, &len, &ctr) || ctr <= x->rx_ctr || !len || inner[0] == APP_OURS) {
-        return;  // forged, another session's, or a replay
+    if (!sl_open(x->key, SL_UP, pt, n, inner, &len, &ctr) || ctr <= x->rx_ctr || !len ||
+        (inner[0] == APP_OURS && (len < 2 || inner[1] <= SL_RESYNC))) {
+        return;  // forged, another session's, a replay, or the link's own messages nested (only OTA ones are carried)
     }
     x->rx_ctr = ctr;
     x->last_ms = gw->now_ms;
@@ -1076,6 +1077,17 @@ static void handle_message(gateway_t *gw, uint16_t src, const uint8_t *pt, size_
                 secure_hello(gw, src, pt, n);
             } else if (n >= 2 && pt[1] == SL_FRAME && !authed) {
                 secure_frame(gw, src, pt, n, rssi);
+            } else if (n >= 15 && (pt[1] == APP_OTA_REQUEST || pt[1] == APP_OTA_DONE) &&
+                       heard(gw, src, pt + 2, authed)) {
+                const uint8_t *m = pt + 1;  // the message after APP_OURS: sub-ID, MAC, ...
+                uint8_t mac[8];
+                if (m[0] == APP_OTA_REQUEST) {
+                    ota_request(gw, src, m);
+                } else if (ota_target_for(gw, src, mac)) {
+                    memcpy(payload, m + 1, 13);  // MAC, status, version
+                    ows_send(gw, OWS_SUB_OTA_DONE, payload, 13);
+                    ota_finish_target(gw, src, mac, m[9]);
+                }
             }
             break;
         case APP_STATUS:
@@ -1225,22 +1237,6 @@ static void handle_message(gateway_t *gw, uint16_t src, const uint8_t *pt, size_
             }
             host_send(gw, HOST_GET_R1 + 1, pt, 27);
             break;
-        case APP_OTA_REQUEST:
-            if (n < 14) {
-                break;
-            }
-            ota_request(gw, src, pt);
-            break;
-        case APP_OTA_DONE: {
-            uint8_t mac[8];
-            if (n < 14 || !ota_target_for(gw, src, mac)) {
-                break;
-            }
-            memcpy(payload, pt + 1, 13);  // MAC, status, version
-            ows_send(gw, OWS_SUB_OTA_DONE, payload, 13);
-            ota_finish_target(gw, src, mac, pt[9]);
-            break;
-        }
         default:
             break;
     }

@@ -876,6 +876,32 @@ static void stage_and_press(void)
     short_press();
 }
 
+static const uint8_t net_key[16];  // the secured link's network key in these tests (defined with its tests below)
+
+// The secured link (#28): an update for a secured sensor comes sealed from its own gateway, so it needs no button: the
+// host stages it, and the sensor takes it at its next check-in (here an A1 from the console, as a heartbeat would)
+static void test_secure_ota_without_button(void)
+{
+    boot_ota_world(GW_FLAG_OTA | GW_FLAG_ANNOUNCE);
+    const pkt_t *r = ows_call(OWS_SUB_NET_KEY, net_key, sizeof net_key);
+    CHECK(r && r->n == 2 && r->p[1] == 1);
+    pair(false);
+    run(15000);
+    CHECK(sensor_app.sensor.sl.session && (sensor_app.sensor.gw_features & A6_OURS_OTA));
+    CHECK(stage() == 0);
+    run(5000);
+    CHECK(!strstr(sn_text, "ota offer"));  // nothing yet: the sensor has not polled
+    CHECK(say("status", "", 100));         // its next check-in (no button)
+    int res = ota_result(120000);
+    if (res != OTA_DONE_OK) {
+        fprintf(stderr, "secure ota: result %d\n--- sensor:\n%s\n", res, sn_text);
+    }
+    CHECK(res == OTA_DONE_OK);
+    run(500);
+    CHECK(!sensor_app.ota_window && strstr(sn_text, "ota offer 11, slot B, 9000 bytes: taken"));
+    CHECK(sn->slot == 1 && running_version() == 11);
+}
+
 // With OTA on, a paired sensor, the update staged, a short press of its button: offered version 11, the sensor (in
 // A) takes the slot-B build, writes slot B, says so, restarts into it; it reports as before and confirms itself
 // after its first minute. It never paired again. Then version 12, staged after the press (found by the window's
@@ -2129,6 +2155,7 @@ int main(void)
     test_ota_multi_sensor_and_wildcard();
     test_repurposed_diy_profile_and_ota();
     test_ota_update();
+    test_secure_ota_without_button();
     test_ota_lossy();
     test_ota_from_the_console();
     test_ota_reset_midway();

@@ -68,8 +68,8 @@ enum {
 #define GW_DEDUP_ENTRIES   8
 #define GW_DEDUP_MS        30000  // a retry comes within seconds; the same A1 two hours on is a new one
 #define GW_MAX_OTA_TARGETS 8      // sensor MACs staged in one OTA wave (plus wildcard "********")
-#define GW_OTA_OFFER_MS    5000   // C0 offer claim before C1 arrives: yields if the sensor ignores it
-#define GW_OTA_IDLE_MS     30000  // active C1/C2 block stream idle timeout before yielding to another sensor
+#define GW_OTA_OFFER_MS    5000   // offer claim before the first block request: yields if the sensor ignores it
+#define GW_OTA_IDLE_MS     30000  // active request / block stream idle timeout before yielding to another sensor
 
 typedef struct {
     uint8_t mac[8];  // ASCII

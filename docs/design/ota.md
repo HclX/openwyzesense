@@ -3,7 +3,12 @@
 Updating our own sensor firmware over the air, after the first install by wire. Between our gateway and our sensors
 only; off unless the host asks for it (R3). Stock sensors are never offered anything.
 
-## Who may update a sensor: whoever has just pressed its button
+## Who may update a sensor: its own gateway over the secured link, or whoever has just pressed its button
+
+**With the secured link** ([security.md](security.md), prototype): the offer and the blocks come sealed (AES-CCM) from
+the gateway the sensor shares a session with, so the sensor takes the offer without a button press, at its next
+check-in (its A1 heartbeat, then a poll). A staged wave updates unattended. The rest of this section is the rule
+without the secured link (a gateway without the network key):
 
 No signatures (the user's decision, 2026-10-24): a sensor accepts an update only in a **window opened by a short
 press of its own pairing button** (5 minutes, closed by the update or a reset), the way pairing itself needs a hand
@@ -60,7 +65,9 @@ clone without tags) a build is `0.0.0` + the commit count (saturated), below eve
 
 ## On the air
 
-Our own application messages C0-C3 (`firmware/common/ota.h`, encrypted as all the others), on the existing poll /
+Our own application messages `4F 10`–`13` (`firmware/common/ota.h`; they were C0-C3, which collide with the stock
+gateway's `0xC0` command), sealed in a secured link's frame when there is one, else encrypted as all the others, on
+the existing poll /
 pending-frame mechanism, so the sensor drives everything and its receiver is on only around its own frames.
 Nothing a stock peer sees changes (R3): our sensor joins exactly as before (an early version flagged itself in an
 A3 byte, which a stock dongle would have seen: dropped), and our gateway offers an update only with `GW_FLAG_OTA`

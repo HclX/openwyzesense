@@ -80,7 +80,7 @@ flowchart LR
         MQTT["MQTT Broker /\nHome Assistant"]
     end
 
-    S1 <-->|"906.8 MHz 2-GFSK\n802.15.4 + AES-128\n(+ C0-C3 OTA)"| G1
+    S1 <-->|"906.8 MHz 2-GFSK\n802.15.4 + AES-128\n(+ 4F ours: secured link, OTA)"| G1
     S1 <-->|"906.8 MHz 2-GFSK"| G2
     S2 <-->|"906.8 MHz 2-GFSK"| G1
     S3 <-->|"906.8 MHz 2-GFSK\nStock Protocol"| G1
@@ -269,10 +269,11 @@ These messages are transmitted **only** when explicitly enabled on an OWS gatewa
 | Opcode / Field | Name | Direction | Enc? | Raw / Encrypted Size | Payload Layout & Meaning |
 |---|---|---|---|---|---|
 | `0xA6` bytes `11..15` | `A6_OURS` (Padding Extension) | Gateway → Sensor | AES | Inside 16 B `0xA6` | `"OW"(2)` + `ver(1)` + `gw_features_be16(2)` placed in the 5 trailing padding bytes (`11..15`) that stock gateways leave `0x00` (only when `GW_FLAG_ANNOUNCE` is enabled). Lets an OWS sensor record that its coordinator is an OWS gateway (`wyze_app.h:56-66`). |
-| `0xC0` | `APP_OTA_OFFER` | Gateway → Sensor | AES | 25 B → 32 B | `C0` + `board_id_be32(4)` + `ver_be32(4)` + `size_a_be32(4)` + `crc_a_be32(4)` + `size_b_be32(4)` + `crc_b_be32(4)`. Offered on a sensor's `DATA_REQ` after a short button press. |
-| `0xC1` | `APP_OTA_REQUEST` | Sensor → Gateway | AES | 14 B → 16 B | `C1` + `mac[8]` + `slot(1: 0=A, 1=B)` + `offset_be32(4)`. Requests the next 96-byte image chunk at `offset`. |
-| `0xC2` | `APP_OTA_BLOCK` | Gateway → Sensor | AES | 6+n B → 16..112 B | `C2` + `offset_be32(4)` + `len(1, <=96)` + `data[len]`. Delivered on the sensor's `DATA_REQ`. |
-| `0xC3` | `APP_OTA_DONE` | Sensor → Gateway | AES | 14 B → 16 B | `C3` + `mac[8]` + `status(1)` + `version_be32(4)`. Status (`ota.h`): `0=OK`, `1=BAD_CRC`, `2=REFUSED`, `3=GAVE_UP`, `4=FLASH`. |
+| `0x4F` | `APP_OURS` (prototype, #28) | Both | AES (+ AES-CCM when sealed) | | Our messages: `4F` + sub-ID (`firmware/common/seclink.h`). The secured link: `01` key, `02` hello, `03` session, `04` sealed frame (AES-CCM), `05` new session ([security.md](security.md)). OTA (below): `10`–`13`, sealed inside a `04` frame when the link is secured. (They were `C0`–`C3`, which collide with the stock gateway's `0xC0` command.) |
+| `4F 10` | `APP_OTA_OFFER` | Gateway → Sensor | AES | 26 B → 32 B | `4F 10` + `board_id_be32(4)` + `ver_be32(4)` + `size_a_be32(4)` + `crc_a_be32(4)` + `size_b_be32(4)` + `crc_b_be32(4)`. Offered on a sensor's `DATA_REQ`: sealed for a secured sensor (taken without a button), else after a short button press. |
+| `4F 11` | `APP_OTA_REQUEST` | Sensor → Gateway | AES | 15 B → 16 B | `4F 11` + `mac[8]` + `slot(1: 0=A, 1=B)` + `offset_be32(4)`. Requests the next image block (80 bytes) at `offset`. |
+| `4F 12` | `APP_OTA_BLOCK` | Gateway → Sensor | AES | 7+n B → 16..112 B | `4F 12` + `offset_be32(4)` + `len(1, <=80)` + `data[len]`. Delivered on the sensor's `DATA_REQ`; sealed it is 102 B → 112 B. |
+| `4F 13` | `APP_OTA_DONE` | Sensor → Gateway | AES | 15 B → 16 B | `4F 13` + `mac[8]` + `status(1)` + `version_be32(4)`. Status (`ota.h`): `0=OK`, `1=BAD_CRC`, `2=REFUSED`, `3=GAVE_UP`, `4=FLASH`. |
 
 ### 4.5 Pairing & Reporting State Machines
 
@@ -376,7 +377,7 @@ All OWS-specific host extensions share **one** top-level async command pair, str
 | `0x05` | `OWS_SUB_ENTER_SBL` | Host → GW | Requires 4-byte confirmation magic `"OSBL"` (`[0x05, "OSBL"]`). On direct-UART gateways (`gateway-contact-v1`, `gateway-launchpad`), replies `[0x05, 0x00]` and jumps to the ROM Serial Bootloader via `chip_enter_sbl()` (§6.6). **Refused (`0xE0`) on `gateway-dongle`** (whose CH554 requires `0x4312`) and **blocked over remote `/ws/bridge`** by `buffer.c`. |
 | `0x06` | `OWS_SUB_NV_IMPORT` | Host ↔ GW | Zero-ladder sensor-table migration & export (`CLEAR = 1`, `SET_NET = 2`, `ADD_SENSOR = 3` replying `4 B` `[0x06, op, status, count]`, and `GET_SENSOR = 4` replying `18 B` `[0x06, 0x04, status, count, idx, sub_id_le16, short_le16, mac[8], type]` for `--nv-export` / `GET /contact/nv`). |
 | `0x10` | `OWS_SUB_OTA_OFFER` | Host → GW | Stages or cancels dual-slot OTA update offers (`[0x10, mac[8], 24-byte C0 metadata]` = `33 B`, or `[0x10, mac[8]]` / `[0x10]` to cancel). Supports up to **8 concurrent staged sensor MACs** (`GW_MAX_OTA_TARGETS = 8`) and `"********"` wildcard fleet offers. |
-| `0x11` | `OWS_SUB_OTA_NEED` | GW → Host | Gateway requests a 96-byte OTA block slice from the host (`[0x11, mac[8], slot(1), offset_be32(4), len(1)]` = `15 B`). |
+| `0x11` | `OWS_SUB_OTA_NEED` | GW → Host | Gateway requests an OTA block (80 bytes) from the host (`[0x11, mac[8], slot(1), offset_be32(4), len(1)]` = `15 B`). |
 | `0x12` | `OWS_SUB_OTA_DATA` | Host → GW | Host supplies a `<= 48 B` chunk (`[0x12, offset_be32(4), data[<=48]]` <= `53 B`) for the active 96-byte OTA block buffer. |
 | `0x13` | `OWS_SUB_OTA_DONE` | GW → Host | Notifies the host when a sensor completes or aborts an OTA update (`[0x13, mac[8], status(1), version_be32(4)]` = `14 B`). |
 | `0x20` | `OWS_SUB_OVERHEARD` | GW → Host | `GW_FLAG_ROAM` only: a report (A1/A2/E8/AB) from a sensor another gateway owns, heard and not ACKed (`[0x20, short_le16(2), <0x5319 payload>]`). Sent once, not resent ([`roaming.md`](roaming.md)). |
@@ -450,10 +451,10 @@ Flash Page 30 (`0x1E000–0x1EFFF`, 4096 bytes) uses the custom `OWNV` log-struc
   - If Page 30 has an unknown header (stock `NVOCTP`, blank, or corrupted page header), `nv_open()` erases and formats it with `"OWNV"` so boot **never** fails.
 
 ### 6.5 Over-The-Air (OTA) Sensor Update Protocol (`docs/design/ota.md`, `firmware/common/ota.h`)
-- **Physical Presence Authorization**: No cryptographic code-signing keys are required on the sensor; instead, a sensor only accepts an `0xC0` OTA offer during a **5-minute window opened by a physical short press of its button** (or `ota` on the wired bench console).
+- **Authorization**: a secured sensor takes an offer that comes sealed from its own gateway at any time (prototype, [security.md](security.md)); otherwise it accepts an offer only during a **5-minute window opened by a physical short press of its button** (or `ota` on the wired bench console).
 - **Slot Target Range Validation (`TASK-08`)**: Because Slot A (`0x01000`) and Slot B (`0x0F000`) are linked at fixed flash addresses, `boot_written_ok()` (and `slot_image.py`) verifies that the downloaded image's reset vector points inside `[slot_base + 0x100, slot_base + SLOT_SIZE)`, rejecting mismatched `slot-a.img`/`slot-b.img` arguments before confirming an update.
 - **Offer & Per-Page Battery Guard (`TASK-08`)**: The sensor measures battery voltage via `AONBatMon` under load both when evaluating `0xC0` and **before every 4 KB flash sector erase** during `0xC2` block streaming; if `V_bat < 2.50 V` (`2500 mV`), it refuses or cleanly aborts (`OTA_DONE_REFUSED` / `OTA_DONE_FLASH`) before brownout while the running slot remains intact.
-- **Zero-RAM-Bloat Streaming**: The gateway holds only a single 96-byte block buffer (`gw->ota.block[96]`), fetching chunks (`<= 48 B` each) on demand from the host via `OWS_SUB_OTA_NEED` / `OWS_SUB_OTA_DATA` (`0x53F1` sub-ID `0x11` / `0x53F0` sub-ID `0x12`), while up to 8 sensor MACs (`GW_MAX_OTA_TARGETS = 8`, or `"********"` wildcard) can be staged concurrently. A ~36 KB sensor image transfers in ~380 blocks (~3 minutes at 5 kbps, consuming ~0.3 mAh or ~0.15% of a CR2032).
+- **Zero-RAM-Bloat Streaming**: The gateway holds only a single 80-byte block buffer (`gw->ota.block[OTA_BLOCK]`), fetching chunks (`<= 48 B` each) on demand from the host via `OWS_SUB_OTA_NEED` / `OWS_SUB_OTA_DATA` (`0x53F1` sub-ID `0x11` / `0x53F0` sub-ID `0x12`), while up to 8 sensor MACs (`GW_MAX_OTA_TARGETS = 8`, or `"********"` wildcard) can be staged concurrently. A ~36 KB sensor image transfers in ~380 blocks (~3 minutes at 5 kbps, consuming ~0.3 mAh or ~0.15% of a CR2032).
 
 ### 6.6 Direct Firmware-Initiated Entry into ROM Serial Bootloader (Pinless SBL Entry)
 Disassembly of the CC1310 ROM (`ground_truth/firmware/cc13x0_rom/ROM.bin` at `0x10003bec`–`0x10003c78` and `0x10002968`–`0x10002ea4`) confirms that **running OWS firmware on direct-UART boards can enter the TI ROM Serial Bootloader directly in software without asserting the external SBL backdoor pin (`DIO10` / `DIO2` `W`)**:

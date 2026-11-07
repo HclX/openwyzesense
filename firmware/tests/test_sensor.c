@@ -11,6 +11,7 @@
 #include "host_proto.h"
 #include "mac154.h"
 #include "ota.h"
+#include "seclink.h"
 #include "sensor.h"
 #include "wyze_app.h"
 
@@ -431,30 +432,30 @@ static void test_truncated_payloads(void)
     send_enc_downlink(&s, bad_a4, sizeof bad_a4, 1000);
     CHECK(s.token[0] == 0xAA && !s.step_armed);
 
-    // 2. Truncated 16-byte C0 OTA offer (needs 25 bytes) must not invoke ota_offer callback.
+    // 2. Truncated 16-byte OTA offer (4F 10 ..., needs 26 bytes) must not invoke ota_offer callback.
     sensor_restore(&s, 0x65FE, 0x0F0F, 0x0007, 1, 1000);
     ota_offers_seen = ota_writes_seen = 0;
-    uint8_t bad_c0[16] = {APP_OTA_OFFER, 0x11, 0x22, 0x33, 0x44};
+    uint8_t bad_c0[16] = {APP_OURS, APP_OTA_OFFER, 0x11, 0x22, 0x33, 0x44};
     send_enc_downlink(&s, bad_c0, sizeof bad_c0, 1100);
     CHECK(ota_offers_seen == 0 && !s.ota.active);
 
-    // 3. Valid 25-byte C0 offer starts OTA; truncated 16-byte C2 claiming len=96 must not write out-of-bounds.
-    uint8_t good_c0[25] = {APP_OTA_OFFER};
-    ota_put_be32(good_c0 + 1, 0x12345678u);
-    ota_put_be32(good_c0 + 5, 2u);
-    ota_put_be32(good_c0 + 9, 1024u);
-    ota_put_be32(good_c0 + 13, 0xAABBCCDDu);
+    // 3. Valid 26-byte offer starts OTA; a truncated 16-byte block claiming len=80 must not write out-of-bounds.
+    uint8_t good_c0[26] = {APP_OURS, APP_OTA_OFFER};
+    ota_put_be32(good_c0 + 2, 0x12345678u);
+    ota_put_be32(good_c0 + 6, 2u);
+    ota_put_be32(good_c0 + 10, 1024u);
+    ota_put_be32(good_c0 + 14, 0xAABBCCDDu);
     send_enc_downlink(&s, good_c0, sizeof good_c0, 1200);
     CHECK(ota_offers_seen == 1 && s.ota.active && s.ota.offset == 0);
 
-    uint8_t bad_c2[16] = {APP_OTA_BLOCK, 0, 0, 0, 0, 96, 0xDE, 0xAD};
+    uint8_t bad_c2[16] = {APP_OURS, APP_OTA_BLOCK, 0, 0, 0, 0, OTA_BLOCK, 0xDE, 0xAD};
     send_enc_downlink(&s, bad_c2, sizeof bad_c2, 1300);
     CHECK(ota_writes_seen == 0 && s.ota.offset == 0);
 
-    // A C2 whose length fits inside the 16-byte decrypted payload (6 + 10 <= 16) succeeds cleanly.
-    uint8_t ok_c2[16] = {APP_OTA_BLOCK, 0, 0, 0, 0, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    // A block whose length fits inside the 16-byte decrypted payload (7 + 9 <= 16) succeeds cleanly.
+    uint8_t ok_c2[16] = {APP_OURS, APP_OTA_BLOCK, 0, 0, 0, 0, 9, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     send_enc_downlink(&s, ok_c2, sizeof ok_c2, 1400);
-    CHECK(ota_writes_seen == 1 && s.ota.offset == 10);
+    CHECK(ota_writes_seen == 1 && s.ota.offset == 9);
 }
 
 static void test_handshake_and_queue_edge_cases(void)

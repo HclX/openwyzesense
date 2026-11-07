@@ -261,22 +261,20 @@ static void next_step(sensor_t *s, uint32_t at)
 
 static void ota_request(sensor_t *s, uint32_t now)
 {
-    uint8_t pt[14];
-    pt[0] = APP_OTA_REQUEST;
-    memcpy(pt + 1, s->cfg.mac, 8);
-    pt[9] = s->ota.offer.slot;
-    ota_put_be32(pt + 10, s->ota.offset);
-    send_message(s, pt, sizeof pt, now);
+    uint8_t pt[15] = {APP_OURS, APP_OTA_REQUEST};
+    memcpy(pt + 2, s->cfg.mac, 8);
+    pt[10] = s->ota.offer.slot;
+    ota_put_be32(pt + 11, s->ota.offset);
+    send_report_msg(s, pt, sizeof pt, now);  // sealed with a session
 }
 
 static void ota_send_done(sensor_t *s, uint32_t now)
 {
-    uint8_t pt[14];
-    pt[0] = APP_OTA_DONE;
-    memcpy(pt + 1, s->cfg.mac, 8);
-    pt[9] = s->ota.status;
-    ota_put_be32(pt + 10, s->ota.offer.version);
-    send_message(s, pt, sizeof pt, now);
+    uint8_t pt[15] = {APP_OURS, APP_OTA_DONE};
+    memcpy(pt + 2, s->cfg.mac, 8);
+    pt[10] = s->ota.status;
+    ota_put_be32(pt + 11, s->ota.offer.version);
+    send_report_msg(s, pt, sizeof pt, now);
 }
 
 // The update ends (status in s->ota.status): tell the gateway (C3), then the app (ota_end, on C3's ACK or failure)
@@ -306,7 +304,8 @@ static void ota_no_block(sensor_t *s, uint32_t now)
     }
 }
 
-static bool ota_offered(sensor_t *s, const uint8_t *pt, size_t n, uint32_t now)
+// pt: the message after APP_OURS (its sub-ID first); sealed: it came in an SL_FRAME
+static bool ota_offered(sensor_t *s, const uint8_t *pt, size_t n, bool sealed, uint32_t now)
 {
     if (n < 1 + OTA_OFFER_LEN || !s->io.ota_offer || s->state != SENSOR_JOINED) {
         return false;
@@ -318,7 +317,8 @@ static bool ota_offered(sensor_t *s, const uint8_t *pt, size_t n, uint32_t now)
                             ota_be32(pt + 5),
                             {ota_be32(pt + 9), ota_be32(pt + 17)},
                             {ota_be32(pt + 13), ota_be32(pt + 21)},
-                            0};
+                            0,
+                            sealed};
     uint8_t st = s->io.ota_offer(s->io.ctx, &o);
     if (st == OTA_DONE_OK && (o.slot > 1 || !o.size[o.slot] || o.size[o.slot] > SLOT_SIZE - SLOT_IMAGE_OFFSET)) {
         st = OTA_DONE_REFUSED;
@@ -664,13 +664,22 @@ static bool sl_message(sensor_t *s, const uint8_t *pt, size_t n, uint32_t now)
             s->polls_left = 0;
             schedule(s, ACT_HELLO, now + REPORT_GAP_MS);
             return true;
-        case SL_FRAME:  // only a time sync comes sealed so far
+        case SL_FRAME:  // a time sync, or an update's offer and blocks
             if (!s->sl.session || !sl_open(s->sl.sess, SL_DOWN, pt, n, inner, &len, &ctr) || ctr <= s->sl.rx_ctr ||
-                !len || inner[0] != APP_TIME_SYNC) {
+                !len) {
                 return false;
             }
             s->sl.rx_ctr = ctr;
-            return on_message(s, inner, len, now);
+            if (inner[0] == APP_TIME_SYNC) {
+                return on_message(s, inner, len, now);
+            }
+            if (len >= 2 && inner[0] == APP_OURS && inner[1] == APP_OTA_OFFER) {
+                return ota_offered(s, inner + 1, len - 1, true, now);
+            }
+            if (len >= 2 && inner[0] == APP_OURS && inner[1] == APP_OTA_BLOCK) {
+                return ota_block(s, inner + 1, len - 1, now);
+            }
+            return false;
         default:
             return false;
     }
@@ -718,12 +727,14 @@ static bool on_message(sensor_t *s, const uint8_t *pt, size_t n, uint32_t now)
             s->polls_left = 0;
             next_step(s, now + REPORT_GAP_MS);
             return true;
-        case APP_OURS:
+        case APP_OURS:  // OTA unsealed (a gateway without the secured link: the button window decides), or ours
+            if (n >= 2 && pt[1] == APP_OTA_OFFER) {
+                return ota_offered(s, pt + 1, n - 1, false, now);
+            }
+            if (n >= 2 && pt[1] == APP_OTA_BLOCK && !s->sl.session) {
+                return ota_block(s, pt + 1, n - 1, now);
+            }
             return sl_message(s, pt, n, now);
-        case APP_OTA_OFFER:
-            return ota_offered(s, pt, n, now);
-        case APP_OTA_BLOCK:
-            return ota_block(s, pt, n, now);
         default:
             return false;
     }
