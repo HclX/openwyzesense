@@ -30,6 +30,13 @@ On 2026-11-03 (#67) this file took over what was open in `tasks.md` (the TASK-01
 Hardware checks of changes so far tested only headless (DESIGN.md §10.4 as of 2026-10-29). Tick with the date and
 the evidence.
 
+- **#81 relay wiring** (ESP32 and ESP32-S3, headless only so far): a contact's `+` on `OWS_CONTACT_POWER` (S3 GPIO7,
+  LOLIN32 GPIO27) starts and runs from it, including transmit bursts; a power-cycle reset leaves nothing back-powering
+  it (the chip stays off for the 300 ms); gwsync updates it through `M`/`C` (S3 15/16, LOLIN32 25/26) without `S` or
+  `W`; `auto` falls back to the bootloader with `M`/`C` unwired; bootloader entry on `R` for a stock-backdoor unit.
+  Then move the user guide's level 4 and its wiring SVGs (`tools/wiring_svg.py`) to the new wiring; until then the
+  guide keeps `+` on 3V3 with `S` and `W`. If the power cycle does not work: `+` on 3V3 and `S` (the user's fallback).
+
 - `TASK-01` relays: the fallback access point closes as soon as Wi-Fi is back (watch it from a phone); with a
   password set, every changing endpoint answers 401 without it, on ESP-IDF and ESP8266, and `GET /setup` shows no
   secrets.

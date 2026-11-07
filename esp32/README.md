@@ -33,11 +33,23 @@ Hardware bench test: `reference/tests/test_hw_esp32.py`, with the board wired as
 
 | Contact pad | ESP32-S3 (default GPIO; `tools/idf.sh menuconfig` -> OpenWyzeSense relay) |
 |---|---|
-| `+` / `-` | 3V3 / GND |
+| `+` | GPIO7 (`OWS_CONTACT_POWER`, #81: a reset is a power cycle); or 3V3, as before (`-1`) |
+| `-` | GND |
 | `RX` (DIO1) | GPIO17 (UART1 TX) |
 | `TX` (DIO0) | GPIO18 (UART1 RX) |
-| `S` (RESET_N) | GPIO4, open-drain (hardware reset; optional in 4-wire mode once OWS firmware is running, recommended for recovery) |
-| `W` (DIO10) | GPIO5, open-drain: low at a reset = the ROM bootloader (the contact's CCFG has backdoor `w`: `0xC5FE0AC5`, #14) |
+| `M` (TMSC) | GPIO15 (`OWS_CONTACT_TMS`, #81: updates through the debug port) |
+| `C` (TCKC) | GPIO16 (`OWS_CONTACT_TCK`) |
+| `S` (RESET_N) | GPIO4, open-drain; optional when `+` is on GPIO7 (`-1`) |
+| `W` (DIO10) | GPIO5, open-drain: low at a start = the ROM bootloader on units provisioned with backdoor `w` (`0xC5FE0AC5`, #14); optional otherwise |
+
+Since #81 the relay powers the contact from a GPIO and updates it through its 2-pin debug port (cJTAG on `M`/`C`),
+like the LaunchPad does: no bootloader backdoor needed. Setup page "Contact updates through" (`auto`, the default:
+the debug port, else the ROM bootloader; `cjtag`; `sbl`). Into the bootloader, `R` and `W` are both held low across
+the start, so stock units (backdoor on `R`/DIO1, `0xC5FE01C5`) and ours (`W`) both enter it. While the power is off,
+the relay drives no line high (`R` low, `T`'s pull-up off, `S`/`W` released), so nothing feeds the chip through its
+pins. A relay wired the old way (`+` on 3V3, `S`, `W`) keeps working: the power GPIO then does nothing and a debug
+port that does not answer falls back to the bootloader. Not yet tried on hardware: if the debug port or the power
+cycle does not work, wire `+` to 3V3 and `S` as before.
 
 Provision the contact board once over JTAG (`docs/design/v1-contact.md`), backing up its stock flash first:
 `tools/uniflash.py provision --gateway --backup backups/contact_<MAC>` (or step by step:
@@ -121,11 +133,14 @@ tools/idf.sh -B build-esp32 -D SDKCONFIG=build-esp32/sdkconfig -p /dev/ttyUSB0 f
 
 | Contact pad | LOLIN32 |
 |---|---|
-| `+` / `-` | 3V3 / GND |
+| `+` | GPIO27 (`OWS_CONTACT_POWER`); or 3V3 |
+| `-` | GND |
 | `R` (the contact's input) | GPIO17 (UART1 TX) |
 | `T` (the contact's output) | GPIO18 (UART1 RX) |
-| `S` (RESET_N) | GPIO4 |
-| `W` (DIO10) | GPIO23 |
+| `M` (TMSC) | GPIO25 |
+| `C` (TCKC) | GPIO26 |
+| `S` (RESET_N) | GPIO4 (optional with `+` on GPIO27) |
+| `W` (DIO10) | GPIO23 (optional) |
 
 Both relays pull their UART RX pin up: a contact that does not drive its T pad (a half-written image after an
 interrupted flash) leaves the line floating, and the noise came in as bytes (`00 ff 00 fe …`, hundreds a second), which
