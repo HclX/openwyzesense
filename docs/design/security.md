@@ -255,6 +255,10 @@ Built on the host board and tested end to end (`test_secure_link` in `firmware/t
 - `test_hw_ota.py[secured]`: the sealed update of 45 KB started by a check-in (an A1), no button, in 299 s (plain: 265 s);
   the new image in slot B reported and confirmed itself. `[plain]` (no key) still passes, and `test_hw_sensor.py` (all
   six types, no key) too.
+- A forged sensor (a one-off check): the secured LaunchPad reflashed with firmware without the secured link
+  (`main`, 620b5eb), its NV page kept, so the same MAC and join; its four stock-format events were each acknowledged
+  by the gateway's radio (frame level) and **none reached the host**. The gateway keeps "secured" in RAM, so this
+  holds until it restarts (the persisted flag is still to do, below).
 - On air (`ground_truth/rf/2026-11-07_1146_906.7M_250k_g0_secure_ota`, during that update): all 564 data frames between
   the two, 282 each way, are `4F 04` sealed frames once the stock layer is removed; none of the sensor's outside them.
 

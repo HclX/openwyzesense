@@ -78,6 +78,10 @@ with the SDR running.
 
 ## Small fixes (left from the code review)
 
+- `test_hw_inputs.py` fails on the LaunchPad on 2026-11-07, the same with `main`'s sensor (620b5eb) and the #28
+  prototype, so not a firmware change: after BTN-2's release from the debugger, "button short" does not come (or a
+  press is not seen at all). Suspects: the press/release timing over OpenOCD, or the 1 s read in the test.
+
 - `tools/host_link.py` `--pair` sends `VERIFY_SENSOR` with a hard-coded type `ff 04`.
 - `firmware/tests/test_gateway.c` `window()`: the frame-count check only catches more expected frames than sent.
 
