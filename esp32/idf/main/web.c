@@ -459,6 +459,115 @@ static esp_err_t contact_console_post(httpd_req_t *req)
     return httpd_resp_send(req, out, (ssize_t)got);
 }
 
+// Bring-up (the stock-dongle-firmware experiment): POST /debug/cjtag_page?page=N, body: 4096 bytes -> that page written
+// through the debug port (pages 0-30; page 31 never). POST /debug/capture?ms=M&at=A, body: bytes sent A ms after the
+// start -> the contact restarted and its UART for M ms (at most 10000), as hex.
+static esp_err_t debug_cjtag_page_post(httpd_req_t *req)
+{
+    if (!require_auth(req) || refused_relay_disabled(req) || refused_busy(req)) {
+        return ESP_OK;
+    }
+    static uint8_t page[4096];
+    char query[32] = "", v[8] = "", err[120] = "", mac[9] = "", out[200];
+    httpd_req_get_url_query_str(req, query, sizeof query);
+    int n = httpd_query_key_value(query, "page", v, sizeof v) == ESP_OK ? atoi(v) : -1;
+    if (n < 0 || n > 30 || req->content_len != (int)sizeof page) {
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "page=0..30 and a 4096-byte body");
+    }
+    for (int got = 0; got < (int)sizeof page;) {
+        int r = httpd_req_recv(req, (char *)page + got, sizeof page - got);
+        if (r <= 0) {
+            return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "short body");
+        }
+        got += r;
+    }
+    if (!contact_uart_take(2000)) {
+        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "the contact is busy");
+    }
+    int r = contact_cjtag_page((uint32_t)n, page, mac, err, sizeof err);
+    contact_uart_give();
+    snprintf(out, sizeof out, r > 0 ? "page %d written and verified (contact %s)\n" : "page %d failed: %s\n", n,
+             r > 0 ? mac : err);
+    return httpd_resp_sendstr(req, out);
+}
+
+static esp_err_t debug_capture_post(httpd_req_t *req)
+{
+    if (!require_auth(req) || refused_relay_disabled(req) || refused_busy(req)) {
+        return ESP_OK;
+    }
+    static uint8_t send[256], got[4096];
+    static char hex[2 * sizeof got + 64];
+    char query[48] = "", v[8] = "";
+    httpd_req_get_url_query_str(req, query, sizeof query);
+    uint32_t ms = httpd_query_key_value(query, "ms", v, sizeof v) == ESP_OK ? (uint32_t)atoi(v) : 2000;
+    uint32_t at = httpd_query_key_value(query, "at", v, sizeof v) == ESP_OK ? (uint32_t)atoi(v) : 0;
+    ms = ms > 10000 ? 10000 : ms;
+    int n = req->content_len > 0 && req->content_len <= (int)sizeof send
+                ? httpd_req_recv(req, (char *)send, req->content_len)
+                : 0;
+    size_t g = contact_capture(ms, send, n > 0 ? (size_t)n : 0, at, got, sizeof got);
+    size_t k = (size_t)snprintf(hex, sizeof hex, "%u bytes:", (unsigned)g);
+    for (size_t i = 0; i < g; i++) {
+        k += (size_t)snprintf(hex + k, sizeof hex - k, " %02x", got[i]);
+    }
+    hex[k++] = '\n';
+    return httpd_resp_send(req, hex, (ssize_t)k);
+}
+
+// Bring-up: POST /debug/sample?wait=W&n=N&gap=G&addr=0x..&len=L&restart=0|1 (see contact_sample)
+static esp_err_t debug_sample_post(httpd_req_t *req)
+{
+    if (!require_auth(req) || refused_relay_disabled(req) || refused_busy(req)) {
+        return ESP_OK;
+    }
+    static char out[3072];
+    char query[128] = "", v[16] = "";
+    httpd_req_get_url_query_str(req, query, sizeof query);
+#define QV(name, def) (httpd_query_key_value(query, name, v, sizeof v) == ESP_OK ? strtoul(v, NULL, 0) : (def))
+    uint32_t wait = QV("wait", 2000), gap = QV("gap", 50), addr = QV("addr", 0), len = QV("len", 0);
+    int n = (int)QV("n", 4);
+    bool rst = QV("restart", 1) != 0;
+#undef QV
+    size_t k = contact_sample(wait > 20000 ? 20000 : wait, n > 20 ? 20 : n, gap, addr, len, rst, out, sizeof out);
+    return httpd_resp_send(req, out, (ssize_t)k);
+}
+
+// Bring-up: GET /debug/page31 -> the contact's page 31 (4096 bytes, read twice). POST /debug/page31 (body: 0xFA8
+// bytes) -> its code area written, the CCFG kept (cjtag_write_page31_code); the page as it was comes back.
+static esp_err_t debug_page31_handler(httpd_req_t *req)
+{
+    if (!require_auth(req) || refused_relay_disabled(req) || refused_busy(req)) {
+        return ESP_OK;
+    }
+    static uint8_t code[0xFA8], page[4096];
+    char err[120] = "";
+    int op = req->method == HTTP_POST;
+    if (op) {
+        if (req->content_len != (int)sizeof code) {
+            return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "a 4008-byte body (0x1F000-0x1FFA7)");
+        }
+        for (int got = 0; got < (int)sizeof code;) {
+            int r = httpd_req_recv(req, (char *)code + got, sizeof code - got);
+            if (r <= 0) {
+                return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "short body");
+            }
+            got += r;
+        }
+    }
+    if (!contact_uart_take(2000)) {
+        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "the contact is busy");
+    }
+    int r = contact_page31(op, code, page, err, sizeof err);
+    contact_uart_give();
+    if (r < 0) {
+        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, err);
+    }
+    httpd_resp_set_type(req, "application/octet-stream");
+    httpd_resp_set_hdr(req, "X-Result", r > 0 ? (op ? "written" : "read") : "already");
+    return httpd_resp_send(req, (const char *)page, sizeof page);
+}
+
 static esp_err_t contact_reset_post(httpd_req_t *req)
 {
     if (!require_auth(req) || refused_relay_disabled(req)) {
@@ -776,7 +885,7 @@ void web_start(void)
     httpd_config_t cfg = HTTPD_DEFAULT_CONFIG();
     cfg.stack_size = 8192;
     cfg.recv_wait_timeout = 30;
-    cfg.max_uri_handlers = 24;
+    cfg.max_uri_handlers = 32;
     httpd_handle_t h;
     if (httpd_start(&h, &cfg) != ESP_OK) {
         ESP_LOGE(TAG, "the web server did not start");
@@ -796,6 +905,11 @@ void web_start(void)
         {.uri = "/api/rig", .method = HTTP_GET, .handler = rig_get},
         {.uri = "/rig", .method = HTTP_POST, .handler = rig_post},
         {.uri = "/contact/console", .method = HTTP_POST, .handler = contact_console_post},
+        {.uri = "/debug/cjtag_page", .method = HTTP_POST, .handler = debug_cjtag_page_post},
+        {.uri = "/debug/capture", .method = HTTP_POST, .handler = debug_capture_post},
+        {.uri = "/debug/sample", .method = HTTP_POST, .handler = debug_sample_post},
+        {.uri = "/debug/page31", .method = HTTP_GET, .handler = debug_page31_handler},
+        {.uri = "/debug/page31", .method = HTTP_POST, .handler = debug_page31_handler},
         {.uri = "/api/cjtag", .method = HTTP_GET, .handler = cjtag_get},
         {.uri = "/cjtag/arm", .method = HTTP_POST, .handler = cjtag_arm_post},
         {.uri = "/cjtag/stage", .method = HTTP_POST, .handler = cjtag_stage_post},

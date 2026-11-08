@@ -157,8 +157,10 @@ with the SDR running.
   Static analysis of `dongle_app` / `iCamera` first. Live probing only on a dongle we can lose, never 77A85A36.
 - **Get Key (0x4306)**: answered on a stock dongle (2019), not with our CC1310 firmware, so probably the CH554's or
   stock CC1310's. Confirm on a stock dongle; implement if anything needs it (Wyze's cloud auth; wyzesense2mqtt skips it).
-- **Stock dongle firmware on the LaunchPad** stops at start-up with RTOS error 4 (7x7 vs the dongle's 5x5 package
-  is a suspect). Not pursued.
+- **Stock dongle firmware on another CC1310**: it links code into page 31 (FACTS.md §5); on a v1 contact it runs once
+  the dongle's page-31 code is there too (2026-11-07). Left: the LaunchPad (same cause expected), and whether it works as
+  a gateway over the air there (a stock host behind the relay's UART would need the CH554's answers: Inquiry, Get MAC).
+  7779749A's page 31 now holds the dongle's code (ours does not use it; its own is in `backups/`).
 - **Bootloader entry after a CCFG repair, as behaviour** (not just bytes): the UART-break test on the LaunchPad was
   inconclusive (the chip did not come up after a JTAG-triggered system reset).
 

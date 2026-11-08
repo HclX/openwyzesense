@@ -50,3 +50,13 @@ size_t contact_gwsync_steps(char *out, size_t cap);
 // Runtime NV export / zero-ladder migration over the contact's UART (OWS_SUB_NETWORK + OWS_SUB_NV_IMPORT, TASK-14).
 bool contact_nv_export(char *json_out, size_t json_cap, char *msg, size_t msg_cap);
 bool contact_nv_import(const gwnv_doc_t *doc, char *msg, size_t msg_cap);
+
+// Bring-up: one page 0-30 through the debug port (page 31 never); 1 written, -1 failed (err). mac: the CCFG MAC.
+int contact_cjtag_page(uint32_t page, const uint8_t *data, char *mac, char *err, size_t cap);
+// Bring-up: a restart of the contact and its UART output from then for ms (send written at send_at_ms)
+size_t contact_capture(uint32_t ms, const uint8_t *send, size_t n, uint32_t send_at_ms, uint8_t *out, size_t cap);
+// Bring-up: register samples and a memory read through the debug port, the CPU left running (text)
+size_t contact_sample(uint32_t wait_ms, int n, uint32_t gap_ms, uint32_t addr, uint32_t len, bool restart_first,
+                      char *out, size_t cap);
+// Bring-up: page 31 read (op 0) or its code area written, the CCFG kept (op 1); see cjtag_write_page31_code
+int contact_page31(int op, const uint8_t *code, uint8_t *page, char *err, size_t cap);

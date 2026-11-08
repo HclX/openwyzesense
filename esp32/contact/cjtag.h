@@ -99,6 +99,16 @@ int cjtag_set_backdoor(cjtag_t *c, uint8_t pin, uint8_t *buf_4k);
 // MAC needs no 0 -> 1 bit); page 31 read twice before and verified whole after. Returns 1 written, 0 already so, -1
 // refused (slot not blank, MAC not the page-29 one) or failed (c->error).
 int cjtag_fill_ccfg_mac(cjtag_t *c, const char *mac, uint8_t *buf_4k);
+// Bring-up: halts the CPU, reads r0-r3, r12, sp, lr, pc, xpsr, msp, psp into regs, and lets it run on
+#define CJTAG_SAMPLE_REGS 11
+bool cjtag_sample(cjtag_t *c, uint32_t regs[CJTAG_SAMPLE_REGS]);
+// Bring-up: lets go of a running CPU without a reset (debug off, the debug port powered down, the adapter offline)
+void cjtag_release_running(cjtag_t *c);
+// Bring-up (the stock dongle firmware on a contact board, approved by the user 2026-11-07): page 31's code area
+// (0x1F000-0x1FFA7: code is linked there by the stock products) replaced by code (0xFA8 bytes), the unit's own CCFG
+// kept byte for byte. Requires the CCFG's MAC, debug port and bootloader on, image valid; page 31 read twice, verified
+// whole after, the original put back on a failure. orig_4k receives the page as it was. 1 written, 0 already, -1.
+int cjtag_write_page31_code(cjtag_t *c, const uint8_t *code, uint8_t *buf_4k, uint8_t *orig_4k);
 // Release the debug domain, trigger a Cortex-M3 VECTRESET so the chip boots cleanly without hanging in ROM
 // Halt-In-Boot (HIB), and return the cJTAG adapter to offline mode.
 void cjtag_release_and_reset(cjtag_t *c);

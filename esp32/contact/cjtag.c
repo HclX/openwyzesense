@@ -1136,3 +1136,67 @@ void cjtag_release_and_reset(cjtag_t *c)
     (void)dp_write(c, DP_CTRL_STAT, 0x00000000u);
     cjtag_reset_escape(c);
 }
+
+bool cjtag_sample(cjtag_t *c, uint32_t regs[CJTAG_SAMPLE_REGS])
+{
+    static const uint8_t which[CJTAG_SAMPLE_REGS] = {0,  1,  2,  3,  12, 13,
+                                                     14, 15, 16, 17, 18};  // r0-3 r12 sp lr pc xpsr msp psp
+    if (!cpu_halt(c)) {
+        return false;
+    }
+    for (int i = 0; i < CJTAG_SAMPLE_REGS; i++) {
+        if (!cpu_read_reg(c, which[i], &regs[i])) {
+            return false;
+        }
+    }
+    return cjtag_mem_write32(c, CM3_DHCSR, DHCSR_RUN);
+}
+
+void cjtag_release_running(cjtag_t *c)
+{
+    (void)cjtag_mem_write32(c, CM3_DEMCR, 0x00000000u);
+    (void)cjtag_mem_write32(c, CM3_DHCSR, 0xA05F0000u);  // C_DEBUGEN off: the CPU runs on, undebugged
+    (void)dp_write(c, DP_CTRL_STAT, 0x00000000u);
+    cjtag_reset_escape(c);
+}
+
+int cjtag_write_page31_code(cjtag_t *c, const uint8_t *code, uint8_t *buf_4k, uint8_t *orig_4k)
+{
+    const uint32_t ccfg_off = CJTAG_CCFG_ADDR - CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE;
+    if (!c->has_ccfg_mac) {
+        fail(c, "no factory MAC in its CCFG: not touching page 31");
+        return -1;
+    }
+    if (!cjtag_dump_page(c, CJTAG_CCFG_PAGE_IDX, orig_4k)) {
+        return -1;
+    }
+    if (~crc32_update(0xFFFFFFFFu, orig_4k, CJTAG_PAGE) != c->page31_crc) {
+        fail(c, "page 31 changed since the connect: not writing");
+        return -1;
+    }
+    const uint8_t *ccfg = orig_4k + ccfg_off;
+    if (le32(ccfg + CJTAG_CCFG_TAP_DAP_0) != 0xFFC500C5u || le32(ccfg + CJTAG_CCFG_IMAGE_VALID) != 0 ||
+        (le32(ccfg + CJTAG_CCFG_BL_CONFIG) & 0xFF0000FFu) != 0xC50000C5u) {
+        fail(c, "unexpected CCFG (debug port, image valid, bootloader on): not writing");
+        return -1;
+    }
+    memcpy(buf_4k, code, ccfg_off);
+    memcpy(buf_4k + ccfg_off, ccfg, CJTAG_PAGE - ccfg_off);  // the unit's own CCFG, byte for byte
+    if (!memcmp(buf_4k, orig_4k, CJTAG_PAGE)) {
+        return 0;
+    }
+    if (!flash_raw(c, CJTAG_CCFG_PAGE_IDX, buf_4k)) {
+        char why[sizeof c->error];
+        snprintf(why, sizeof why, "%s", c->error);
+        for (int i = 0; i < 3; i++) {
+            if (flash_raw(c, CJTAG_CCFG_PAGE_IDX, orig_4k)) {
+                snprintf(c->error, sizeof c->error, "page 31 restored; the code write failed: %.40s", why);
+                return -1;
+            }
+        }
+        snprintf(c->error, sizeof c->error, "page 31 write failed and NOT restored: restore the backup");
+        return -1;
+    }
+    c->page31_crc = ~crc32_update(0xFFFFFFFFu, buf_4k, CJTAG_PAGE);
+    return 1;
+}

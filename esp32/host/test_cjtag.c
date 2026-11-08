@@ -746,7 +746,35 @@ int main(void)
     CHECK(cjtag_fill_ccfg_mac(&cj, "77A9B886", page_buf) == -1 && sim.erases == erases0);
     CHECK(memcmp(sim.flash + (size_t)CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, orig_page31, CJTAG_PAGE) == 0);
 
-    // 10. Clean release and VECTRESET (0x05FA0001)
+    // 10. Page 31's code area replaced, the unit's CCFG kept byte for byte; a failed write put back; refusals
+    {
+        static uint8_t code[0xFA8], orig[CJTAG_PAGE], before[CJTAG_PAGE];
+        uint8_t *p31 = sim.flash + (size_t)CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE;
+        sim_init(&sim, "77A1B2C3");
+        uint8_t *cc = sim.flash + CJTAG_CCFG_ADDR;
+        put_le32(cc + CJTAG_CCFG_TAP_DAP_0, 0xFFC500C5u);
+        put_le32(cc + CJTAG_CCFG_IMAGE_VALID, 0);
+        memset(p31, 0x6B, sizeof code);   // the contact's own code there
+        memset(code, 0x4D, sizeof code);  // the dongle's
+        memcpy(before, p31, CJTAG_PAGE);
+        cjtag_init(&cj, &io);
+        CHECK(cjtag_connect(&cj, true));
+        sim.fail_programs = 1;
+        CHECK(cjtag_write_page31_code(&cj, code, page_buf, orig) == -1 && strstr(cj.error, "restored"));
+        CHECK(memcmp(p31, before, CJTAG_PAGE) == 0);
+        CHECK(cjtag_write_page31_code(&cj, code, page_buf, orig) == 1 && memcmp(orig, before, CJTAG_PAGE) == 0);
+        CHECK(memcmp(p31, code, sizeof code) == 0 && memcmp(p31 + sizeof code, before + sizeof code, 88) == 0);
+        CHECK(cjtag_write_page31_code(&cj, code, page_buf, orig) == 0);  // already so
+        CHECK(cjtag_flash_page(&cj, 2, new_page, false));                // the new CRC is the one checked now
+        put_le32(cc + CJTAG_CCFG_BL_CONFIG, 0x00FE0100u);                // bootloader off: refused, untouched
+        cjtag_init(&cj, &io);
+        CHECK(cjtag_connect(&cj, true));
+        memcpy(before, p31, CJTAG_PAGE);
+        memset(code, 0x4E, sizeof code);
+        CHECK(cjtag_write_page31_code(&cj, code, page_buf, orig) == -1 && memcmp(p31, before, CJTAG_PAGE) == 0);
+    }
+
+    // 11. Clean release and VECTRESET (0x05FA0001)
     cjtag_release_and_reset(&cj);
     CHECK(sim.aircr == 0x05FA0001u);
     CHECK(!sim.in_oscan1);

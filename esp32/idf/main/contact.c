@@ -476,6 +476,185 @@ out:
     return written;
 }
 
+// Bring-up: one page (0-30; page 31 never: cjtag_flash_page refuses it) through the debug port, the CCFG's factory MAC
+// checked first and the page verified; the contact is left halted-and-released (VECTRESET), not restarted.
+int contact_cjtag_page(uint32_t page, const uint8_t *data, char *mac, char *err, size_t cap)
+{
+    static cjtag_t cj;
+    const int tck = OWS_PIN_CONTACT_TCK, tms = OWS_PIN_CONTACT_TMS;
+    if (tck < 0 || tms < 0) {
+        snprintf(err, cap, "no debug port wired (M, C)");
+        return -1;
+    }
+    cj_pins_t pins = {tck, tms};
+    gpio_reset_pin(tck);
+    gpio_set_direction(tck, GPIO_MODE_OUTPUT);
+    gpio_set_level(tck, 1);
+    gpio_reset_pin(tms);
+    gpio_set_pull_mode(tms, GPIO_PULLUP_ONLY);
+    gpio_set_direction(tms, GPIO_MODE_INPUT_OUTPUT);
+    gpio_set_level(tms, 1);
+    cjtag_io_t io = {cj_set_pins, cj_set_tms_dir, cj_get_tms, cj_delay, &pins};
+    bool connected = false;
+    for (int i = 0; i < 3 && !connected; i++) {
+        cjtag_init(&cj, &io);
+        connected = cjtag_connect(&cj, true);
+        if (!connected) {
+            vTaskDelay(pdMS_TO_TICKS(50));
+        }
+    }
+    int r = -1;
+    if (connected) {
+        memcpy(mac, cj.mac, 9);
+        r = cjtag_flash_page(&cj, page, data, true) ? 1 : -1;
+        if (r < 0) {
+            snprintf(err, cap, "%s", cj.error);
+        }
+        cjtag_release_and_reset(&cj);
+    } else {
+        snprintf(err, cap, "%s", cj.error);
+    }
+    line_free(tck);
+    line_free(tms);
+    return r;
+}
+
+// Bring-up: page 31 read (op 0, into page) or its code area written from code (op 1; the CCFG kept, cjtag.c), page
+// receiving the page as it was. 1/0/-1 as cjtag_write_page31_code (a read: 1).
+int contact_page31(int op, const uint8_t *code, uint8_t *page, char *err, size_t cap)
+{
+    static cjtag_t cj;
+    static uint8_t buf[CJTAG_PAGE];
+    const int tck = OWS_PIN_CONTACT_TCK, tms = OWS_PIN_CONTACT_TMS;
+    cj_pins_t pins = {tck, tms};
+    gpio_reset_pin(tck);
+    gpio_set_direction(tck, GPIO_MODE_OUTPUT);
+    gpio_set_level(tck, 1);
+    gpio_reset_pin(tms);
+    gpio_set_pull_mode(tms, GPIO_PULLUP_ONLY);
+    gpio_set_direction(tms, GPIO_MODE_INPUT_OUTPUT);
+    gpio_set_level(tms, 1);
+    cjtag_io_t io = {cj_set_pins, cj_set_tms_dir, cj_get_tms, cj_delay, &pins};
+    bool connected = false;
+    for (int i = 0; i < 8 && !connected; i++) {
+        cjtag_init(&cj, &io);
+        connected = cjtag_connect(&cj, true);
+        if (!connected) {
+            vTaskDelay(pdMS_TO_TICKS(50));
+        }
+    }
+    int r = -1;
+    if (!connected) {
+        snprintf(err, cap, "%s", cj.error);
+    } else {
+        r = op == 0 ? (cjtag_dump_page(&cj, CJTAG_CCFG_PAGE_IDX, page) ? 1 : -1)
+                    : cjtag_write_page31_code(&cj, code, buf, page);
+        if (r < 0) {
+            snprintf(err, cap, "%s", cj.error);
+        }
+        cjtag_release_and_reset(&cj);
+    }
+    line_free(tck);
+    line_free(tms);
+    return r;
+}
+
+// Bring-up: a restart, then after wait_ms the debug port attached without a halt; n samples of the CPU's registers
+// gap_ms apart, then len bytes of memory at addr; the CPU left running. Text into out.
+size_t contact_sample(uint32_t wait_ms, int n, uint32_t gap_ms, uint32_t addr, uint32_t len, bool restart_first,
+                      char *out, size_t cap)
+{
+    static cjtag_t cj;
+    static uint8_t mem[512];
+    size_t k = 0;
+    const int tck = OWS_PIN_CONTACT_TCK, tms = OWS_PIN_CONTACT_TMS;
+    if (!contact_uart_take(2000)) {
+        return (size_t)snprintf(out, cap, "busy\n");
+    }
+    if (restart_first) {
+        restart(false);
+    }
+    vTaskDelay(pdMS_TO_TICKS(wait_ms));
+    cj_pins_t pins = {tck, tms};
+    gpio_reset_pin(tck);
+    gpio_set_direction(tck, GPIO_MODE_OUTPUT);
+    gpio_set_level(tck, 1);
+    gpio_reset_pin(tms);
+    gpio_set_pull_mode(tms, GPIO_PULLUP_ONLY);
+    gpio_set_direction(tms, GPIO_MODE_INPUT_OUTPUT);
+    gpio_set_level(tms, 1);
+    cjtag_io_t io = {cj_set_pins, cj_set_tms_dir, cj_get_tms, cj_delay, &pins};
+    bool connected = false;
+    for (int i = 0; i < 5 && !connected; i++) {
+        cjtag_init(&cj, &io);
+        connected = cjtag_connect(&cj, false);
+        if (!connected) {
+            vTaskDelay(pdMS_TO_TICKS(20));
+        }
+    }
+    if (!connected) {
+        k += (size_t)snprintf(out + k, cap - k, "no connect: %s\n", cj.error);
+    } else {
+        for (int i = 0; i < n && k < cap - 200; i++) {
+            uint32_t r[CJTAG_SAMPLE_REGS];
+            if (cjtag_sample(&cj, r)) {
+                k +=
+                    (size_t)snprintf(out + k, cap - k,
+                                     "pc=%08lx lr=%08lx sp=%08lx xpsr=%08lx r0=%08lx r1=%08lx r2=%08lx r3=%08lx "
+                                     "r12=%08lx msp=%08lx psp=%08lx\n",
+                                     (unsigned long)r[7], (unsigned long)r[6], (unsigned long)r[5], (unsigned long)r[8],
+                                     (unsigned long)r[0], (unsigned long)r[1], (unsigned long)r[2], (unsigned long)r[3],
+                                     (unsigned long)r[4], (unsigned long)r[9], (unsigned long)r[10]);
+            } else {
+                k += (size_t)snprintf(out + k, cap - k, "sample failed: %s\n", cj.error);
+            }
+            vTaskDelay(pdMS_TO_TICKS(gap_ms));
+        }
+        len = len > sizeof mem ? sizeof mem : len & ~3u;
+        if (len && cjtag_mem_read_block(&cj, addr & ~3u, mem, len)) {
+            for (uint32_t i = 0; i < len && k < cap - 64; i += 16) {
+                k += (size_t)snprintf(out + k, cap - k, "%08lx:", (unsigned long)((addr & ~3u) + i));
+                for (uint32_t j = 0; j < 16 && i + j < len; j += 4) {
+                    uint32_t w = (uint32_t)mem[i + j] | (uint32_t)mem[i + j + 1] << 8 | (uint32_t)mem[i + j + 2] << 16 |
+                                 (uint32_t)mem[i + j + 3] << 24;
+                    k += (size_t)snprintf(out + k, cap - k, " %08lx", (unsigned long)w);
+                }
+                k += (size_t)snprintf(out + k, cap - k, "\n");
+            }
+        } else if (len) {
+            k += (size_t)snprintf(out + k, cap - k, "memory read failed: %s\n", cj.error);
+        }
+        cjtag_release_running(&cj);
+    }
+    line_free(tck);
+    line_free(tms);
+    contact_uart_give();
+    return k;
+}
+
+// Bring-up: a power cycle (or an S reset), then the contact's UART from its start for ms, send (n bytes) written at
+// send_at_ms; returns the bytes received (into out). The UART is taken from the relay meanwhile.
+size_t contact_capture(uint32_t ms, const uint8_t *send, size_t n, uint32_t send_at_ms, uint8_t *out, size_t cap)
+{
+    if (!contact_uart_take(2000)) {
+        return 0;
+    }
+    contact_uart_flush_input();
+    restart(false);
+    size_t got = 0;
+    bool sent = n == 0;
+    int64_t t0 = esp_timer_get_time(), end = t0 + (int64_t)ms * 1000;
+    while (got < cap && esp_timer_get_time() < end) {
+        if (!sent && esp_timer_get_time() - t0 >= (int64_t)send_at_ms * 1000) {
+            contact_uart_write(send, n);
+            sent = true;
+        }
+        got += contact_uart_read(out + got, cap - got, 10);
+    }
+    contact_uart_give();
+    return got;
+}
+
 // The debug-port work runs in its own task, with room to spare, only for as long as it takes (#81: the first bench
 // run, when cjtag.c still kept 4 KB page buffers on the stack, overflowed the relay task's 6 KB stack into the Wi-Fi
 // driver's memory; it now reads in 256-byte chunks, but the task costs nothing to keep).
