@@ -96,7 +96,7 @@ def test_cli_requires_backup_or_explicit_override(tmp_path, monkeypatch):
     # Matching backup succeeds, and still succeeds after enable-bootloader changes BL_CONFIG
     good_bak = tmp_path / 'good_bak'
     uniflash.main(['backup', str(good_bak)])
-    uniflash.main(['enable-bootloader', 'w', '--yes'])
+    uniflash.main(['enable-bootloader', 'r', '--yes'])
     uniflash.main(['slots', str(boot), str(slot_a), '--backup', str(good_bak)])
     assert bytes(chip.flash[:0x10000]) == uniflash.slots_image(boot, slot_a)
     assert chip.flash[0x1FFCC:0x1FFD4] == b'777B42DF'
@@ -110,10 +110,10 @@ def test_provision_sensor_and_gateway_preserve_original_backup(tmp_path, monkeyp
 
     backups = tmp_path / 'backups'
     info = uniflash.provision('sensor', backup_root=backups, build_dir=bdir)
-    assert info['mac'] == '777B42DF' and info['backed_up_now'] is True and info['bootloader'] == 'w'
+    assert info['mac'] == '777B42DF' and info['backed_up_now'] is True and info['bootloader'] == 'r'
     saved = (backups / '777B42DF' / 'flash.bin').read_bytes()
     assert saved == orig_flash  # full 128 KB stock image backed up before flashing
-    assert int.from_bytes(chip.flash[0x1FFA8 + 0x30 : 0x1FFA8 + 0x34], 'little') == 0xC5FE0AC5  # DIO10 W pad enabled
+    assert int.from_bytes(chip.flash[0x1FFA8 + 0x30 : 0x1FFA8 + 0x34], 'little') == 0xC5FE01C5  # DIO1 R pad enabled
     assert chip.flash[0x1FFCC:0x1FFD4] == b'777B42DF'
 
     # Re-provisioning the same unit as a gateway verifies and preserves the original stock backup without clobbering it

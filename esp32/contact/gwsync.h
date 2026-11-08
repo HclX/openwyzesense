@@ -3,7 +3,7 @@
 // difference it reflashes the contact (sbl.c: pages 0-29 only, the NV page with the sensors and the CCFG with the MAC
 // kept). When the gateway does not answer (older firmware, stock, a hung board), the bootloader's CRC32 of the image's
 // range decides, so an image already there is not written again. Once per call; the caller calls it once per boot.
-// Portable C: the platform gives the UART, the S and W pads and the carried image's bytes, and optionally the
+// Portable C: the platform gives the UART, the S pad and the carried image's bytes, and optionally the
 // contact's debug port (cJTAG on its M and C pads, #81): then the reflash can go that way instead (transport).
 #pragma once
 
@@ -19,8 +19,8 @@ typedef struct {
     // up to cap bytes: waits up to timeout_ms for the first, then returns what has come; 0 on timeout
     size_t (*read)(void *ctx, uint8_t *buf, size_t cap, uint32_t timeout_ms);
     void (*flush_input)(void *ctx);
-    void (*reset)(void *ctx);             // S pulsed: the contact starts its firmware
-    void (*enter_bootloader)(void *ctx);  // W held low through a reset: its ROM bootloader
+    void (*reset)(void *ctx);             // S pulsed (or power-cycled): the contact starts its firmware
+    void (*enter_bootloader)(void *ctx);  // R held low through a reset: its ROM bootloader
     void (*sleep_ms)(void *ctx, uint32_t ms);
     // len bytes of the carried image from off (it may live in flash the CPU cannot read directly)
     bool (*image)(void *ctx, uint32_t off, uint8_t *buf, size_t len);

@@ -15,9 +15,9 @@ The pads are on the battery side of the board (battery out). Labels are printed 
 | `M` | purple | JTAG TMSC | flashing with the LaunchPad (levels 2-4) |
 | `C` | red | JTAG TCKC | flashing with the LaunchPad |
 | `S` | green | reset (RESET_N) | flashing with the LaunchPad; the ESP's reset line |
-| `R` | grey-blue | the chip's serial input (DIO1) | console (level 3); the ESP's TX (level 4) |
+| `R` | grey-blue | the chip's serial input and bootloader backdoor (DIO1) | console (level 3); the ESP's TX and bootloader entry (level 4) |
 | `T` | yellow-green | the chip's serial output (DIO0) | console; the ESP's RX |
-| `W` | blue | DIO10: the serial bootloader when low at a reset | the ESP's bootloader line (level 4) |
+| `W` | blue | DIO10 (factory test input, pulled up) | |
 
 A second green pad (bottom left) and a second dark-red pad (top right) carry the same signals as `S` and `V−`;
 use whichever is easier to reach.

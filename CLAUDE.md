@@ -53,9 +53,9 @@ decisions so far.
   The same apps also build as host programs (`ows-host-gateway` / `-sensor` / `-sniffer`, `boards/host/host_main.c`):
   real time, the air over local UDP, the gateway's console on a pty. `test_host_e2e.py` runs wyzesense2mqtt-rs
   (`OWS_W2M=<binary>`) + mosquitto + `tools/ws_bridge.py` against them: no hardware, no radio, safe to run anytime. Boards we have no firmware dump for are README placeholders
-  without build rules (user's decision). On `wyze_dongle` and `wyze_motion_v1` the built-in CCFG equals the stock one
-  (`0xC5FE01C5`, `test_wyze_board_ccfg_is_the_stock_one`), whereas `wyze_contact_v1` enables the ROM bootloader on the
-  `W` pad `DIO10` (`0xC5FE0AC5`) so `gateway-contact-v1` and provisioned contact boards keep UART/ESP SBL access. Boards
+  without build rules (user's decision). On `wyze_dongle`, `wyze_motion_v1` and `wyze_contact_v1` the built-in CCFG
+  matches the stock one with the ROM bootloader enabled on `DIO1` active low (`0xC5FE01C5`,
+  `test_wyze_board_ccfg_is_the_stock_one`; stock `contact_v1` cleared the two `0xC5` enable bytes to `0x00FE0100`). Boards
   that keep each unit's MAC in the CCFG (`BOARD_MAC_IN_CCFG`) build without one and are flashed with `<product>-app.bin`
   (or dual-slot `.img`) only, so the unit keeps its CCFG and MAC; `-DOWS_SENSOR_MAC=...` builds one in, for provisioning
   a unit that lost it.

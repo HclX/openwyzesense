@@ -119,7 +119,7 @@ files directly (`build/fw/firmware/`):
 | Tool | What | `ows-flash` equivalent |
 |---|---|---|
 | `tools/uniflash.py` | v1 units over the LaunchPad's 2-pin cJTAG: `provision --sensor` / `--gateway` (build files by default), `backup`, `flash`, `slots`, `enable-bootloader`, `reset`, `read`; `flash` and `slots` need `--backup DIR` matching the chip's CCFG MAC. The `flash-*` CMake targets pass `OWS_BACKUP_DIR`. Details: [v1-contact.md](design/v1-contact.md) | `ows-flash v1 ...` |
-| `tools/uart_sbl.py` | the CC1310's ROM serial bootloader over `R` / `T` with any 3.3 V USB-serial adapter, once `BL_CONFIG` is enabled on `W`; enters it in software if our firmware runs, otherwise hold `W` low across a reset | (the ESP relay's `/contact/flash`) |
+| `tools/uart_sbl.py` | the CC1310's ROM serial bootloader over `R` / `T` with any 3.3 V USB-serial adapter, once `BL_CONFIG` is enabled on `R`; enters it in software if our firmware runs, otherwise hold `R` low across a reset | (the ESP relay's `/contact/flash`) |
 | `tools/nv_json.py` | page 30 to JSON and back (`export` / `import`), including a sensor's DIY profile (`"cfg": {...}`, [nv-format.md](design/nv-format.md)) | `ows-flash nv export` / `nv import` |
 | `tools/host_link.py` | a host for the dongle protocol over serial or hidraw (auto-detects `0451:bef3` / `1a86:e024`): sensor OTA (`--ota`, `--ota-all`), `--nv-export` / `--nv-import` | `ows-flash ota` |
 | `tools/ws_bridge.py` | a serial gateway (LaunchPad, contact board on a USB-serial adapter) to wyzesense2mqtt-rs's WebSocket bridge (below) | (the ESP relay) |
@@ -134,7 +134,7 @@ uv run python tools/uniflash.py backup backups/contact_v1/manual-1
 uv run python tools/uniflash.py slots build/fw/firmware/boot-wyze_contact_v1.bin \
                                       build/fw/firmware/sensor-contact-v1-slot-a.img \
                                       --backup backups/contact_v1/manual-1
-uv run python tools/uniflash.py enable-bootloader w --yes
+uv run python tools/uniflash.py enable-bootloader r --yes
 uv run python tools/uart_sbl.py --port /dev/ttyUSB0 flash build/fw/firmware/boot-wyze_contact_v1.bin \
                                                     build/fw/firmware/sensor-contact-v1-slot-a.img --yes
 ```
@@ -164,11 +164,11 @@ All hardware verification across the project uses seven specific device classes 
 
 ### 4. Bench Wyze Sense v1 Contact Sensor (`MAC 777B42DF`, plus Zero-MAC Spares)
 - **Hardware**: `CC1310F128RHB` (5×5, 15 DIOs), reed switch on `DIO7`, tactile button on `DIO11`, red LED on `DIO9`. Exposes PCB test pads `+` (`VDDS`), `-` (`GND`), `T`/`TX` (`DIO0`), `R`/`RX` (`DIO1`), `S` (`RESET_N`), `W` (`DIO10`), `M` (`TMS`), and `C` (`TCK`) (`docs/design/v1-contact.md`).
-- **Backup & CCFG**: Full 128 KB stock dump archived prior to modification; CCFG `BL_CONFIG` (`0x1FFD8`) enabled once via `tools/uniflash.py enable-bootloader w` (`0xC5FE0AC5`, active-low `W` `DIO10` backdoor, preserving factory ASCII MAC `777B42DF` at `0x1FFCC`).
+- **Backup & CCFG**: Full 128 KB stock dump archived prior to modification; CCFG `BL_CONFIG` (`0x1FFD8`) enabled once via `tools/uniflash.py enable-bootloader r` (`0xC5FE01C5`, active-low `R` `DIO1` backdoor, preserving factory ASCII MAC `777B42DF` at `0x1FFCC`).
 - **Three Physical Sub-Setups**:
   1. **cJTAG Bench Sub-Setup (`Env 4B`)**: `CR2450` coin cell **removed**; wired to LaunchPad XDS110 Config B (`M←TMS`, `C←TCK`, `S←RST`, `R←TXD`, `T→RXD`, `+←3V3`, `-←GND`).
   2. **Standalone Coin-Cell / Bench-PSU Sensor Sub-Setup (`Env 5`)**: **All debug/UART wires detached** to prevent parasitic ESD-diode back-powering or `JTAG_PD` lockup; powered by `CR2450` (`3.0 V`) or programmable bench PSU (`2.35–3.10 V` via inline ammeter) running `boot-wyze_contact_v1` + `sensor-contact-v1-slot-{a,b}`.
-  3. **ESP-Attached Gateway Radio Sub-Setup (`Env 4C` / `Env 5`)**: `CR2450` **removed**; powered from ESP `3V3`/`GND` (`+`/`-`) and wired `T/R/S/W` (6-wire standard) or `T/R` only (4-wire software-SBL test), running `gateway-contact-v1-app.bin` on an isolated test PAN (`0x65FD` / `OWS_SUB_NETWORK`).
+  3. **ESP-Attached Gateway Radio Sub-Setup (`Env 4C` / `Env 5`)**: `CR2450` **removed**; powered from ESP (`+`/`-`) and wired `T/R/S` (5-wire, plus optional `M/C` debug port) or `T/R` only (4-wire software-SBL test), running `gateway-contact-v1-app.bin` on an isolated test PAN (`0x65FD` / `OWS_SUB_NETWORK`).
 
 ### 5. Unmodified Stock Reference Sensors (Sealed Factory Units, `Env 5`)
 - **Stock v2 Contact (`MAC 77BD514D`, type `0x0E`)**: AAA battery, physical door magnet + side pairing button.
@@ -180,8 +180,8 @@ All hardware verification across the project uses seven specific device classes 
 - **Gain Staging**: `-g 35` for room/house captures (`test_hw.py`), `-g 10` for same-bench stock sensor captures, and **`-g 0`** when capturing a LaunchPad or dongle transmitting within `< 50 cm` (`test_hw_tx.py`) to avoid front-end saturation.
 
 ### 7. Wi-Fi IP Relay Microcontrollers (`esp32/`, `Env 4C` & `Env 5`)
-- **ESP32-S3 DevKit** (`esp32/idf/`, `IDF_TARGET=esp32s3`): `3V3→+`, `GND→-`, `GPIO17→R`, `GPIO18←T` (internal pull-up), `GPIO4→S` (open-drain), `GPIO5→W` (open-drain).
-- **Classic ESP32 LOLIN32** (`esp32/idf/`, `IDF_TARGET=esp32`): Same as ESP32-S3 except **`GPIO23→W`** (open-drain; avoids `GPIO5` boot-strap/LED and `GPIO6–11` SPI flash pins).
-- **ESP8266 Wemos D1 mini / NodeMCU** (`esp32/esp8266/`, PlatformIO `d1_mini`): Split-UART wiring (`3V3→+`, `GND→-`, `D7`/`GPIO13` swapped `UART0_RX` `←T`, `D4`/`GPIO2` `UART1_TX` `→R`, `D8`/`GPIO15` **unconnected** to preserve SPI flash boot, `D2`/`GPIO4` `→S` open-drain, `D1`/`GPIO5` `→W` open-drain).
+- **ESP32-S3 DevKit** (`esp32/idf/`, `IDF_TARGET=esp32s3`): `GPIO7` (or `3V3`)`→+`, `GND→-`, `GPIO17→R`, `GPIO18←T` (internal pull-up), `GPIO15/16↔M/C`, `GPIO4→S` (open-drain).
+- **Classic ESP32 LOLIN32** (`esp32/idf/`, `IDF_TARGET=esp32`): `GPIO27` (or `3V3`)`→+`, `GND→-`, `GPIO17→R`, `GPIO18←T` (internal pull-up), `GPIO25/26↔M/C`, `GPIO4→S` (open-drain; avoids `GPIO5` boot-strap/LED and `GPIO6–11` SPI flash pins).
+- **ESP8266 Wemos D1 mini / NodeMCU** (`esp32/esp8266/`, PlatformIO `d1_mini`): Split-UART wiring (`3V3→+`, `GND→-`, `D7`/`GPIO13` swapped `UART0_RX` `←T`, `D4`/`GPIO2` `UART1_TX` `→R`, `D8`/`GPIO15` **unconnected** to preserve SPI flash boot, `D2`/`GPIO4` `→S` open-drain, optional `D5/D6` `↔M/C`).
 
 ---

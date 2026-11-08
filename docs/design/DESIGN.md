@@ -142,16 +142,16 @@ Reverse-engineering of the stock firmware dumps (`contact_v1`, `motion_v1`, `gat
 | **Pairing Button** | `DIO11` (active-low, ext pull-up) | `DIO13` (active-low) | — | `DIO14` (BTN-2) | Short press (`< 1 s`): check-in + OTA window; Long press (`>= 3.04 s`): pair (stock UX). |
 | **Primary LED** | `DIO9` (active-high, Red) | `DIO12` (active-high, Red) | `DIO10` (active-high) | `DIO6` (Red LED) | Blinks only on events on battery boards (`BOARD_LOW_POWER=1`). |
 | **Secondary LED** | — | — | `DIO13` (active-high) | `DIO7` (Green LED) | Dongle configures both `DIO10` and `DIO13` as LED outputs (`0x174c0`). |
-| **Factory `W` Pad / Bootloader Backdoor** | `DIO10` (`W` pad, ext pull-up) | `DIO2` (`W` pad, pull-up); `DIO1` (`UART_RX` SBL backdoor) | `DIO1` (CH554 controls SBL entry, `BL_CONFIG = 0xC5FE01C5`) | `DIO13` (BTN-1, `0xC5FE0DC5`) | Stock `contact_v1` disables ROM SBL (`BL_CONFIG = 0x00FE0100`); OWS `wyze_contact_v1` enables SBL on `W` (`0xC5FE0AC5`). Stock `motion_v1` already enables ROM SBL on `DIO1` (`0xC5FE01C5`), which OWS preserves. |
+| **Factory `W` Pad / Bootloader Backdoor** | `DIO10` (`W` pad, ext pull-up); `DIO1` (`UART_RX` SBL backdoor) | `DIO2` (`W` pad, pull-up); `DIO1` (`UART_RX` SBL backdoor) | `DIO1` (CH554 controls SBL entry, `BL_CONFIG = 0xC5FE01C5`) | `DIO13` (BTN-1, `0xC5FE0DC5`) | Stock `contact_v1` disables ROM SBL (`BL_CONFIG = 0x00FE0100`); OWS `wyze_contact_v1` enables SBL on `R` (`DIO1`, `0xC5FE01C5`), matching stock `motion_v1` and `wyze_dongle`. |
 | **JTAG / Reset** | `M` = `TMSC`, `C` = `TCKC`, `S` = `RESET_N` | `M` = `TMSC`, `C` = `TCKC`, `S` = `RESET_N` | Internal pads + CH554 reset line (`DIO1` + `RESET_N`) | On-board XDS110 (4-pin / 2-pin cJTAG + `RST`) | Wyze boards expose 2-pin cJTAG (`TMSC`/`TCKC`) only; requires TI UniFlash (`DSLite`) with `xds110_2pin.ccxml`. |
 
-### 3.2 Discovery of the `W` Test Pad (`DIO10` / `DIO2`) and Dual-Purpose Provisioning
+### 3.2 Discovery of the `W` Test Pad (`DIO10` / `DIO2`) and ROM Bootloader Provisioning
 In stock sensor firmware (`contact_v1` `BoardGpioInitTable` at `0x1532C`, `motion_v1` at `0x156B0`), the `W` test pad (`DIO10` on `contact_v1`, `DIO2` on `motion_v1`) is initialized as an input with pull-up (`0xC000200A` / `0x80002002`). At boot:
 - If `W` (`DIO10` / `DIO2`) is held low (`0`) at startup, stock firmware sets `factoryTestActive = 1` (`0x20000A74`), opens `UART0` (`DIO0`/`DIO1` at 115200 8N1), shortens unjoined polling to `400 ms`, and activates the `AA 55` Factory Test UART handler (`0x43`/`0x53` commands `0x04–0x0B`, `0x17`, `0x22`, `0x2A`, `0xD2`, `0xFF`). On the assembly line, command `0x08` writes the 8-byte ASCII MAC into CCFG `0x1FFCC` (`FlashProgram` on Page 31), and command `0x0A` writes the 25-byte `{xxtea_key[16], mac[8], valid=1}` record into NVOCTP item `(6, 8, 0)` on Page 30 (`0x1E000`).
-- Notably, stock `contact_v1` CCFG disables the ROM bootloader (`BL_CONFIG = 0x00FE0100`), whereas stock `motion_v1` CCFG (`motion_v1_777A9A46/dump.bin`) already enables the ROM bootloader with `DIO1` (`UART_RX`, active-low) as the backdoor pin (`0xC5FE01C5`).
-- In **OpenWyzeSense**, we preserve the factory MAC in CCFG (`0x1FFCC`), keep `wyze_motion_v1`'s stock `0xC5FE01C5` CCFG untouched, and set `BOOTLOADER_ENABLE = 0xC5` on `W` (`DIO10`) in `wyze_contact_v1` (`0x1FFD8` -> `0xC5FE0AC5`). This allows:
-  1. **Hands-free bench flashing** via any 3.3 V USB-UART adapter (`tools/uart_sbl.py`, `ows-sbl`) by holding `W` to `GND` across a reset (`S`).
-  2. **In-field CC1310 firmware updates by an attached ESP32/ESP8266** (`gateway-contact-v1` + relay) by toggling `W` and `S` over two open-drain GPIOs.
+- Notably, stock `contact_v1` CCFG disables the ROM bootloader (`BL_CONFIG = 0x00FE0100`, backdoor pin 1 = `DIO1`, active low, with the two `0xC5` enable bytes cleared), whereas stock `motion_v1` CCFG (`motion_v1_777A9A46/dump.bin`) already enables the ROM bootloader with `DIO1` (`UART_RX`, active-low) as the backdoor pin (`0xC5FE01C5`).
+- In **OpenWyzeSense**, we preserve the factory MAC in CCFG (`0x1FFCC`), keep `wyze_motion_v1`'s stock `0xC5FE01C5` CCFG untouched, and set `BOOTLOADER_ENABLE = 0xC5` on `R` (`DIO1`) in `wyze_contact_v1` (`0x1FFD8` -> `0xC5FE01C5`). This allows:
+  1. **Hands-free bench flashing** via any 3.3 V USB-UART adapter (`tools/uart_sbl.py`, `ows-sbl`) by holding `R` to `GND` across a reset (`S`).
+  2. **In-field CC1310 firmware updates by an attached ESP32/ESP8266** (`gateway-contact-v1` + relay) by holding `R` low across `S` (or a power cycle), without needing a wire to `W`.
 
 ### 3.3 Stock Firmware vs. OpenWyzeSense Architectural Comparison
 
@@ -163,7 +163,7 @@ In stock sensor firmware (`contact_v1` `BoardGpioInitTable` at `0x1532C`, `motio
 | **Flash Writes on Boot & Events** | Writes NV item `(6, 6, 0)` (boot count `+1`) and `(6, 4, 0)` (`seq + 25`) on **every boot before checking battery**, plus every 25 events and offline `0xAD` logs (item `3`); triggers Page 30 erase/compaction | **Zero flash writes** on boot or normal operation; message counter is RAM-only (`#38`); NV is written **only** when pairing (or saving an optional `0x21` DIY profile) |
 | **AES-128 Implementation** | Hardware `CryptoCC26XX` AES-128-ECB wrapper (`0x0C5F0` / `0x0924C`) with missing `else` on `len <= 16` (3 ops + 16 B OOB read) and broken `> 32 B` decrypt (`known-issues.md` §3) | Direct CC1310 hardware crypto engine (`CRYPTOAesEcb` in `soc/cc13x0/radio.c`) + verified portable C reference (`aes_ref.c`), clean 16-byte loop up to `112 B` |
 | **Button Hold UX** | Polled every `10 ms` while held (`Ssf_buttonClockCb`); blinks LED 3× at **`3.04 s`** (`300` ticks after `40 ms` debounce) while still held to start pairing; `< 3 s` checks in if joined | Mimics stock `3.04 s` while-held 3× blink to start pairing (`TASK-12`), **plus** a short press (`< 1 s`) blinks once, sends a `0xA1` check-in, and opens the 5-minute OTA window |
-| **Firmware Upgradability** | Sensor: None (`BL_CONFIG` disabled, no OTA). Gateway: USB HID `0x4312` enters CH554/ROM SBL | Sensor: Dual-slot A/B OTA (`0xC0–0xC3`) with CRC-32 + 3-boot probation rollback, plus ROM SBL on `W` pad. Gateway: SBL + `OWSB` auto-update |
+| **Firmware Upgradability** | Sensor: None (`BL_CONFIG` disabled, no OTA). Gateway: USB HID `0x4312` enters CH554/ROM SBL | Sensor: Dual-slot A/B OTA (`0xC0–0xC3`) with CRC-32 + 3-boot probation rollback, plus ROM SBL on `R` pad (`DIO1`). Gateway: SBL + `OWSB` auto-update |
 
 ### 3.4 Definitive Root Cause of the Stock v1 "Zero-MAC" Bug
 Disassembly of `contact_v1` and `motion_v1` ([`docs/stock-re/stock_sensor.c`](../stock-re/stock_sensor.c), [`docs/known-issues.md` §1](../known-issues.md)) proved how the infamous v1 bricking bug actually works:
@@ -545,12 +545,12 @@ To eliminate the range and placement limits of a single USB dongle, OpenWyzeSens
 
 | `wyze_contact_v1` Pad | CC1310 Signal | ESP32-S3 (`esp32/idf/`) | Classic ESP32 (LOLIN32, `IDF_TARGET=esp32`) | ESP8266 (`esp32/esp8266/`, D1 mini / NodeMCU) | Purpose |
 |---|---|---|---|---|---|
-| `+` | `VDDS` (`3.3 V`) | `3V3` | `3V3` | `3V3` | Mains-powered 3.3 V supply (radio RX is always on; never `5V`) |
+| `+` | `VDDS` (`3.3 V`) | `GPIO7` (or `3V3`) | `GPIO27` (or `3V3`) | `3V3` | Switched 3.3 V supply (or `3V3`; radio RX is always on; never `5V`) |
 | `-` | `GND` | `GND` | `GND` | `GND` | Common ground |
 | `T` | `DIO0` (`UART0_TX`) | `GPIO18` (`UART1_RX`, pull-up) | `GPIO18` (`UART1_RX`, pull-up) | `D7` / `GPIO13` (`UART0_RX` swapped) | `55 AA` packets & SBL replies from CC1310 to ESP (115200 8N1) |
-| `R` | `DIO1` (`UART0_RX`) | `GPIO17` (`UART1_TX`) | `GPIO17` (`UART1_TX`) | `D4` / `GPIO2` (`UART1_TX`) | `AA 55` packets & SBL commands from ESP to CC1310 (115200 8N1) |
+| `R` | `DIO1` (`UART0_RX` + SBL backdoor) | `GPIO17` (`UART1_TX`) | `GPIO17` (`UART1_TX`) | `D4` / `GPIO2` (`UART1_TX`) | `AA 55` packets & SBL commands from ESP to CC1310 (115200 8N1); held low across start for ROM SBL |
 | `S` | `RESET_N` (int pull-up) | `GPIO4` (open-drain) | `GPIO4` (open-drain) | `D2` / `GPIO4` (open-drain) | Pulled low (`20 ms`) to hardware-reset the CC1310 |
-| `W` | `DIO10` (ext pull-up) | `GPIO5` (open-drain) | `GPIO23` (open-drain; `GPIO5` is strap/LED, `GPIO6–11` SPI flash) | `D1` / `GPIO5` (open-drain) | Held low across `S` reset to enter CC1310 ROM Serial Bootloader |
+| `M` / `C` | `TMSC` / `TCKC` | `GPIO15` / `GPIO16` | `GPIO25` / `GPIO26` | `D5` (`GPIO14`) / `D6` (`GPIO12`) | 2-pin cJTAG debug port |
 
 #### Key Hardware & Electrical Design Rules Discovered on the Bench
 1. **ESP8266 `GPIO15` (`D8`) Boot-Strap Trap & Split-UART Solution (`esp32/esp8266/src/main.cpp`)**:
@@ -558,9 +558,9 @@ To eliminate the range and placement limits of a single USB dongle, OpenWyzeSens
    - **Solution**: The ESP8266 firmware swaps `UART0` so **hardware RX is on `D7` (`GPIO13`)** (receiving from contact `T`), leaves `D8` (`GPIO15`) unconnected, and transmits to contact `R` using **`UART1`'s dedicated hardware TX on `D4` (`GPIO2`, `Serial1`)**.
 2. **ESP UART RX Internal Pull-Up (`esp32/idf/main/contact.c`)**:
    - While the CC1310 is held in reset, in pre-sync ROM bootloader mode, or holds a half-written image, its `T` (`DIO0`) pad floats. Without an internal pull-up enabled on the ESP's UART RX pin (`gpio_pullup_en()`), floating line noise is sampled as continuous framing bytes (`00 ff 00 fe ...`), corrupting SBL sync and relay parsing.
-3. **Open-Drain `W` and `S` Control & Hardware Reset Exit**:
-   - Because the contact board pulls `W` (`DIO10`) and `S` (`RESET_N`) up to `3.3 V`, the ESP drives both pins open-drain (`GPIO_MODE_OUTPUT_OD` on ESP32; switching between `INPUT` and `OUTPUT LOW` on ESP8266) so it never fights the contact's pull-ups.
-   - After SBL operations complete, the relay always exits the bootloader via a hardware `S` pulse (`contact_reset()`) rather than the SBL `CMD_RESET (0x25)` command, which leaves the CC1310 in a halted state after debug/SBL sessions.
+3. **Open-Drain `S` Control, `R` Backdoor Entry & Hardware Reset Exit**:
+   - Because the contact board pulls `S` (`RESET_N`) up to `3.3 V`, the ESP drives `S` open-drain (`GPIO_MODE_OUTPUT_OD` on ESP32; switching between `INPUT` and `OUTPUT LOW` on ESP8266) so it never fights the contact's pull-up, and holds `R` (`DIO1`) low across the start to enter the ROM bootloader.
+   - After SBL operations complete, the relay always exits the bootloader via a hardware reset (`contact_reset()`) rather than the SBL `CMD_RESET (0x25)` command, which leaves the CC1310 in a halted state after debug/SBL sessions.
 4. **Non-Blocking Buffered UART Reads (`contact_uart_read()`)**:
    - Calling ESP-IDF's `uart_read_bytes(cap, timeout)` waits for the full `cap` bytes or the full timeout on every short SBL ACK (causing a single 4 KB page flash to take `49 s` on LOLIN32). Instead, `contact_uart_read()` waits up to `timeout_ms` for the *first* byte and then immediately drains whatever is queued in the hardware FIFO (`uart_get_buffered_data_len()`) with timeout `0`, flashing the entire gateway image in `~8.4 s`.
 
@@ -609,7 +609,7 @@ flowchart TD
      - **Replay, Duplicate-ACK Suppression & Post-Boot Timestamp Rebasing (`TASK-02`)**: Once the WebSocket connection has remained open for **`3000 ms`** (`BUFFER_REPLAY_AFTER = 3000`), `buffer_tick()` replays one queued alarm every **`200 ms`** (`BUFFER_REPLAY_EVERY = 200`). For each replayed alarm, `acks_to_keep` increments (with a `2 s` safety expiry if a server ACK is ever dropped), and `buffer_from_server()` swallows that many incoming `AA 55 53 19 FF` server ACKs. If the ESP + CC1310 cold-booted during a power/Wi-Fi outage (`gw->clock_ms < 2020-01-01`), `buffer.c` records the relative offset and rebases buffered `1970` alarm timestamps as soon as the server sends `0x5333` (`HOST_TIME_SYNC`) before replaying them.
 3. **Portable CC1310 ROM SBL Client (`esp32/contact/sbl.c`)**:
    - Implements the complete CC1310 ROM Serial Bootloader protocol (`CMD_AUTO_BAUD 0x5555`, `CMD_PING 0x20`, `CMD_DOWNLOAD 0x21`, `CMD_GET_STATUS 0x23`, `CMD_SEND_DATA 0x24`, `CMD_SECTOR_ERASE 0x26`, `CMD_CRC32 0x27`, `CMD_GET_CHIP_ID 0x28`, `CMD_MEMORY_READ 0x2A`) in portable C.
-   - **Safety Invariants**: Before erasing or writing a single page, `sbl_connect()` reads the CC1310's CCFG (`0x50003FD8` and `0x50003FCC`), verifies that the ROM bootloader and active-low backdoor remain enabled (`BL_CONFIG == 0xC5FE0AC5`), validates the 8-byte ASCII MAC at `0x1FFCC` (and optionally matches `expect_mac`), and enforces `addr + len <= 0x1E000` (Pages 0–29 only; Page 30 `OWNV` is only erased via explicit `sbl_write_nv()`, and Page 31 `CCFG` is unreachable).
+   - **Safety Invariants**: Before erasing or writing a single page, `sbl_connect()` reads the CC1310's CCFG (`0x50003FD8` and `0x50003FCC`), verifies that the ROM bootloader and active-low backdoor remain enabled (`BL_CONFIG == 0xC5FE01C5`), validates the 8-byte ASCII MAC at `0x1FFCC` (and optionally matches `expect_mac`), and enforces `addr + len <= 0x1E000` (Pages 0–29 only; Page 30 `OWNV` is only erased via explicit `sbl_write_nv()`, and Page 31 `CCFG` is unreachable).
    - **Unified Streaming Flash (`sbl_stream_begin/step/end()`, `TASK-08`)**: Both ESP8266 (`~40 KB` heap) and ESP32/ESP32-S3 stream each 4 KB page via `sbl_stream_*()` during `gwsync` and `/contact/flash` HTTP uploads without requiring a contiguous 120 KB heap allocation.
 4. **Startup Self-Updating Gateway Sync (`esp32/contact/gwsync.c`, `esp32/gateway_image.py`, `#76`)**:
    - At build time, `esp32/gateway_image.py` builds `gateway-contact-v1-app.bin` (padded to 4-byte words) and embeds it into both the ESP-IDF image (`target_add_binary_data`) and the ESP8266 image (`esp32/esp8266/embed.py` `PROGMEM`).
@@ -671,12 +671,12 @@ OpenWyzeSense preserves the exact **stock sensor button and LED behaviors** ([`d
    - Connects via LaunchPad XDS110 (`M` = `TMS`, `C` = `TCK`, `S` = `RST`, `+` = `3V3`, `-` = `GND`, with LaunchPad jumpers pulled) using TI UniFlash `DSLite` and `xds110_2pin.ccxml` (all steps automated in one command via `tools/uniflash.py provision --sensor|--gateway --backup <dir>`).
    - Step 1 (`backup`): Reads full 128 KB flash twice (must match byte-for-byte), CCFG, and FCFG1, verifying that a valid `77xxxxxx` ASCII MAC exists at `0x1FFCC`.
    - Step 2 (`slots` or `flash` for gateway, requiring `--backup <dir>`): Programs Page 0 (`boot-wyze_contact_v1.bin`) and Pages 1–14 (`sensor-contact-v1-slot-a.img`) for sensors—or Pages 0–29 (`gateway-contact-v1-app.bin`) for an IP gateway contact—leaving Page 31 untouched.
-   - Step 3 (`enable-bootloader w` on `wyze_contact_v1`): Modifies *only* the 4-byte `BL_CONFIG` field (`0x1FFD8`) in a verified copy of Page 31 to `0xC5FE0AC5` (`W` pad `DIO10` active-low backdoor on `wyze_contact_v1`; `wyze_motion_v1` preserves its stock `0xC5FE01C5` CCFG with `DIO1` active-low backdoor), verifies that every other byte of Page 31 (including the factory ASCII MAC at `0x1FFCC`) is identical, programs Page 31, and verifies read-back.
+   - Step 3 (`enable-bootloader r` on `wyze_contact_v1`): Modifies *only* the 4-byte `BL_CONFIG` field (`0x1FFD8`) in a verified copy of Page 31 to `0xC5FE01C5` (`R` pad `DIO1` active-low backdoor on `wyze_contact_v1`, matching `wyze_motion_v1`'s stock `0xC5FE01C5` CCFG), verifies that every other byte of Page 31 (including the factory ASCII MAC at `0x1FFCC`) is identical, programs Page 31, and verifies read-back.
    - Step 4 (`reset`): Executes a clean board reset (`DSLite -r 2`, `KeepDebugPoweredAtDisconnect=false`) so the CC1310 exits debug power domain lockup without unplugging USB.
 3. **Subsequent Updates (No JTAG Required)**:
    - **Sensor Over-The-Air**: `tools/host_link.py --ota <MAC> <slot-a.img> <slot-b.img>` + short button press on the sensor.
    - **Gateway Contact Attached to ESP32/ESP8266**: Automatically updated at ESP boot by `gwsync.c` whenever the embedded `gateway-contact-v1-app.bin` `OWSB` ID changes, or manually via `curl -F image=@gateway-contact-v1-app.bin http://<esp-ip>/contact/flash`.
-   - **Wired UART SBL (`tools/uart_sbl.py`, `ows-sbl`, `ows-gwsync`)**: Either via `OWS_SUB_ENTER_SBL` (pinless software jump into SBL) or by holding `W` to `GND` across an `S` reset.
+   - **Wired UART SBL (`tools/uart_sbl.py`, `ows-sbl`, `ows-gwsync`)**: Either via `OWS_SUB_ENTER_SBL` (pinless software jump into SBL) or by holding `R` to `GND` across an `S` reset.
 
 ---
 

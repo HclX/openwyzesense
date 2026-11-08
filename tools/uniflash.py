@@ -4,12 +4,12 @@ docs/design/v1-contact.md) through TI UniFlash's DSLite, which OpenOCD cannot re
 4-pin JTAG only).
 
     uv run python tools/uniflash.py provision --sensor [--board wyze_contact_v1|wyze_motion_v1] [--nv CHOICE]
-    uv run python tools/uniflash.py provision --gateway [--nv CHOICE]   # backup -> gateway-contact-v1-app.bin -> SBL w
+    uv run python tools/uniflash.py provision --gateway [--nv CHOICE]   # backup -> gateway-contact-v1-app.bin -> SBL r
     uv run python tools/uniflash.py backup DIR          # flash (read twice, compared), CCFG, FCFG1: read-only
     uv run python tools/uniflash.py flash APP.bin --backup DIR [--nv CHOICE]       # pages 0-29 (+ page 30 if --nv)
     uv run python tools/uniflash.py slots BOOT.bin SLOT_A.img --backup DIR [--nv CHOICE]   # boot selector + slot A
     uv run python tools/uniflash.py reset               # a board reset (RESET_N), the debug power domain off
-    uv run python tools/uniflash.py enable-bootloader w|button --yes   # the one CCFG write we allow (issue #14)
+    uv run python tools/uniflash.py enable-bootloader [r] --yes         # the one CCFG write we allow (issue #14)
     uv run python tools/uniflash.py read ADDR WORDS OUT # memory, in 32-bit words
 
 Every operation ends with a **board reset with the debug power domain released** (DSLite -r 2,
@@ -17,7 +17,7 @@ KeepDebugPoweredAtDisconnect=false): left powered (the default), our firmware pr
 stopped answering until a real power-off; this reset brings it back from that too, without touching the board
 (2026-10-24). Page 30 (NV) is untouched by default (`--nv keep`), or updated with `--nv wipe|migrate|NV.json`;
 page 31 (CCFG, with the unit's MAC) is never written except `BL_CONFIG` in `enable-bootloader` / `provision`
-(`--bootloader w`, default on `wyze_contact_v1`, `keep` on `wyze_motion_v1`).
+(`--bootloader r`, default on `wyze_contact_v1`, `keep` on `wyze_motion_v1`).
 """
 
 import argparse
@@ -180,7 +180,7 @@ def slots(boot, slot_a, config=CONFIG, nv='keep', backup_dir=None):
 
 CCFG_ADDR, PAGE31 = 0x1FFA8, 0x1F000
 BL_CONFIG = 0x30  # offset in the CCFG
-BACKDOORS = {'w': 10, 'button': 11}  # the ROM bootloader's backdoor: the W pad or the button (both pulled up on board)
+BACKDOORS = {'r': 1}  # the ROM bootloader's backdoor: the R pad (DIO1, active low, as in the stock CCFG)
 MAX_BL_PIN = 14  # 5x5 package: DIO0-14 (TI errata SWRZ062F advisory 13)
 
 
@@ -278,7 +278,7 @@ def provision(
         raise ValueError(f'unknown provision mode {mode!r}')
     bdir_build = pathlib.Path(build_dir) if build_dir else ROOT / 'build' / 'fw' / 'firmware'
     if bootloader is None:
-        bootloader = 'keep' if board == 'wyze_motion_v1' else 'w'
+        bootloader = 'keep' if board == 'wyze_motion_v1' else 'r'
     if bootloader != 'keep' and bootloader not in BACKDOORS:
         raise ValueError(f'unknown bootloader backdoor {bootloader!r}')
     if mode == 'sensor':
@@ -363,7 +363,7 @@ def main(argv=None):
         '--bootloader',
         choices=[*BACKDOORS, 'keep'],
         default=None,
-        help='ROM bootloader backdoor (default: w on wyze_contact_v1, keep on wyze_motion_v1)',
+        help='ROM bootloader backdoor (default: r on wyze_contact_v1, keep on wyze_motion_v1)',
     )
     pr.add_argument('--nv', default='keep', help='page 30 (#61): keep (default), wipe, migrate, or an NV.json')
     pr.add_argument('--boot', type=pathlib.Path)
@@ -371,7 +371,7 @@ def main(argv=None):
     pr.add_argument('--app', type=pathlib.Path)
     sub.add_parser('reset')
     eb = sub.add_parser('enable-bootloader')
-    eb.add_argument('backdoor', choices=BACKDOORS, help='w: the W pad (DIO10); button: the button (DIO11)')
+    eb.add_argument('backdoor', nargs='?', default='r', choices=BACKDOORS, help='r: the R pad (DIO1, default)')
     eb.add_argument('--yes', action='store_true', help='really write the CCFG')
     r = sub.add_parser('read')
     r.add_argument('addr', type=lambda s: int(s, 0))

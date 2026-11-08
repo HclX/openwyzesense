@@ -110,7 +110,7 @@ void log_line(void *, const char *msg)
     snprintf(last_log, sizeof last_log, "%s", msg);
 }
 
-// --- the contact's S and W pads, open-drain; its R pad on UART1's TX ---
+// --- the contact's S pad, open-drain; its R pad on UART1's TX ---
 
 constexpr int CONTACT_R_GPIO = 2;  // D4
 
@@ -126,29 +126,25 @@ void pad(int gpio, bool low)
 
 void contact_reset()
 {
-    pad(OWS_CONTACT_BOOT, false);
     pad(OWS_CONTACT_RESET, true);
     delay(20);
     pad(OWS_CONTACT_RESET, false);
 }
 
-// R and W low through a reset: the ROM bootloader, whichever backdoor the unit's CCFG enables: R (DIO1, the stock
-// BL_CONFIG 0xC5FE01C5, as the dongle's CH554 and the ESP32 relay do it; then W need not be wired) or W (DIO10, what
-// our earlier provisioning set; docs/design/v1-contact.md). R is UART1's TX on GPIO2: taken from the UART meanwhile
-// and driven low (GPIO2 is a boot strap of the ESP8266's own start only), then given back, idling high.
+// R low through a reset: the ROM bootloader (R / DIO1, the stock BL_CONFIG 0xC5FE01C5, as the dongle's CH554 and the
+// ESP32 relay do it; docs/design/v1-contact.md). R is UART1's TX on GPIO2: taken from the UART meanwhile and driven
+// low (GPIO2 is a boot strap of the ESP8266's own start only), then given back, idling high.
 void contact_enter_bootloader()
 {
     Serial1.flush();
     digitalWrite(CONTACT_R_GPIO, LOW);
     pinMode(CONTACT_R_GPIO, OUTPUT);  // a plain GPIO now, out of UART1
-    pad(OWS_CONTACT_BOOT, true);
     delay(5);
     pad(OWS_CONTACT_RESET, true);
     delay(20);
     pad(OWS_CONTACT_RESET, false);
     delay(50);  // the ROM has looked at its backdoor pin by now
     digitalWrite(CONTACT_R_GPIO, HIGH);
-    pad(OWS_CONTACT_BOOT, false);
     Serial1.begin(115200);  // GPIO2 back to UART1's TX
 }
 
@@ -305,45 +301,38 @@ void contact_reset_post()
 }
 
 #ifdef OWS_DEBUG_UART
-// Bring-up: GET /debug/boot[?r=0]: only the reset into the contact's bootloader (r=0: R not held low, W only)
+// Bring-up: GET /debug/boot: only the reset into the contact's bootloader (R held low across S)
 void debug_boot()
 {
-    if (server.arg("r") == "0") {
-        pad(OWS_CONTACT_BOOT, true);
-        delay(5);
-        pad(OWS_CONTACT_RESET, true);
-        delay(20);
-        pad(OWS_CONTACT_RESET, false);
-        delay(50);
-        pad(OWS_CONTACT_BOOT, false);
-    } else {
-        contact_enter_bootloader();
-    }
+    contact_enter_bootloader();
     server.send(200, "text/plain", "reset into the bootloader\n");
 }
 
 // Bring-up: GET /debug/sdrive: into the bootloader with S driven high after the reset (not just released), and left so
 void debug_sdrive()
 {
-    pad(OWS_CONTACT_BOOT, true);
+    Serial1.flush();
+    digitalWrite(CONTACT_R_GPIO, LOW);
+    pinMode(CONTACT_R_GPIO, OUTPUT);
     delay(5);
     pad(OWS_CONTACT_RESET, true);
     delay(20);
     digitalWrite(OWS_CONTACT_RESET, HIGH);
     pinMode(OWS_CONTACT_RESET, OUTPUT);
     delay(50);
-    pad(OWS_CONTACT_BOOT, false);
+    digitalWrite(CONTACT_R_GPIO, HIGH);
+    Serial1.begin(115200);
     server.send(200, "text/plain", "reset into the bootloader, S driven high\n");
 }
 
-// Bring-up: GET /debug/follow: drives D1, D2 and D4 low then high in turn and reports D7 (the line from T) each time
+// Bring-up: GET /debug/follow: drives D2 and D4 low then high in turn and reports D7 (the line from T) each time
 void debug_follow()
 {
     String out;
-    const int pins[] = {OWS_CONTACT_BOOT, OWS_CONTACT_RESET, 2};
-    const char *names[] = {"D1", "D2", "D4"};
+    const int pins[] = {OWS_CONTACT_RESET, 2};
+    const char *names[] = {"D2", "D4"};
     Serial1.flush();
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 2; i++) {
         int g = pins[i];
         digitalWrite(g, LOW);
         pinMode(g, OUTPUT);
@@ -357,7 +346,6 @@ void debug_follow()
     }
     Serial1.begin(115200);
     pad(OWS_CONTACT_RESET, false);
-    pad(OWS_CONTACT_BOOT, false);
     out += String("released: D7=") + digitalRead(13) + "\n";
     server.send(200, "text/plain", out);
 }
@@ -377,12 +365,12 @@ void debug_t()
     ESP.restart();
 }
 
-// Bring-up: GET /debug/pins: the levels on the contact's lines, released (S and W read as inputs; R is UART1's TX)
+// Bring-up: GET /debug/pins: the levels on the contact's lines, released (S read as input; R is UART1's TX)
 void debug_pins()
 {
     char out[96];
-    snprintf(out, sizeof out, "S(D2)=%d W(D1)=%d T(D7)=%d R(D4)=%d\n", digitalRead(OWS_CONTACT_RESET),
-             digitalRead(OWS_CONTACT_BOOT), digitalRead(13), digitalRead(2));
+    snprintf(out, sizeof out, "S(D2)=%d T(D7)=%d R(D4)=%d\n", digitalRead(OWS_CONTACT_RESET), digitalRead(13),
+             digitalRead(2));
     server.send(200, "text/plain", out);
 }
 
@@ -841,7 +829,7 @@ const char *backdoor_name(uint32_t bl)
 String js(const char *v);  // below
 
 // GET /contact/bootloader: the contact's BL_CONFIG through the debug port (read only; the contact restarts).
-// POST /contact/bootloader backdoor=r|w|button mac=<its MAC>: the one CCFG write allowed (cjtag_set_backdoor).
+// POST /contact/bootloader backdoor=r mac=<its MAC>: the one CCFG write allowed (cjtag_set_backdoor).
 void contact_bootloader()
 {
     bool write = server.method() == HTTP_POST;
@@ -853,10 +841,10 @@ void contact_bootloader()
         return;
     }
     String want = server.arg("backdoor");
-    // only pins this relay drives (docs/design/ccfg-rule.md: never a backdoor nothing can reach): R (D4), W (D1)
-    int pin = want == "r" ? 1 : want == "w" ? 10 : -1;
+    // only the pin this relay drives (docs/design/ccfg-rule.md: never a backdoor nothing can reach): R (D4)
+    int pin = want == "r" ? 1 : -1;
     if (write && pin < 0) {
-        server.send(400, "text/plain", "backdoor=r|w (pins this relay drives)\n");
+        server.send(400, "text/plain", "backdoor=r (the pin this relay drives)\n");
         return;
     }
     gw_busy = true;
@@ -1086,7 +1074,6 @@ void setup()
     Serial1.begin(115200);  // TX GPIO2: to the contact
     Serial.begin(115200);   // on the USB serial chip until the swap below: the start-up report goes there
     pad(OWS_CONTACT_RESET, false);
-    pad(OWS_CONTACT_BOOT, false);
     contact_reset();
     settings_load();
     snprintf(name, sizeof name, "OWS-relay-%04X", (unsigned)(ESP.getChipId() & 0xFFFF));

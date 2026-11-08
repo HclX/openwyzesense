@@ -1,6 +1,6 @@
 // The v1 contact board the relay serves (docs/design/v1-contact.md; wiring: esp32/README.md): its UART (the gateway's host
-// link, and the ROM bootloader's), its S pad (RESET_N) and W pad (DIO10: low at reset = the ROM bootloader, backdoor
-// `w`, #14), both open-drain.
+// link, and the ROM bootloader's; R / DIO1 is also the ROM bootloader backdoor, BL_CONFIG 0xC5FE01C5), its + supply
+// pin, its M/C debug port (cJTAG), and its S pad (RESET_N, open-drain).
 #pragma once
 
 #include "gwnv.h"
@@ -12,10 +12,10 @@
 
 void contact_init(void);
 
-// A reset into its firmware (W released)
+// A reset into its firmware (R high)
 void contact_reset(void);
 
-// A reset into the ROM bootloader (W low across the reset, then released: the ROM looks at it at the reset only)
+// A reset into the ROM bootloader (R held low across the start, then released: the ROM looks at it at the reset only)
 void contact_enter_bootloader(void);
 
 // The UART is shared: the relay uses it unless a bootloader session holds it
@@ -28,8 +28,8 @@ void contact_uart_flush_input(void);
 void contact_uart_counts(uint32_t *tx, uint32_t *rx);
 
 // Reflash the contact (pages 0-29: image, len) through its ROM bootloader (esp32/contact/sbl.c): the UART taken from
-// the relay, W + S into the bootloader, the CCFG checked (expect_mac if not NULL), written and verified, page 30
-// wiped if wipe_nv, then a reset into the new firmware and the UART given back. msg: what happened.
+// the relay, R held low across a reset into the bootloader, the CCFG checked (expect_mac if not NULL), written and
+// verified, page 30 wiped if wipe_nv, then a reset into the new firmware and the UART given back. msg: what happened.
 bool contact_flash(const uint8_t *image, size_t len, const char *expect_mac, bool wipe_nv, char *msg, size_t cap);
 
 // Streaming variant of contact_flash() (4 KB page buffer, zero 120 KB heap allocation): begin, feed chunks, then end.

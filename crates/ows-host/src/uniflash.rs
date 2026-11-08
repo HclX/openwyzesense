@@ -41,11 +41,10 @@ const CLEAN_RESET: [&str; 4] = ["-s", "KeepDebugPoweredAtDisconnect=false", "-r"
 const WRITE: [&str; 4] =
     ["-s", "FlashEraseSetting=Necessary Sectors Only", "-s", "VerifyAfterProgramLoad=Full verification"];
 
-/// The ROM bootloader's backdoor pins (both pulled up on the board): the W pad, the button.
+/// The ROM bootloader's backdoor pin: the R pad (DIO1, active low, as in the stock CCFG).
 pub fn backdoor_pin(name: &str) -> Option<u8> {
     match name {
-        "w" => Some(10),
-        "button" => Some(11),
+        "r" => Some(1),
         _ => None,
     }
 }

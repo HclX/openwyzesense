@@ -9,7 +9,7 @@ own MAC) connect to one wyzesense2mqtt-rs. While Wi-Fi or wyzesense2mqtt-rs is d
 | Path | What |
 |---|---|
 | `relay/` | the relay core, portable C with no I/O of its own: the WebSocket client (handshake, framing, client/server ping/pong, close), reconnects, the relay; `sock_posix.c`: its TCP link on BSD sockets (the PC and lwIP); `buffer.c`: the alarms kept through an outage (strict FIFO ordering, `1970` timestamp rebasing, remote SBL filtering; host protocol read with `firmware/common/host_proto.c`); `gwnv.c`: zero-ladder NV JSON import/export over `0x53F0` sub-IDs `0x04`/`0x06` |
-| `contact/` | the contact's ROM bootloader (`sbl.c`, including `sbl_stream_*` page-by-page streaming) and startup sync (`gwsync.c`): tries 4-wire software SBL (`0x53F0` sub-ID `0x05` `OWS_SUB_ENTER_SBL`) first and falls back to hardware `W` + `S`; enforces the rules of `tools/uart_sbl.py` (pages 0-29, page 30 only on request, page 31 never, CCFG checked first) |
+| `contact/` | the contact's ROM bootloader (`sbl.c`, including `sbl_stream_*` page-by-page streaming) and startup sync (`gwsync.c`): tries 4-wire software SBL (`0x53F0` sub-ID `0x05` `OWS_SUB_ENTER_SBL`) first and falls back to hardware `R` + `S`; enforces the rules of `tools/uart_sbl.py` (pages 0-29, page 30 only on request, page 31 never, CCFG checked first) |
 | `web/` | the shared Web UI (`index.html`), streaming `multipart/form-data` parser (`multipart.c`), HTTP Basic/Bearer auth (`http_auth.c`), and mDNS packet responder (`mdns.c`) |
 | `host/` | the cores on a PC: `ows-relay` (the counterpart of `tools/ws_bridge.py`), `ows-sbl` (of `tools/uart_sbl.py`), `ows-gwsync`, and the 6 host test binaries (`test_relay`, `test_buffer`, `test_gwnv`, `test_multipart`, `test_http_auth`, `test_mdns`) |
 | `idf/` | the ESP-IDF firmware for the ESP32-S3 and classic ESP32 (`tools/idf.sh build`) |
@@ -42,15 +42,14 @@ The GPIOs are fixed per chip (`esp32/idf/main/pins.h`; the user, 2026-11-06).
 | `M` (TMSC) | GPIO15 (#81: updates through the debug port) |
 | `C` (TCKC) | GPIO16 |
 | `S` (RESET_N) | GPIO4, open-drain; optional when `+` is on GPIO7 |
-| `W` (DIO10) | GPIO5, open-drain: low at a start = the ROM bootloader on units provisioned with backdoor `w` (`0xC5FE0AC5`, #14); needed only for the bootloader fallback on such units |
 
 Since #81 the relay powers the contact from a GPIO and updates it through its 2-pin debug port (cJTAG on `M`/`C`),
 like the LaunchPad does: no bootloader backdoor needed. Setup page "Contact updates through" (`auto`, the default:
-the debug port, else the ROM bootloader; `cjtag`; `sbl`). Into the bootloader, `R` and `W` are both held low across
-the start, so stock units (backdoor on `R`/DIO1, `0xC5FE01C5`) and ours (`W`) both enter it. While the power is off,
-the relay drives no line high (`R` low, `T`'s pull-up off, `S`/`W` released), so nothing feeds the chip through its
-pins. A relay wired the old way (`+` on 3V3, `S`, `W`) keeps working: the power GPIO then does nothing and a debug
-port that does not answer falls back to the bootloader. Tried on the LOLIN32 (docs/TODO.md, bench checklist).
+the debug port, else the ROM bootloader; `cjtag`; `sbl`). Into the bootloader, `R` (DIO1, the stock backdoor
+`0xC5FE01C5`) is held low across the start. While the power is off, the relay drives no line high (`R` low, `T`'s
+pull-up off, `S` released), so nothing feeds the chip through its pins. A relay wired with `+` on 3V3 and `S` keeps
+working: the power GPIO then does nothing and a debug port that does not answer falls back to the bootloader. Tried on
+the LOLIN32 (docs/TODO.md, bench checklist).
 
 ### Relay or provisioning station
 
@@ -79,8 +78,8 @@ Provision the contact board once over JTAG (`docs/design/v1-contact.md`), backin
 `tools/uniflash.py provision --gateway --backup backups/contact_<MAC>` (or step by step:
 `tools/uniflash.py backup backups/contact_<MAC>`,
 `tools/uniflash.py flash --backup backups/contact_<MAC> build/fw/firmware/gateway-contact-v1-app.bin`, and
-`tools/uniflash.py enable-bootloader w --backup backups/contact_<MAC> --yes`). Later updates come from the ESP itself
-(trying 4-wire software SBL `OWS_SUB_ENTER_SBL` over `RX`/`TX` first, and falling back to `W` + `S` hardware entry).
+`tools/uniflash.py enable-bootloader r --backup backups/contact_<MAC> --yes`). Later updates come from the ESP itself
+(trying 4-wire software SBL `OWS_SUB_ENTER_SBL` over `RX`/`TX` first, and falling back to `R` + `S` hardware entry).
 
 ## First flash and setup
 
@@ -103,7 +102,7 @@ optional HTTP `admin_pass`; it restarts onto that network, tears down `OWS-relay
 start (unless paused with `skip=1`), before it relays anything, the relay asks the contact for its build info block
 (host command `0x53F0` sub-ID `0x02` `OWS_SUB_BUILD_INFO`, `part = 0`) and MAC (`0x4304`) and compares the image IDs
 (`esp32/contact/gwsync.c`). If they differ, or the contact does not answer, it enters the contact's ROM bootloader
-(software `OWS_SUB_ENTER_SBL` first, then `W` + `S` hardware fallback) and streams pages 0-29 via `sbl_stream_*`, so the
+(software `OWS_SUB_ENTER_SBL` first, then `R` + `S` hardware fallback) and streams pages 0-29 via `sbl_stream_*`, so the
 paired sensors (page 30) and MAC (page 31) stay. When the contact is silent, the bootloader's CRC32 first tells whether
 the image is already there. The ID is the hash of the code (`tools/image_id.py`), so a relay update that does not change
 the gateway code does not reflash it. An OTA rollback puts the matching gateway back only if its code differs. So
@@ -123,7 +122,7 @@ curl -u admin:<pass> --data-binary @esp32/idf/build/ows_relay.bin http://<ip>/ot
 ```
 
 `/contact/flash` streams pages 0-29 directly to the contact via `sbl_stream_*` on both ESP-IDF and ESP8266 (zero 120 KB
-RAM buffer): it takes the UART from the relay, enters the bootloader (`OWS_SUB_ENTER_SBL` or `W` + `S`), checks its CCFG
+RAM buffer): it takes the UART from the relay, enters the bootloader (`OWS_SUB_ENTER_SBL` or `R` + `S`), checks its CCFG
 (a valid MAC, matching `?mac=` if given, bootloader enabled), streams pages 0-29 and checks the chip's CRC32, wipes page
 30 when `?nv=wipe` is set, optionally sets `skip_gwsync` when `?keep=1` is passed (so the next reboot does not overwrite
 a custom bench image with the embedded gateway), resets into the new firmware, and gives the UART back. `/ota` writes the
@@ -164,12 +163,11 @@ tools/idf.sh -B build-esp32 -D SDKCONFIG=build-esp32/sdkconfig -p /dev/ttyUSB0 f
 | `M` (TMSC) | GPIO25 |
 | `C` (TCKC) | GPIO26 |
 | `S` (RESET_N) | GPIO4 (optional with `+` on GPIO27) |
-| `W` (DIO10) | GPIO23 (optional) |
 
 Both relays pull their UART RX pin up: a contact that does not drive its T pad (a half-written image after an
 interrupted flash) leaves the line floating, and the noise came in as bytes (`00 ff 00 fe …`, hundreds a second), which
 kept the start-up check's waits from ever timing out (2026-10-25, the LOLIN32; reproduced by interrupting a flash, and
-gone with the pull-up). W is not on GPIO5 as on the S3. On the classic ESP32, GPIO5 is a boot strap, and on a LOLIN32 it drives the blue
+gone with the pull-up). On the classic ESP32, GPIO5 is a boot strap, and on a LOLIN32 it drives the blue
 LED (the Lite's LED is on GPIO22). The other straps (GPIO0, 2, 12, 15) stay free too. GPIO12 above all: high at the
 start, it sets the flash to 1.8 V. The console is UART0, the board's USB serial chip.
 
@@ -209,12 +207,11 @@ builds it). Verified on NodeMCU and D1 mini hardware (2026-10-26).
 | `+` / `-` | 3V3 / G |
 | `R` (silkscreen; the contact's input) | D4 (GPIO2: UART1 TX) |
 | `T` (silkscreen; the contact's output) | D7 (GPIO13: UART0 RX after `Serial.swap()`) |
-| `W` (DIO10) | D1 (GPIO5); optional: only for units whose bootloader backdoor is `W` (our earlier provisioning) |
 | `S` (RESET_N) | D2 (GPIO4) |
 | `M` (TMSC) | D5 (GPIO14): the debug port, optional |
 | `C` (TCKC) | D6 (GPIO12) |
 
-Into the bootloader the relay holds both `R` (D4, taken from UART1 meanwhile) and `W` low through an `S` reset, so a
+Into the bootloader the relay holds `R` (D4, taken from UART1 meanwhile) low through an `S` reset, so a
 unit with the stock backdoor (`R`/DIO1, `BL_CONFIG 0xC5FE01C5`) needs only five wires (#81, 2026-11-07). With `M` and
 `C` wired, the start-up check updates the gateway through the debug port first (`esp32/contact/cjtag.c`, as the ESP32
 does; 65 s for 10 pages through Arduino's `digitalWrite`, the bootloader fallback after it), and the bootloader's
@@ -223,7 +220,7 @@ changed, the page verified whole, put back on a failure; the unit's MAC must be 
 
 ```
 curl http://<ip>/contact/bootloader                                       # {"mac", "bl_config", "backdoor": r|w|button|off|other}
-curl -u admin:<pass> -d 'backdoor=r&mac=<MAC>' http://<ip>/contact/bootloader  # r (DIO1, stock) or w (DIO10): pins the relay drives
+curl -u admin:<pass> -d 'backdoor=r&mac=<MAC>' http://<ip>/contact/bootloader  # r (DIO1, stock): the pin the relay drives
 ```
 
 Newer v1 contacts keep their MAC only in page 29 (`0x1D000`), the CCFG MAC slot blank (77A9B885, 2026-11-07); the
@@ -245,8 +242,8 @@ Its web page (`http://<ip>/`, the one both relays serve: `esp32/web/index.html`)
 pause/resume, `nv.json` import/export, and custom radio flash), ESP OTA update, and setup. Both ESP-IDF and ESP8266
 stream contact reflashes page by page via `sbl_stream_*` (`curl -u admin:<pass> -F image=@gateway-contact-v1-app.bin
 "http://<ip>/contact/flash?mac=<MAC>&nv=wipe&keep=1"`), and both try 4-wire software SBL (`OWS_SUB_ENTER_SBL`) before
-falling back to `W` + `S` hardware entry; a broken upload leaves pages 0-29 part written and the bootloader, CCFG, and
-page 30 untouched, so flash again (wiring `W` and `S` is still recommended so a half-written image can enter the
+falling back to `R` + `S` hardware entry; a broken upload leaves pages 0-29 part written and the bootloader, CCFG, and
+page 30 untouched, so flash again (wiring `S` is recommended so a half-written image can enter the
 bootloader by hardware reset). OTA as a multipart upload (`curl -F`), settings in EEPROM (`GET /debug/uart` is compiled
 only under `#ifdef OWS_DEBUG_UART`). Nothing goes on D8 (GPIO15): it must be low when the ESP8266
 starts, and both of the contact's UART pads idle high (on a NodeMCU, 2026-10-25: either pad on D8 gave boot mode
@@ -257,9 +254,9 @@ The pads' silkscreen is the contact's own side: T is its output, R its input (th
 
 ## Bring-up on the bench (the first time on hardware)
 
-1. The contact board: back up and provision our gateway + backdoor `w` (`tools/uniflash.py provision --gateway --backup
+1. The contact board: back up and provision our gateway + backdoor `r` (`tools/uniflash.py provision --gateway --backup
    backups/contact_<MAC>`, or `backup` -> `flash --backup ... build/fw/firmware/gateway-contact-v1-app.bin` ->
-   `enable-bootloader w --backup ... --yes`); then unwire it from the LaunchPad.
+   `enable-bootloader r --backup ... --yes`); then unwire it from the LaunchPad.
 2. Wire it to the S3 (the table above); the GPIOs are fixed (`pins.h`).
 3. `tools/idf.sh -p /dev/ttyACM0 flash monitor`: the log shows `OpenWyzeSense relay OWS-relay-XXXX up` and the
    setup access point.

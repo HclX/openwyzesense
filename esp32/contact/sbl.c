@@ -275,7 +275,7 @@ bool sbl_connect(sbl_t *s, const char *expect_mac)
             return s->error[0]
                        ? false
                        : fail(s,
-                              "no bootloader (no ACK to the sync or a ping): W held low at the reset? bootloader on?");
+                              "no bootloader (no ACK to the sync or a ping): R held low at the reset? bootloader on?");
         }
     }
     if (!sbl_get_chip_id(s, NULL)) {

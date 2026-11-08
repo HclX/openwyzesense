@@ -141,12 +141,12 @@ fn nv_wipe_writes_page_30_only() {
 fn the_bootloader_backdoor_changes_bl_config_only() {
     let mut c = contact();
     let before = c.flash.clone();
-    assert!(Probe::new(&mut c).unwrap().enable_bootloader(10).unwrap());
+    assert!(Probe::new(&mut c).unwrap().enable_bootloader(1).unwrap());
     let off = CCFG_ADDR as usize + BL_CONFIG;
-    assert_eq!(&c.flash[off..off + 4], &0xC5FE_0AC5u32.to_le_bytes());
+    assert_eq!(&c.flash[off..off + 4], &0xC5FE_01C5u32.to_le_bytes());
     let strip = |f: &[u8]| [&f[..off], &f[off + 4..]].concat();
     assert_eq!(strip(&c.flash), strip(&before), "the stock code in page 31 and the MAC stay");
-    assert!(!Probe::new(&mut c).unwrap().enable_bootloader(10).unwrap(), "already so: no write");
+    assert!(!Probe::new(&mut c).unwrap().enable_bootloader(1).unwrap(), "already so: no write");
     assert_eq!(c.writes.len(), 1);
     assert!(uniflash::bootloader_ccfg(&before[CCFG_ADDR as usize..], 15).is_err(), "no DIO15 on the 5x5 package");
 }
@@ -161,7 +161,7 @@ fn a_chip_without_a_mac_is_not_touched() {
         boot: None,
         slot_a: None,
         backup_root: tmp("nomac"),
-        bootloader: Some(10),
+        bootloader: Some(1),
         nv: NvChoice::Keep,
     };
     assert!(matches!(Probe::new(&mut c).unwrap().provision(&p), Err(Error::Refused(_))));
@@ -173,12 +173,13 @@ fn provision_sensor_backs_up_flashes_slots_and_enables_the_backdoor() {
     let mut c = contact();
     let stock = c.flash.clone();
     let root = tmp("prov");
+    assert_eq!(uniflash::backdoor_pin("w"), None);
     let p = Provision {
         app: None,
         boot: Some(boot()),
         slot_a: Some(slot_a()),
         backup_root: root.clone(),
-        bootloader: uniflash::backdoor_pin("w"),
+        bootloader: uniflash::backdoor_pin("r"),
         nv: NvChoice::Keep,
     };
     let r = Probe::new(&mut c).unwrap().provision(&p).unwrap();
@@ -189,7 +190,7 @@ fn provision_sensor_backs_up_flashes_slots_and_enables_the_backdoor() {
     assert_eq!(&c.flash[..img.len()], &img[..]);
     assert_eq!(&c.flash[0x1000..0x1004], b"OWSI");
     let off = CCFG_ADDR as usize + BL_CONFIG;
-    assert_eq!(&c.flash[off..off + 4], &0xC5FE_0AC5u32.to_le_bytes());
+    assert_eq!(&c.flash[off..off + 4], &0xC5FE_01C5u32.to_le_bytes());
     // again: the backup there is checked (BL_CONFIG may differ), not remade
     let r = Probe::new(&mut c).unwrap().provision(&p).unwrap();
     assert!(!r.backed_up_now);

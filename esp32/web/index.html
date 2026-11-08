@@ -235,12 +235,12 @@ const wcol=(g,txt)=>wireOf(g)?txt+' · '+wireOf(g):txt;
 const g=n=>n>=0?'GPIO'+n:'–',st=role==2;
 const rows=st&&!e8?[['+',g(p.power),'the sensor’s supply, switched (a clip)',null,'red'],
 ['−','GND','a clip',null,'black'],['1',g(p.r),'probe 1',p.r],['2',g(p.t),'probe 2',p.t]]:e8?[['+','3V3',''],['−','G',''],['R','D4','its input (DIO1)'],['T','D7','its output (DIO0)'],
-['S','D2','RESET_N'],['W','D1','bootloader backdoor (DIO10)']]:
+['S','D2','RESET_N']]:
 [['+',g(p.power),st?'supply, switched (clip: battery +)':'its supply: a reset is a power cycle'],
 ['−','GND',st?'clip: battery −':''],
 ['R',g(p.r),wcol(p.r,st?'hand probe / SBL pad':'its input (DIO1)'),p.r],['T',g(p.t),wcol(p.t,st?'hand probe / SBL pad':'its output (DIO0)'),p.t],
 ['M',g(p.m),st?'cJTAG (TMSC)':'debug port TMSC: updates'],['C',g(p.c),st?'cJTAG (TCKC)':'debug port TCKC'],
-['S',g(p.s),st?'SBL pad':'RESET_N (optional)'],['W',g(p.w),st?'SBL pad':'bootloader backdoor (optional)']];
+['S',g(p.s),st?'SBL pad':'RESET_N (optional)']];
 if(st&&!e8){const w=s.wires||{},esc=t=>String(t).replace(/[&<>"]/g,c=>'&#'+c.charCodeAt(0)+';');
 let v=rows.map(r=>{const col=r[4]||wireOf(r[3]),k=r[3]===p.r?'r':r[3]===p.t?'t':'';
 return '<div class=wrow><span class=wpad>'+r[0]+'</span><span class=wdesc>'+r[2]+'</span>'+
@@ -265,7 +265,7 @@ v+='<rect x="8" y="'+(y)+'" width="34" height="'+(H-8)+'" rx="5" fill="var(--bar
 v+='</svg><p class=hint>'+(e8?'Nothing on D8 (GPIO15): it must be low at start.':st?
 'Station: <b>+</b> and <b>−</b> clipped to the battery holder (battery out), the two probes on the pads: '+
 '<b>M</b>/<b>C</b> for cJTAG, <b>T</b>/<b>R</b> for the bootloader, either way round. Probe colours: set them on the Probe tab.':
-'Relay: the contact on all eight. <b>+</b> on 3V3 instead also works (then <b>S</b> resets it); <b>S</b> and <b>W</b> are '+
+'Relay: the contact on all seven. <b>+</b> on 3V3 instead also works (then <b>S</b> resets it); <b>S</b> is '+
 'optional with <b>+</b> on its GPIO.')+'</p>';
 document.querySelectorAll('.wiring').forEach(d=>d.innerHTML=v)}
 async function poll(){if(busy)return;try{const r=await fetch('/api/status',{cache:'no-store'});const s=await r.json();

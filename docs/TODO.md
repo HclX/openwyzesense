@@ -60,7 +60,7 @@ the evidence.
 - `TASK-03`, `TASK-05`: `test_hw.py` and `test_hw_tx.py` on the LaunchPad.
 - `TASK-04`: `test_hw_sensor.py`; on a coin cell, fast magnet toggles while the gateway is out of reach: the settled
   state is never dropped or inverted.
-- `TASK-06`: a contact gateway keeps `BL_CONFIG` `0xC5FE0AC5`; `/contact/flash` refuses an image with a bad
+- `TASK-06`: a contact gateway keeps `BL_CONFIG` `0xC5FE01C5`; `/contact/flash` refuses an image with a bad
   `BL_CONFIG`.
 - `TASK-07`: `test_hw_tx.py::test_gateway_keeps_its_table_in_flash` and a 35-cycle pair / delete loop (real page 30
   compactions).
@@ -122,8 +122,7 @@ with the SDR running.
   writes would be far faster); its status lacks `via_cjtag`; no web-page button for `/contact/bootloader` yet, and the
   ESP32 relay has no `/contact/bootloader` yet. `cjtag.c` now reads in 256-byte chunks (no 4 KB stack buffers): re-run
   the ESP32 station and relay cJTAG paths on B15C. Backdoor on `R`: test a power cut of relay and contact together (a
-  floating `R` at the contact's start would leave it in its bootloader). `uniflash.py` / `ows-flash` `enable-bootloader`
-  could offer `r` too.
+  floating `R` at the contact's start would leave it in its bootloader).
 
 - Relay on the old wiring (`+` on 3V3, no M/C; 9A78 + 7788CCF6, 2026-11-07, #81 build `b646e49`): after the relay's
   own OTA restart the contact answered nothing at all, not even its ROM bootloader, also under the v0.2.5 relay, until
@@ -145,8 +144,8 @@ with the SDR running.
 
 - `ccfg_is_safe()`: the bootloader backdoor pin must be below the package's GPIO count - 1 (TI errata SWRZ062F
   Advisory 13: DIO14 max on the 5x5 dongle/v1 chip, DIO9 on 4x4, DIO30 on 7x7). It now accepts up to 31; read the
-  package from FCFG1 USER_ID and refuse more. (The CCFGs we ship use pins 1 (`wyze_dongle`, `wyze_motion_v1`), 10
-  (`wyze_contact_v1`), and 13 (`launchxl_cc1310`): all fine.)
+  package from FCFG1 USER_ID and refuse more. (The CCFGs we ship use pins 1 (`wyze_dongle`, `wyze_motion_v1`,
+  `wyze_contact_v1`) and 13 (`launchxl_cc1310`): all fine.)
 
 ## Back burner
 

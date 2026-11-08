@@ -37,7 +37,6 @@ RELAYS = {
             ('R', 'GPIO17', 'UART1 TX'),
             ('T', 'GPIO18', 'UART1 RX'),
             ('S', 'GPIO4', 'reset'),
-            ('W', 'GPIO5', 'bootloader'),
         ],
     ),
     'lolin32': (
@@ -49,7 +48,6 @@ RELAYS = {
             ('R', '17', 'UART1 TX'),
             ('T', '18', 'UART1 RX'),
             ('S', '4', 'reset'),
-            ('W', '23', 'bootloader'),
         ],
     ),
     'd1mini': (
@@ -61,7 +59,6 @@ RELAYS = {
             ('R', 'D4', 'GPIO2, UART1 TX'),
             ('T', 'D7', 'GPIO13, UART0 RX'),
             ('S', 'D2', 'GPIO4, reset'),
-            ('W', 'D1', 'GPIO5, bootloader'),
         ],
     ),
 }
@@ -194,10 +191,10 @@ def relay(key):
         if note:
             body.append(f'<text x="{bx + 100}" y="{y + 5}" font-size="11" fill="#d0d7de" {FONT}>{note}</text>')
     body += [
-        f'<text x="40" y="440" font-size="12" fill="{INK}" {FONT}>Six wires; pin names as printed on the ESP board. '
+        f'<text x="40" y="440" font-size="12" fill="{INK}" {FONT}>Five wires; pin names as printed on the ESP board. '
         "R is the contact's input (the ESP transmits), T its output.</text>",
         f'<text x="40" y="460" font-size="12" fill="{INK}" {FONT}>The ESP powers the contact from its 3.3 V pin '
-        '(battery out). S and W let the relay reset and reflash the contact by itself.</text>',
+        '(battery out). S lets the relay reset and reflash the contact by itself.</text>',
     ]
     return svg(900, 480, body, f'Wiring a Wyze v1 contact to an {title} relay')
 

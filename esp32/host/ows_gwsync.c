@@ -1,9 +1,9 @@
 // ows-gwsync: the relays' start-up gateway check and update (esp32/contact/gwsync.c, #76) on a PC, against a
 // simulated contact board (reference/tests/test_gwsync.py: a gateway that answers or not, and the ROM bootloader).
 //   ows-gwsync --port PORT --ctl FIFO IMAGE.bin
-// The S and W pads are lines written to FIFO: "R" a reset into the firmware, "B" a reset into the bootloader, "J" the
-// carried image written through the debug port (--cjtag ok). Prints the result and the report; exit 0 for same or
-// updated. --cjtag ok|same|fail simulates a debug port (#81): written, already equal, or not reachable;
+// Control lines are written to FIFO: "R" a reset into the firmware, "B" a reset into the bootloader (R held low),
+// "J" the carried image written through the debug port (--cjtag ok). Prints the result and the report; exit 0 for same
+// or updated. --cjtag ok|same|fail simulates a debug port (#81): written, already equal, or not reachable;
 // --transport auto|cjtag|sbl picks how gwsync reflashes.
 #include <errno.h>
 #include <fcntl.h>

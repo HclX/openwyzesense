@@ -13,7 +13,7 @@ link is back. Its web page shows each sensor's signal strength, battery and last
 - a v1 contact sensor (its board becomes the gateway's radio; the battery is not used);
 - one of these ESP boards: an **ESP32-S3 DevKit**, a **classic ESP32 (LOLIN32)**, or an **ESP8266 (D1 mini or
   NodeMCU)**, and a USB power supply for it;
-- 6 wires, soldered to the contact's pads (this is permanent);
+- 5 wires, soldered to the contact's pads (this is permanent);
 - the LaunchPad setup from [level 2](2-revive-contact.md), once, to prepare the contact board;
 - `esptool`, Espressif's flashing tool, for the ESP's first flash: `pip install esptool` (or `pipx install esptool`);
 - from the release: `ows-flash-linux-x86_64-<version>`, `ows-gateway-contact-v1-<version>.bin`, the relay images for
@@ -36,17 +36,18 @@ out, and run:
 ```
 
 As for a sensor, it backs the board up first (`backups/contact_v1/<MAC>/`), then writes the gateway firmware and
-enables the board's serial bootloader on the `W` pad. From then on, the ESP keeps the board's firmware up to date by
+enables the board's serial bootloader on the `R` pad. From then on, the ESP keeps the board's firmware up to date by
 itself, and the LaunchPad is not needed again.
 
 ## 2. Wire it to the ESP
 
-Six wires. The ESP powers the contact board from its 3.3 V pin. `R` is the contact's serial input (the ESP's TX),
-and `T` its output (the ESP's RX). `S` (reset) and `W` (bootloader) let the ESP reset and reflash the board.
+Five wires. The ESP powers the contact board from its 3.3 V pin. `R` is the contact's serial input (the ESP's TX, and
+the board's bootloader backdoor), and `T` its output (the ESP's RX). `S` (reset) lets the ESP reset and reflash the
+board.
 
 ### ESP32-S3
 
-![Wiring a v1 contact to an ESP32-S3: V− to GND, W to GPIO5, S to GPIO4, V+ to 3V3, R to GPIO17, T to GPIO18](../img/wiring-contact-esp32s3.svg)
+![Wiring a v1 contact to an ESP32-S3: V− to GND, S to GPIO4, V+ to 3V3, R to GPIO17, T to GPIO18](../img/wiring-contact-esp32s3.svg)
 
 | Contact pad | ESP32-S3 |
 |---|---|
@@ -54,11 +55,10 @@ and `T` its output (the ESP's RX). `S` (reset) and `W` (bootloader) let the ESP 
 | `R` | GPIO17 |
 | `T` | GPIO18 |
 | `S` | GPIO4 |
-| `W` | GPIO5 |
 
 ### Classic ESP32 (LOLIN32)
 
-![Wiring a v1 contact to a LOLIN32: V− to GND, W to 23, S to 4, V+ to 3V, R to 17, T to 18](../img/wiring-contact-lolin32.svg)
+![Wiring a v1 contact to a LOLIN32: V− to GND, S to 4, V+ to 3V, R to 17, T to 18](../img/wiring-contact-lolin32.svg)
 
 | Contact pad | LOLIN32 |
 |---|---|
@@ -66,13 +66,12 @@ and `T` its output (the ESP's RX). `S` (reset) and `W` (bootloader) let the ESP 
 | `R` | 17 |
 | `T` | 18 |
 | `S` | 4 |
-| `W` | 23 |
 
 Leave GPIO0, 2, 5, 12 and 15 free: they decide how the ESP32 starts.
 
 ### ESP8266 (D1 mini, NodeMCU)
 
-![Wiring a v1 contact to a D1 mini: V− to G, W to D1, S to D2, V+ to 3V3, R to D4, T to D7](../img/wiring-contact-d1mini.svg)
+![Wiring a v1 contact to a D1 mini: V− to G, S to D2, V+ to 3V3, R to D4, T to D7](../img/wiring-contact-d1mini.svg)
 
 | Contact pad | D1 mini / NodeMCU |
 |---|---|
@@ -80,7 +79,6 @@ Leave GPIO0, 2, 5, 12 and 15 free: they decide how the ESP32 starts.
 | `R` | D4 |
 | `T` | D7 |
 | `S` | D2 |
-| `W` | D1 (optional: not needed when the board's bootloader is on `R`, the factory setting) |
 | `M` | D5 (optional: updates through the debug port, and setting the bootloader pin) |
 | `C` | D6 (with `M`) |
 

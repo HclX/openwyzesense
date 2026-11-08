@@ -19,9 +19,12 @@ static volatile uint32_t s_uart_tx, s_uart_rx;
 
 static void pin_init(int gpio)
 {
+    if (gpio < 0) {
+        return;
+    }
     gpio_config_t c = {
         .pin_bit_mask = 1ULL << gpio,
-        .mode = GPIO_MODE_OUTPUT_OD,  // the contact pulls its own pins up (DIO10 externally, RESET_N internally)
+        .mode = GPIO_MODE_OUTPUT_OD,  // the contact pulls its RESET_N pin up internally
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type = GPIO_INTR_DISABLE,
@@ -90,9 +93,9 @@ void contact_init(void)
 
 // A restart of the contact, into its firmware or (bootloader) into its ROM bootloader (#81): a power cycle when its
 // + pad is on a GPIO (a cold reset: it also ends a brown-out lock-up, TI errata Advisory 12), else S. Into the
-// bootloader, R (DIO1: the stock backdoor, BL_CONFIG 0xC5FE01C5, as the dongle's CH554 does it) and W (DIO10: the
-// backdoor our earlier provisioning set) are held low across the start, whichever the unit has. While the power is
-// off nothing may feed the chip through its pins: R low, the line from T unpulled, S and W released (open-drain).
+// bootloader, R (DIO1: the stock backdoor, BL_CONFIG 0xC5FE01C5, as the dongle's CH554 does it) is held low across
+// the start. While the power is off nothing may feed the chip through its pins: R low, the line from T unpulled, S
+// released (open-drain).
 static void restart(bool bootloader)
 {
     const int tx = OWS_PIN_CONTACT_TX, rx = OWS_PIN_CONTACT_RX;

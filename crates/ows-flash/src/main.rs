@@ -35,12 +35,12 @@ v1 contact / motion units, on a LaunchPad's XDS110 over 2-pin cJTAG (docs/design
   ows-flash v1 provision --sensor --boot BOOT.bin --slot-a SLOT_A.img [--board wyze_motion_v1]
   ows-flash v1 provision --gateway --app gateway-contact-v1-app.bin
                                                        one step: back up (backups/<board>/<MAC>, or check the one
-                                                       there), flash, enable the bootloader's backdoor (contact: W;
-                                                       --bootloader w|button|keep), reset
+                                                       there), flash, enable the bootloader's backdoor (contact: R;
+                                                       --bootloader r|keep), reset
   ows-flash v1 backup DIR                              flash (read twice), CCFG, FCFG1: read only
   ows-flash v1 flash APP.bin --backup DIR              an app image to pages 0-29
   ows-flash v1 slots BOOT.bin SLOT_A.img --backup DIR  the boot selector and slot A
-  ows-flash v1 enable-bootloader w|button --yes        the one CCFG write: BL_CONFIG only
+  ows-flash v1 enable-bootloader [r] --yes             the one CCFG write: BL_CONFIG only
   ows-flash v1 reset | ows-flash v1 read ADDR WORDS OUT
   (--nv keep|wipe|migrate|NV.json: page 30, default keep; --uniflash DIR: where UniFlash is)
 
@@ -233,10 +233,10 @@ fn v1(a: &Args, pos: &[&str]) -> Result<(), String> {
             if board != "wyze_contact_v1" && board != "wyze_motion_v1" {
                 return Err(format!("--board {board}: wyze_contact_v1 or wyze_motion_v1"));
             }
-            let bl = flag("--bootloader").unwrap_or(if board == "wyze_motion_v1" { "keep" } else { "w" });
+            let bl = flag("--bootloader").unwrap_or(if board == "wyze_motion_v1" { "keep" } else { "r" });
             let bootloader = match bl {
                 "keep" => None,
-                b => Some(uniflash::backdoor_pin(b).ok_or(format!("--bootloader {b}: w, button or keep"))?),
+                b => Some(uniflash::backdoor_pin(b).ok_or(format!("--bootloader {b}: r or keep"))?),
             };
             let p = if a.flags.contains_key("--gateway") {
                 Provision {
@@ -274,8 +274,9 @@ fn v1(a: &Args, pos: &[&str]) -> Result<(), String> {
                 if r.backed_up_now { "made now" } else { "checked" }
             );
         }
-        ["enable-bootloader", which] => {
-            let pin = uniflash::backdoor_pin(which).ok_or("w or button")?;
+        ["enable-bootloader"] | ["enable-bootloader", _] => {
+            let which = pos.get(1).copied().unwrap_or("r");
+            let pin = uniflash::backdoor_pin(which).ok_or("r")?;
             if !a.yes {
                 return Err("writes the CCFG (page 31, BL_CONFIG only): add --yes".into());
             }

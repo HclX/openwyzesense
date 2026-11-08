@@ -146,7 +146,9 @@ def test_tx_build_has_the_stock_tx_command():
 
 
 STOCK_CCFG = {
+    'gateway-contact-v1': 'contact_v1_777B42DF_2026-10-24/flash.bin',
     'gateway-dongle': 'gateway_2025-02-08_v1.8/FLASH.bin',
+    'sensor-contact-v1': 'contact_v1_777B42DF_2026-10-24/flash.bin',
     'sensor-motion-v1': 'motion_v1_777A9A46/dump.bin',
 }
 
@@ -154,13 +156,24 @@ STOCK_CCFG = {
 @pytest.mark.parametrize('product', sorted(STOCK_CCFG))
 def test_wyze_board_ccfg_is_the_stock_one(product):
     # on Wyze hardware the CCFG must be what the stock firmware had: power (DC/DC, VDDR), LF clock source,
-    # bootloader backdoor, debug port; a sensor's MAC only when built with -DOWS_SENSOR_MAC (=777A9A46 here)
+    # bootloader backdoor (DIO1 active low, 0xC5FE01C5), debug port; a sensor's MAC only when built with
+    # -DOWS_SENSOR_MAC. Stock contact_v1 cleared the two 0xC5 enable bytes of BL_CONFIG (0x00FE0100).
     p = ROOT / 'build' / 'fw' / 'firmware' / f'{product}.elf'
     if not p.exists():
         pytest.skip(f'{product} not built')
-    stock = stock_ccfg(STOCK_CCFG[product])
+    stock = bytearray(stock_ccfg(STOCK_CCFG[product]))
+    if product.endswith('-contact-v1'):
+        assert struct.unpack_from('<I', stock, 0x30)[0] == 0x00FE0100
+        stock[0x30] = stock[0x33] = 0xC5
+    stock = bytes(stock)
     ours = Elf(p).initial('__ccfg')
-    unit_mac = {'sensor-motion-v1': b'777A9A46'}.get(product)
+    assert struct.unpack_from('<I', ours, 0x30)[0] == 0xC5FE01C5
+    assert ccfg_problems(ours) == []
+    unit_mac = {
+        'gateway-contact-v1': b'777B42DF',
+        'sensor-contact-v1': b'777B42DF',
+        'sensor-motion-v1': b'777A9A46',
+    }.get(product)
     if unit_mac and ours[0x24:0x2C] != unit_mac:
         # built without a MAC (or another one): the unit keeps its own, the rest must be the stock CCFG
         assert ours[:0x20] + ours[0x30:] == stock[:0x20] + stock[0x30:]
@@ -168,22 +181,6 @@ def test_wyze_board_ccfg_is_the_stock_one(product):
             return
         pytest.skip('built for another sensor MAC')
     assert ours == stock
-
-
-@pytest.mark.parametrize('product', ['gateway-contact-v1', 'sensor-contact-v1'])
-def test_contact_v1_ccfg_enables_sbl_on_w_pad(product):
-    # Stock contact_v1 disabled ROM SBL (BL_CONFIG 0x00FE0100); our wyze_contact_v1 CCFG keeps stock power/clock/DAP
-    # words while enabling ROM SBL on W pad DIO10 active-low (0xC5FE0AC5) so gateway-contact-v1 never locks out SBL.
-    stock = stock_ccfg('contact_v1_777B42DF_2026-10-24/flash.bin')
-    found = False
-    for p in sorted((ROOT / 'build').glob(f'fw*/firmware/{product}.elf')):
-        found = True
-        ours = Elf(p).initial('__ccfg')
-        assert struct.unpack_from('<I', ours, 0x30)[0] == 0xC5FE0AC5
-        assert ccfg_problems(ours) == []
-        assert ours[:0x20] + ours[0x34:] == stock[:0x20] + stock[0x34:]
-    if not found:
-        pytest.skip(f'{product} not built')
 
 
 def ccfg_problems(c):

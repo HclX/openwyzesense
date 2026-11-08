@@ -20,9 +20,9 @@ we fell into with the first. Facts here come from FACTS.md (§5) with their evid
 | M | 13 | JTAG TMSC | JTAG (2-pin cJTAG) |
 | C | 14 | JTAG TCKC | JTAG |
 | S | 19 | RESET_N | the debugger's reset: **needed** (see trap 4) |
-| RX | 7 | DIO1 | UART RX (our console) |
+| RX | 7 | DIO1 | UART RX (our console) and ROM bootloader backdoor (§"The ROM bootloader") |
 | TX | 6 | DIO0 | UART TX (our console) |
-| W | 23 | DIO10 | stock **Factory UART Test & Provisioning Mode strap pin** (`0xC000200A` in `BoardGpioInitTable` at `0x15338`; grounded at boot in `main()` at `0x099CE` to spawn `FactoryUart_taskFxn` at `0x0B044`, light the LED solid, and keep the CC1310 awake on UART0); also used as our ROM bootloader backdoor pin (§"The ROM bootloader") |
+| W | 23 | DIO10 | stock **Factory UART Test & Provisioning Mode strap pin** (`0xC000200A` in `BoardGpioInitTable` at `0x15338`; grounded at boot in `main()` at `0x099CE` to spawn `FactoryUart_taskFxn` at `0x0B044`, light the LED solid, and keep the CC1310 awake on UART0) |
 | + / - | | VDD / GND | 3.3 V from the LaunchPad (battery out) |
 
 - Inside: the **reed switch on DIO7** (chip pin 20, closes to GND), the **button on DIO11** (pressed: low), the
@@ -64,8 +64,8 @@ Pull TDO and TDI too (2-pin JTAG does not use them; the LaunchPad's chip would s
 - **`tools/uniflash.py`** wraps it all: `backup DIR` (flash read twice and compared, CCFG, FCFG1), `flash --backup DIR
   APP.bin` (pages 0-29 only, refused unless `DIR/flash.bin` matches the connected chip's CCFG MAC; verified by read-back),
   `slots --backup DIR BOOT.bin SLOT_A.img` (the two-slot layout for OTA: the boot selector in page 0, slot A at 0x1000,
-  slot B's first page blank), `enable-bootloader w|button --backup DIR --yes`, one-step `provision --sensor|--gateway
-  --backup DIR` (`backup` → `slots`/`flash` → `enable-bootloader w` → `reset`), `reset`, and `read ADDR WORDS OUT`.
+  slot B's first page blank), `enable-bootloader [r] --yes`, one-step `provision --sensor|--gateway
+  --backup-dir DIR` (`backup` → `slots`/`flash` → `enable-bootloader r` → `reset`), `reset`, and `read ADDR WORDS OUT`.
   Every command ends with the **clean reset**: a board reset through RESET_N with the debug power domain released
   (DSLite `-r 2`, `KeepDebugPoweredAtDisconnect=false`). That is what makes it all work without touching the board (trap 6).
 - `OWS_BACKUP_DIR=DIR cmake --build --preset fw --target flash-sensor-contact-v1` runs `tools/uniflash.py flash --backup DIR`.
@@ -87,11 +87,11 @@ Pull TDO and TDI too (2-pin JTAG does not use them; the LaunchPad's chip would s
 
 ## Bringing up a unit, step by step
 
-1. **Solder** M, C, S, RX, TX, W (recommended for UART/ESP SBL), + and -; battery out. Check every joint (trap 2).
+1. **Solder** M, C, S, RX, TX, + and -; battery out. Check every joint (trap 2).
 2. **Orientation check** with a meter (sensor unpowered): M beeps to chip pin 13, C to pin 14. Then S to 19.
-3. **One-step provision (recommended)**: `tools/uniflash.py provision --sensor --backup backups/contact_<MAC>` (reads
-   and verifies a dual-read 128 KB backup + CCFG + FCFG1, flashes selector + Slot A, enables the `W` pad ROM bootloader
-   in CCFG while keeping the factory MAC untouched, and performs a clean reset). Or run steps 3a–5 individually:
+3. **One-step provision (recommended)**: `tools/uniflash.py provision --sensor --backup-dir backups/contact_<MAC>` (reads
+   and verifies a dual-read 128 KB backup + CCFG + FCFG1, flashes selector + Slot A, enables the `R` pad (`DIO1`) ROM
+   bootloader in CCFG while keeping the factory MAC untouched, and performs a clean reset). Or run steps 3a–5 individually:
    - **3a. Back up, read-only**, before anything else (CLAUDE.md): `tools/uniflash.py backup backups/contact_<MAC>` (or
      raw `DSLite memory --config .../xds110_2pin.ccxml --range 0x0,32768 --output flash.bin`, plus `0x1FFA8,22` and
      `0x50001000,256`). Archive reference dumps in `ground_truth/firmware/contact_v1_<MAC>_<date>/` with `info.json`,
@@ -159,9 +159,9 @@ Pull TDO and TDI too (2-pin JTAG does not use them; the LaunchPad's chip would s
 Product `gateway-contact-v1`: our gateway app on this board, its host link (the stock dongle's protocol, 115200) on the
 RX/TX pads, the unit's CCFG MAC as its MAC, never in standby (`board_keep_awake()`), the receiver always on: mains
 power, not a coin cell. Without a CH554 it answers the sync host commands itself, as on the LaunchPad. Provision it in
-one step with `tools/uniflash.py provision --gateway --backup backups/contact_<MAC>` (or `tools/uniflash.py flash
+one step with `tools/uniflash.py provision --gateway --backup-dir backups/contact_<MAC>` (or `tools/uniflash.py flash
 --backup backups/contact_<MAC> build/fw/firmware/gateway-contact-v1-app.bin`; pages 0-29, CCFG stays, and
-`wyze_contact_v1`'s built-in CCFG also configures `BL_CONFIG = 0xC5FE0AC5` on `W`). To keep its paired sensors over an
+`wyze_contact_v1`'s built-in CCFG also configures `BL_CONFIG = 0xC5FE01C5` on `R`). To keep its paired sensors over an
 update from a build before #61 (the old NV format), add `--nv migrate`: `uniflash.py` defaults to `keep`, and the new
 firmware formats an old-format page, so the table is lost while the sensors still think they are joined and keep
 reporting (#73).
@@ -179,18 +179,17 @@ reporting (#73).
 
 ## The ROM bootloader (issue #14)
 
-Stock disables it; on our units we enable it once, over JTAG, with one of two backdoors (the user's two configs):
-**`w`**, the W pad (DIO10, BL_CONFIG 0xC5FE0AC5): a pad an ESP32 can be wired to; **`button`** (DIO11, 0xC5FE0BC5): the
-button, no wire, by hand. `tools/uniflash.py enable-bootloader w|button --backup <dir> --yes` (or `provision`) changes
-only BL_CONFIG, checks that nothing else changes (MAC, TAP/DAP, IMAGE_VALID), writes page 31, reads it back. Both DIO10
-and DIO11 have an external pull-up (verified: high even with the chip's pull-down), so the ROM sees them high unless
-pulled to GND. Then: either enter SBL in software without pins (`0x53F0` sub-ID `0x05` `OWS_SUB_ENTER_SBL` on a gateway
-or `sbl` on a sensor console, via `chip_enter_sbl()`), or hold W to GND (or the button), reset (power, S, or
-`tools/uniflash.py reset`), release, and the ROM bootloader talks on the RX/TX pads (DIO1/DIO0, 115200):
+Stock disables it (`BL_CONFIG = 0x00FE0100`: backdoor pin 1 = `DIO1`, active low, with the two `0xC5` enable bytes
+cleared); on our units we enable it once, over JTAG, with backdoor **`r`**, the `R` pad (`DIO1`,
+`BL_CONFIG = 0xC5FE01C5`, matching the stock dongle and motion v1). `tools/uniflash.py enable-bootloader [r] --yes` (or
+`provision`) changes only `BL_CONFIG`, checks that nothing else changes (MAC, TAP/DAP, IMAGE_VALID), writes page 31,
+reads it back. Then: either enter SBL in software without pins (`0x53F0` sub-ID `0x05` `OWS_SUB_ENTER_SBL` on a gateway
+or `sbl` on a sensor console, via `chip_enter_sbl()`), or hold `R` to GND across a reset (power, `S`, or
+`tools/uniflash.py reset`), release, and the ROM bootloader talks on the `RX`/`TX` pads (`DIO1`/`DIO0`, 115200):
 `tools/uart_sbl.py check` (sync, ping, chip ID, the CCFG) and `flash BOOT.bin SLOT_A.img --yes` (pages 0-29 only, ~20 s);
-then reset it with S or the power (or the `~15 s` hardware `WDT` after software SBL entry), not the bootloader's own
-`CMD_RESET` (which hangs after JTAG sessions). Verified with `w` on 777B42DF (W held to GND by hand, 2026-10-24). With
-`w`, an ESP32 on W, S, RX and TX (or 4-wire RX/TX via `OWS_SUB_ENTER_SBL`) can reflash a unit by itself (#15).
+then reset it with `S` or the power (or the `~15 s` hardware `WDT` after software SBL entry), not the bootloader's own
+`CMD_RESET` (which hangs after JTAG sessions). With `r`, an ESP32/ESP8266 on `S`, `RX` and `TX` (holding `R` low across
+`S` or a power-cycle, or 4-wire `RX`/`TX` via `OWS_SUB_ENTER_SBL`) can reflash a unit by itself (#15, #81).
 
 ## What the units tell us
 
@@ -203,4 +202,4 @@ then reset it with S or the power (or the `~15 s` hardware `WDT` after software 
 
 | MAC | Dumped | Our firmware | Notes |
 |---|---|---|---|
-| 777B42DF | `firmware/contact_v1_777B42DF_2026-10-24` | selector + slot A (bench or battery build, swapped by the tests), paired as 777B42DF on the test PAN, short 0x0006 | the first; pads soldered: M, C, S, RX, TX, +, -; **CCFG: bootloader enabled, backdoor `w`**, 2026-10-24 |
+| 777B42DF | `firmware/contact_v1_777B42DF_2026-10-24` | selector + slot A (bench or battery build, swapped by the tests), paired as 777B42DF on the test PAN, short 0x0006 | the first; pads soldered: M, C, S, RX, TX, +, -; **CCFG: bootloader enabled, backdoor `r`** (2026-11-07; originally `w` on 2026-10-24) |

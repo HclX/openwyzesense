@@ -71,7 +71,7 @@ In one run (about 25 seconds), it:
 2. backs up the whole chip, read twice and compared, into `backups/contact_v1/<MAC>/` (keep it; if a backup of this
    MAC is already there, it is checked instead of overwritten);
 3. writes our firmware and reads it back. It never writes the part of the chip that holds the MAC;
-4. enables the chip's serial bootloader on the `W` pad, so a Wi-Fi gateway can reflash this board later
+4. enables the chip's serial bootloader on the `R` pad, so a Wi-Fi gateway can reflash this board later
    ([level 4](4-wifi-gateway.md)) without the LaunchPad;
 5. resets the sensor.
 
