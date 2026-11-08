@@ -168,34 +168,8 @@ bool radio_tx(const uint8_t *frame, size_t len, uint32_t gap_us)
         phy_cmd_tx.startTrigger.triggerType = TRIG_NOW;
         last_start = RF_getCurrentTime();
     }
-    // the battery under load (#75): BATMON measures continuously while the frame is on the air (status ACTIVE: the
-    // PA on; a report is ~86 ms), and the lowest reading is kept. The CPU stays busy meanwhile (~1-2 mA beside the
-    // radio's 13-20 mA); BATMON goes back to its usual 32-cycle period after
-    (void)chip_battery_mv();  // BATMON on
-    tx_min_raw = UINT32_MAX;
-    phy_cmd_tx.status = 0x0000;  // IDLE: the RF driver dispatches it after RF_postCmd returns; until then the field
-                                 // still held the last frame's result (DONE), and the loop below saw it as done
-    RF_CmdHandle h = RF_postCmd(rf, (RF_Op *)&phy_cmd_tx, RF_PriorityNormal, NULL, 0);
-    if (h >= 0) {
-        uint32_t meascfg = HWREG(AON_BATMON_BASE + AON_BATMON_O_MEASCFG);
-        HWREG(AON_BATMON_BASE + AON_BATMON_O_MEASCFG) = AON_BATMON_MEASCFG_PER_CONT;
-        // BAT always holds the latest measurement: read it all along (BATUPD, AONBatMonNewBatteryMeasureReady(), flags
-        // only a reading that differs from the last, so a frame right after another, at the same level, read nothing)
-        const volatile uint16_t *status = &phy_cmd_tx.status;
-        uint32_t t0 = RF_getCurrentTime();
-        while (*status < 0x0400 && RF_getCurrentTime() - t0 < 4u * 400000u) {  // < DONE_OK; at most 400 ms
-            if (*status == 0x0002) {                                           // ACTIVE
-                uint32_t v = AONBatMonBatteryVoltageGet();
-                if (v < tx_min_raw) {
-                    tx_min_raw = v;
-                }
-            }
-        }
-        HWREG(AON_BATMON_BASE + AON_BATMON_O_MEASCFG) = meascfg;
-        ok = RF_pendCmd(rf, h, RF_EventLastCmdDone) & RF_EventLastCmdDone;
-    } else {
-        ok = false;
-    }
+    // EXPERIMENT (#85): the radio_tx of before the battery-under-load change (c642c0c): run the command, no BATMON
+    ok = RF_runCmd(rf, (RF_Op *)&phy_cmd_tx, RF_PriorityNormal, NULL, 0) & RF_EventLastCmdDone;
     return radio_rx_start() && ok;
 }
 
