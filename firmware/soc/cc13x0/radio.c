@@ -4,6 +4,7 @@
 
 #include <string.h>
 
+bool board_battery(void);  // board.h (which needs the board's board_config.h): a battery board?
 #include "chip.h"
 #include "phy_settings.h"
 // clang-format off: a TI include path, not a division
@@ -70,7 +71,12 @@ static void rx_callback(RF_Handle h, RF_CmdHandle ch, RF_EventMask e)
     if (!(e & RF_EventRxEntryDone)) {
         return;
     }
-    while (rx_current->status == DATA_ENTRY_FINISHED) {
+    while (rx_current->status == DATA_ENTRY_FINISHED || rx_current->status == DATA_ENTRY_UNFINISHED) {
+        if (rx_current->status == DATA_ENTRY_UNFINISHED) {  // a frame cut short: dropped, the entry used again (#85;
+            rx_current->status = DATA_ENTRY_PENDING;        // before, the loop stopped on it for good)
+            rx_current = (rfc_dataEntryGeneral_t *)rx_current->pNextEntry;
+            continue;
+        }
         const uint8_t *d = &rx_current->data;
         uint16_t n = (uint16_t)(d[0] | d[1] << 8);  // element length: PHR + frame + RSSI + timestamp
         if (n >= 2 + 1 + 4 && n - 2 - 1 - 4 <= RADIO_MAX_FRAME) {
@@ -92,17 +98,40 @@ static void rx_callback(RF_Handle h, RF_CmdHandle ch, RF_EventMask e)
     }
 }
 
+static uint32_t rf_errors;  // the RF driver's error callback (a failed synthesizer calibration, ...) since the start
+
+// TI's RF.h: on RF_ERROR_CMDFS_SYNTH_PROG and other errors the driver goes on as if nothing happened; we restart,
+// which sets the radio up again from scratch (#85: counted for the host and the bench).
+static void rf_error(RF_Handle h, RF_CmdHandle ch, RF_EventMask e)
+{
+    (void)h, (void)ch, (void)e;
+    rf_errors++;
+    chip_reset();
+}
+
 bool radio_init(void)
 {
     RF_Params params;
     RF_Params_init(&params);
-    params.nInactivityTimeout = 2000;  // µs: with nothing to do (a sensor between events), the RF core
-                                       // powers down; a gateway never stops receiving, so never
+    params.pErrCb = rf_error;
+    if (board_battery()) {
+        params.nInactivityTimeout = 2000;  // µs: with nothing to do (a sensor between events), the RF core powers down
+    }
     rf = RF_open(&rf_object, &phy_mode, (RF_RadioSetup *)&phy_cmd_setup, &params);
     if (!rf) {
         return false;
     }
+    if (!board_battery()) {
+        // a mains-powered board (a gateway) keeps its RF core powered: otherwise the driver powers it down and boots
+        // it again between an ACK and a reply scheduled after it (TRIG_ABSTIME), as stock never does (#85)
+        RF_control(rf, RF_CTRL_SET_POWER_MGMT, (void *)0);
+    }
     return RF_runCmd(rf, (RF_Op *)&phy_cmd_fs, RF_PriorityNormal, NULL, 0) & RF_EventLastCmdDone;
+}
+
+uint32_t radio_errors(void)
+{
+    return rf_errors;
 }
 
 bool radio_rx_start(void)
@@ -220,30 +249,41 @@ bool radio_tx(const uint8_t *frame, size_t len, uint32_t gap_us)
         phy_cmd_tx.startTrigger.triggerType = TRIG_NOW;
         last_start = RF_getCurrentTime();
     }
-    // the battery under load (#75): BATMON measures continuously while the frame is on the air (status ACTIVE: the
-    // PA on; a report is ~86 ms), and the lowest reading is kept. The CPU stays busy meanwhile (~1-2 mA beside the
-    // radio's 13-20 mA); BATMON goes back to its usual 32-cycle period after
-    (void)chip_battery_mv();  // BATMON on
+    // the battery under load (#75), on a battery board only: BATMON measures continuously while the frame is on the
+    // air (status ACTIVE: the PA on; a report is ~86 ms), and the lowest reading is kept. A mains-powered board (a
+    // gateway) has no battery to watch, and that tight loop of BATMON and radio-timer reads made #85 several times
+    // likelier: it only waits for the frame to end, on the system clock.
+    bool battery = board_battery();
+    if (battery) {
+        (void)chip_battery_mv();  // BATMON on
+    }
     tx_min_raw = UINT32_MAX;
     phy_cmd_tx.status = 0x0000;  // IDLE: the RF driver dispatches it after RF_postCmd returns; until then the field
                                  // still held the last frame's result (DONE), and the loop below saw it as done
     RF_CmdHandle h = RF_postCmd(rf, (RF_Op *)&phy_cmd_tx, RF_PriorityNormal, NULL, 0);
     if (h >= 0) {
-        uint32_t meascfg = HWREG(AON_BATMON_BASE + AON_BATMON_O_MEASCFG);
-        HWREG(AON_BATMON_BASE + AON_BATMON_O_MEASCFG) = AON_BATMON_MEASCFG_PER_CONT;
-        // BAT always holds the latest measurement: read it all along (BATUPD, AONBatMonNewBatteryMeasureReady(), flags
-        // only a reading that differs from the last, so a frame right after another, at the same level, read nothing)
         const volatile uint16_t *status = &phy_cmd_tx.status;
-        uint32_t t0 = RF_getCurrentTime();
-        while (*status < 0x0400 && RF_getCurrentTime() - t0 < 4u * 400000u) {  // < DONE_OK; at most 400 ms
-            if (*status == 0x0002) {                                           // ACTIVE
-                uint32_t v = AONBatMonBatteryVoltageGet();
-                if (v < tx_min_raw) {
-                    tx_min_raw = v;
+        uint32_t t0;
+        if (battery) {
+            uint32_t meascfg = HWREG(AON_BATMON_BASE + AON_BATMON_O_MEASCFG);
+            HWREG(AON_BATMON_BASE + AON_BATMON_O_MEASCFG) = AON_BATMON_MEASCFG_PER_CONT;
+            // BAT always holds the latest measurement: read it all along (BATUPD, AONBatMonNewBatteryMeasureReady(),
+            // flags only a reading that differs from the last, so a frame right after another read nothing)
+            t0 = RF_getCurrentTime();
+            while (*status < 0x0400 && RF_getCurrentTime() - t0 < 4u * 400000u) {  // < DONE_OK; at most 400 ms
+                if (*status == 0x0002) {                                           // ACTIVE
+                    uint32_t v = AONBatMonBatteryVoltageGet();
+                    if (v < tx_min_raw) {
+                        tx_min_raw = v;
+                    }
                 }
             }
+            HWREG(AON_BATMON_BASE + AON_BATMON_O_MEASCFG) = meascfg;
+        } else {
+            uint32_t ms0 = clock_now_ms();
+            while (*status < 0x0400 && clock_now_ms() - ms0 < 400u) {  // < DONE_OK; at most 400 ms
+            }
         }
-        HWREG(AON_BATMON_BASE + AON_BATMON_O_MEASCFG) = meascfg;
         if (*status < 0x0400) {
             // the radio core never finished it (#85: a beacon stuck ACTIVE for hours, RF_pendCmd waiting with it):
             // aborted; if the core does not answer even that, a restart, whose start-up resets the RF core (board.c)

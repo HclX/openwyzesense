@@ -43,3 +43,6 @@ uint32_t radio_tx_min_mv(void);
 // Transmits the radio core never finished since the start, each aborted (#85). A core that ignores even the abort
 // restarts the chip.
 uint32_t radio_tx_stuck(void);
+
+// The RF driver's errors since the start (each restarts the chip; #85).
+uint32_t radio_errors(void);

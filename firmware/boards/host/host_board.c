@@ -821,6 +821,11 @@ void chip_watchdog_feed(void)
 {
 }
 
+uint32_t radio_errors(void)
+{
+    return 0;
+}
+
 uint32_t radio_tx_stuck(void)
 {
     return 0;

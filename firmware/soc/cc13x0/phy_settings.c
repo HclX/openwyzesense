@@ -1,10 +1,9 @@
 // Values copied from the stock gateway's RAM (ground_truth/firmware/gateway_2025-02-08_v1.8/RAM.bin):
 // CMD_PROP_TX_ADV 0x2628, CMD_PROP_RADIO_DIV_SETUP 0x2648, CMD_PROP_RX_ADV 0x2670, overrides 0x2728, CMD_FS 0x25D8.
-// The MCE and RFE patches are TI's sl_longrange ones, identical to the stock images (FACTS.md §1).
+// The MCE and RFE patches are TI's sl_longrange ones, identical to the stock images; no CPE patch, as there (FACTS.md §1).
 #include "phy_settings.h"
 
 // clang-format off: a TI include path, not a division
-#include DeviceFamily_constructPath(rf_patches/rf_patch_cpe_sl_longrange.h)
 #include DeviceFamily_constructPath(rf_patches/rf_patch_mce_sl_longrange.h)
 #include DeviceFamily_constructPath(rf_patches/rf_patch_rfe_sl_longrange.h)
 // clang-format on
@@ -13,7 +12,7 @@
 
 RF_Mode phy_mode = {
     .rfMode = RF_MODE_PROPRIETARY_SUB_1,
-    .cpePatchFxn = &rf_patch_cpe_sl_longrange,
+    .cpePatchFxn = NULL,  // none, as in every stock image (FACTS.md §1; #85: the radio core is what froze)
     .mcePatchFxn = &rf_patch_mce_sl_longrange,
     .rfePatchFxn = &rf_patch_rfe_sl_longrange,
 };
