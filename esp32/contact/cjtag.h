@@ -20,9 +20,11 @@
 #define CJTAG_FCFG1_ADDR       0x50001000u
 #define CJTAG_FCFG1_SIZE       0x00000400u  // 1 KB factory configuration
 #define CJTAG_CCFG_SIZE        88u          // 0x0001FFA8..0x0001FFFF
-#define CJTAG_CCFG_BL_CONFIG   0x30u        // offsets in the CCFG
+#define CJTAG_CCFG_MAC         0x24u        // offsets in the CCFG: Wyze's ASCII MAC (8 bytes)
+#define CJTAG_CCFG_BL_CONFIG   0x30u
 #define CJTAG_CCFG_TAP_DAP_0   0x3Cu
 #define CJTAG_CCFG_IMAGE_VALID 0x44u
+#define CJTAG_PAGE29_MAC_ADDR  0x0001D000u  // the MAC of the newer units (v1 contacts too), CCFG slot blank
 #define CJTAG_MAX_BL_PIN       14u          // 5x5 package: DIO0-14 (TI errata SWRZ062F advisory 13)
 #define CJTAG_ICEPICK_IDCODE   0x0B9BE02Fu  // CC13x0 ICEPick-C IDCODE (ignoring 4-bit version)
 #define CJTAG_DAP_IDCODE       0x4BA00477u  // ARM Cortex-M3 CoreSight JTAG-DP IDCODE
@@ -92,6 +94,11 @@ int cjtag_write_image(cjtag_t *c, cjtag_image_fn image, void *ctx, uint32_t imag
 // hold a factory MAC, the CPU debug port enabled and a valid image; after the erase the page is written and verified
 // whole, and on a failure written back as it was. Returns 1 written, 0 already so, -1 refused or failed (c->error).
 int cjtag_set_backdoor(cjtag_t *c, uint8_t pin, uint8_t *buf_4k);
+// Fills a blank CCFG MAC slot (0x1FFCC, 8 bytes, all FF) with the unit's own MAC, the one in page 29: newer units keep
+// it there only (the user's decision, 2026-11-07, for v1 contact 77A9B885). Program only, never an erase (FF -> the
+// MAC needs no 0 -> 1 bit); page 31 read twice before and verified whole after. Returns 1 written, 0 already so, -1
+// refused (slot not blank, MAC not the page-29 one) or failed (c->error).
+int cjtag_fill_ccfg_mac(cjtag_t *c, const char *mac, uint8_t *buf_4k);
 // Release the debug domain, trigger a Cortex-M3 VECTRESET so the chip boots cleanly without hanging in ROM
 // Halt-In-Boot (HIB), and return the cJTAG adapter to offline mode.
 void cjtag_release_and_reset(cjtag_t *c);

@@ -809,7 +809,7 @@ bool cjtag_connect(cjtag_t *c, bool halt_cpu)
         c->has_ccfg_mac = false;
         // Stock v2 climate/motion sensors store their 8-char ASCII MAC at 0x0001D000
         uint8_t p29_mac[8];
-        if (cjtag_mem_read_block(c, 0x0001D000u, p29_mac, sizeof p29_mac) && is_ascii_hex_mac(p29_mac)) {
+        if (cjtag_mem_read_block(c, CJTAG_PAGE29_MAC_ADDR, p29_mac, sizeof p29_mac) && is_ascii_hex_mac(p29_mac)) {
             memcpy(c->mac, p29_mac, 8);
             c->mac[8] = 0;
         } else {
@@ -999,6 +999,80 @@ static void put_le32_(uint8_t *p, uint32_t v)
     for (int i = 0; i < 4; i++) {
         p[i] = (uint8_t)(v >> (8 * i));
     }
+}
+
+// Programs n bytes (a multiple of 4) at addr from data, with no erase: flash bits only go from 1 to 0
+static bool program_only(cjtag_t *c, uint32_t addr, const uint8_t *data, uint32_t n)
+{
+    if (!cpu_halt(c)) {
+        return false;
+    }
+    uint32_t orig_vims = 0;
+    if (!cjtag_mem_read32(c, CC1310_VIMS_CTL, &orig_vims) ||
+        !cjtag_mem_write32(c, CC1310_VIMS_CTL, (orig_vims & ~3u) | 3u)) {
+        return false;
+    }
+    uint32_t fwflag = 0;
+    bool ok =
+        cjtag_mem_write32(c, CC1310_FLASH_FWLOCK, 0x00000005u) && cjtag_mem_read32(c, CC1310_FLASH_FWFLAG, &fwflag) &&
+        cjtag_mem_write32(c, CC1310_FLASH_FWFLAG, fwflag & ~1u) &&
+        cjtag_mem_write32(c, CC1310_FLASH_FWLOCK, 0x00000000u) && cjtag_mem_write_block(c, CC1310_SRAM_BUF, data, n);
+    uint32_t status = 0xFFFFFFFFu;
+    if (ok && (!rom_hapi_call(c, CC1310_ROM_HAPI_PROG, CC1310_SRAM_BUF, addr, n, 500, &status) || status != 0)) {
+        ok = fail(c, "CC1310 HapiProgramFlash failed");
+    }
+    uint32_t fcfg = 0;
+    if (cjtag_mem_read32(c, CC1310_FLASH_CFG, &fcfg)) {
+        (void)cjtag_mem_write32(c, CC1310_FLASH_CFG, fcfg & ~0x02u);
+    }
+    (void)cjtag_mem_write32(c, CC1310_VIMS_CTL, orig_vims);
+    return ok;
+}
+
+int cjtag_fill_ccfg_mac(cjtag_t *c, const char *mac, uint8_t *buf_4k)
+{
+    const uint32_t slot = CJTAG_CCFG_ADDR + CJTAG_CCFG_MAC;
+    const uint32_t slot_off = slot - CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE;
+    uint8_t m[8], page29[8];
+    if (!mac || strlen(mac) != 8) {
+        fail(c, "the MAC must be 8 hex digits");
+        return -1;
+    }
+    for (int i = 0; i < 8; i++) {
+        m[i] = (uint8_t)(mac[i] >= 'a' && mac[i] <= 'f' ? mac[i] - 32 : mac[i]);
+    }
+    if (!is_ascii_hex_mac(m)) {
+        fail(c, "the MAC must be 8 hex digits");
+        return -1;
+    }
+    if (!cjtag_dump_page(c, CJTAG_CCFG_PAGE_IDX, buf_4k)) {
+        return -1;
+    }
+    if (!memcmp(buf_4k + slot_off, m, 8)) {
+        return 0;  // already there
+    }
+    if (!is_all_ff(buf_4k + slot_off, 8)) {
+        fail(c, "the CCFG MAC slot is not blank: not writing (only a blank slot is filled, never erased)");
+        return -1;
+    }
+    if (!cjtag_mem_read_block(c, CJTAG_PAGE29_MAC_ADDR, page29, sizeof page29) || memcmp(page29, m, 8) != 0) {
+        fail(c, "the MAC is not the one in page 29 (0x1D000): not writing");
+        return -1;
+    }
+    if (!program_only(c, slot, m, 8)) {
+        return -1;
+    }
+    memcpy(buf_4k + slot_off, m, 8);  // the page as it must be now: only the slot changed
+    bool equal = false;
+    if (!flash_equals(c, CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, buf_4k, CJTAG_PAGE, &equal) || !equal) {
+        fail(c, "page 31 read-back after the MAC fill differs");
+        return -1;
+    }
+    memcpy(c->mac, m, 8);
+    c->mac[8] = 0;
+    c->has_ccfg_mac = true;
+    c->page31_crc = ~crc32_update(0xFFFFFFFFu, buf_4k, CJTAG_PAGE);
+    return 1;
 }
 
 int cjtag_set_backdoor(cjtag_t *c, uint8_t pin, uint8_t *buf_4k)

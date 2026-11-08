@@ -305,6 +305,87 @@ void contact_reset_post()
 }
 
 #ifdef OWS_DEBUG_UART
+// Bring-up: GET /debug/boot[?r=0]: only the reset into the contact's bootloader (r=0: R not held low, W only)
+void debug_boot()
+{
+    if (server.arg("r") == "0") {
+        pad(OWS_CONTACT_BOOT, true);
+        delay(5);
+        pad(OWS_CONTACT_RESET, true);
+        delay(20);
+        pad(OWS_CONTACT_RESET, false);
+        delay(50);
+        pad(OWS_CONTACT_BOOT, false);
+    } else {
+        contact_enter_bootloader();
+    }
+    server.send(200, "text/plain", "reset into the bootloader\n");
+}
+
+// Bring-up: GET /debug/sdrive: into the bootloader with S driven high after the reset (not just released), and left so
+void debug_sdrive()
+{
+    pad(OWS_CONTACT_BOOT, true);
+    delay(5);
+    pad(OWS_CONTACT_RESET, true);
+    delay(20);
+    digitalWrite(OWS_CONTACT_RESET, HIGH);
+    pinMode(OWS_CONTACT_RESET, OUTPUT);
+    delay(50);
+    pad(OWS_CONTACT_BOOT, false);
+    server.send(200, "text/plain", "reset into the bootloader, S driven high\n");
+}
+
+// Bring-up: GET /debug/follow: drives D1, D2 and D4 low then high in turn and reports D7 (the line from T) each time
+void debug_follow()
+{
+    String out;
+    const int pins[] = {OWS_CONTACT_BOOT, OWS_CONTACT_RESET, 2};
+    const char *names[] = {"D1", "D2", "D4"};
+    Serial1.flush();
+    for (int i = 0; i < 3; i++) {
+        int g = pins[i];
+        digitalWrite(g, LOW);
+        pinMode(g, OUTPUT);
+        delay(2);
+        int lo = digitalRead(13);
+        digitalWrite(g, HIGH);
+        delay(2);
+        int hi = digitalRead(13);
+        pinMode(g, INPUT);
+        out += String(names[i]) + " low->D7=" + lo + " high->D7=" + hi + "\n";
+    }
+    Serial1.begin(115200);
+    pad(OWS_CONTACT_RESET, false);
+    pad(OWS_CONTACT_BOOT, false);
+    out += String("released: D7=") + digitalRead(13) + "\n";
+    server.send(200, "text/plain", out);
+}
+
+// Bring-up: GET /debug/t: D7 as a plain input with its pull-up (out of the UART), read 20 times, then a restart
+void debug_t()
+{
+    pinMode(13, INPUT_PULLUP);
+    delay(5);
+    String out = "D7 as GPIO input, pull-up:";
+    for (int i = 0; i < 20; i++) {
+        out += digitalRead(13) ? " 1" : " 0";
+        delay(5);
+    }
+    server.send(200, "text/plain", out + "\nrestarting\n");
+    delay(200);
+    ESP.restart();
+}
+
+// Bring-up: GET /debug/pins: the levels on the contact's lines, released (S and W read as inputs; R is UART1's TX)
+void debug_pins()
+{
+    char out[96];
+    snprintf(out, sizeof out, "S(D2)=%d W(D1)=%d T(D7)=%d R(D4)=%d\n", digitalRead(OWS_CONTACT_RESET),
+             digitalRead(OWS_CONTACT_BOOT), digitalRead(13), digitalRead(2));
+    server.send(200, "text/plain", out);
+}
+
 // Bring-up: GET /debug/uart?send=<hex>[&ms=300]: the bytes to the contact, and what comes back within ms, as hex
 // (the relay is not reading meanwhile: this runs inside loop())
 void debug_uart()
@@ -804,6 +885,30 @@ void contact_bootloader()
     server.send(r < 0 ? 500 : 200, "application/json", String(out) + ",\"result\":" + js(msg.c_str()) + "}\n");
 }
 
+// POST /contact/ccfg_mac mac=<MAC>: fills a blank CCFG MAC slot with the unit's own MAC from page 29 (newer v1
+// contacts; cjtag_fill_ccfg_mac: program only, no erase). Then the gateway check can write it.
+void contact_ccfg_mac()
+{
+    if (!require_auth() || refused_busy()) {
+        return;
+    }
+    gw_busy = true;
+    if (!cj_connect()) {
+        gw_busy = false;
+        contact_reset();
+        server.send(502, "text/plain", String("debug port: ") + cj.error + "\n");
+        return;
+    }
+    String mac = server.arg("mac");
+    int r = cjtag_fill_ccfg_mac(&cj, mac.c_str(), sbl_page);
+    String msg = r > 0    ? String("written: CCFG MAC ") + cj.mac
+                 : r == 0 ? String("already so: ") + cj.mac
+                          : String("refused/failed: ") + cj.error;
+    cj_done(true);
+    gw_busy = false;
+    server.send(r < 0 ? 500 : 200, "text/plain", msg + "\n");
+}
+
 void gw_sync()
 {
     gwsync_io_t io = {sbl_out,  sbl_in,      sbl_drain, gw_reset,       gw_bootloader,  gw_sleep,
@@ -1006,6 +1111,7 @@ void setup()
     server.on("/contact/reset", HTTP_POST, contact_reset_post);
     server.on("/contact/bootloader", HTTP_GET, contact_bootloader);
     server.on("/contact/bootloader", HTTP_POST, contact_bootloader);
+    server.on("/contact/ccfg_mac", HTTP_POST, contact_ccfg_mac);
     server.on("/contact/gwsync", HTTP_POST, contact_gwsync_post);
     server.on("/ota", HTTP_POST, ota_done, ota_upload);
     server.on("/contact/flash", HTTP_POST, contact_flash_done, contact_flash_upload);
@@ -1013,6 +1119,11 @@ void setup()
     server.on("/contact/nv", HTTP_POST, contact_nv_post, contact_nv_upload);
 #ifdef OWS_DEBUG_UART
     server.on("/debug/uart", HTTP_GET, debug_uart);
+    server.on("/debug/boot", HTTP_GET, debug_boot);
+    server.on("/debug/pins", HTTP_GET, debug_pins);
+    server.on("/debug/t", HTTP_GET, debug_t);
+    server.on("/debug/follow", HTTP_GET, debug_follow);
+    server.on("/debug/sdrive", HTTP_GET, debug_sdrive);
 #endif
     server.begin();
     char device[24];

@@ -106,6 +106,11 @@ with the SDR running.
 
 ## Small fixes (left from the code review)
 
+- v1 contacts with the MAC in page 29 only (77A9B885: CCFG slot blank, stock backup in `backups/`): a FACTS.md row
+  (how common; which production); our firmware could also read `0x1D000` when the CCFG slot is blank, and the ESP32
+  relay / station need `/contact/ccfg_mac` too (ESP8266 only so far). The 7788CCF6 board is retired (its `S` pad
+  floats at 1.5 V unloaded).
+
 - **Safety (2026-11-07, found on 9A78):** a relay's start-up check flashes our gateway onto any contact that does
   not answer, stock units included, with no backup first: 9A78, rewired with v1 contact 7779749A, overwrote that
   unit's firmware over cJTAG at its first start, and no backup of it exists. And a gateway with an empty table makes

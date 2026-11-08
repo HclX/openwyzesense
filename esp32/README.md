@@ -226,6 +226,11 @@ curl http://<ip>/contact/bootloader                                       # {"ma
 curl -u admin:<pass> -d 'backdoor=r&mac=<MAC>' http://<ip>/contact/bootloader  # r (DIO1, stock), w (DIO10) or button (DIO11)
 ```
 
+Newer v1 contacts keep their MAC only in page 29 (`0x1D000`), the CCFG MAC slot blank (77A9B885, 2026-11-07); the
+relay and the station refuse to write such a unit until `curl -u admin:<pass> -d mac=<MAC> http://<ip>/contact/ccfg_mac`
+fills the slot with that same MAC (`cjtag_fill_ccfg_mac`: a blank slot only, program only, no erase; the user's
+decision, 2026-11-07).
+
 Verified on a NodeMCU with 777B42DF, 2026-11-07: `BL_CONFIG` `c5fe0ac5` -> `c5fe01c5`, then a reflash through `R`
 alone (our sensor firmware running, so no software entry), a gateway update through the debug port, and
 `test_hw_esp32.py` (the relay, reset, `nv.json`, a reflash, OTA).

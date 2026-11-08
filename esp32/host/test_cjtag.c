@@ -718,7 +718,35 @@ int main(void)
     CHECK(cjtag_set_backdoor(&cj, 10, page_buf) == -1 && sim.erases == erases0);
     CHECK(cjtag_write_image(&cj, image_fn, image, sizeof image, page_buf) == -1);
 
-    // 9. Clean release and VECTRESET (0x05FA0001)
+    // 9. The CCFG MAC fill (newer units: MAC in page 29, the CCFG slot blank): program only, never an erase
+    sim_init(&sim, NULL);
+    memcpy(sim.flash + CJTAG_PAGE29_MAC_ADDR, "77A9B885", 8);
+    memset(sim.flash + (size_t)CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, 0x6B, 0x100);
+    cjtag_init(&cj, &io);
+    CHECK(cjtag_connect(&cj, true) && !cj.has_ccfg_mac && strcmp(cj.mac, "77A9B885") == 0);
+    CHECK(cjtag_write_image(&cj, image_fn, image, sizeof image, page_buf) == -1);  // refused without a CCFG MAC
+    memcpy(orig_page31, sim.flash + (size_t)CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, CJTAG_PAGE);
+    erases0 = sim.erases;
+    CHECK(cjtag_fill_ccfg_mac(&cj, "77A9B886", page_buf) == -1);  // not the page-29 MAC
+    CHECK(cjtag_fill_ccfg_mac(&cj, "77A9B88", page_buf) == -1);
+    CHECK(cjtag_fill_ccfg_mac(&cj, "77A9B8G5", page_buf) == -1);
+    CHECK(memcmp(sim.flash + (size_t)CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, orig_page31, CJTAG_PAGE) == 0);
+    CHECK(cjtag_fill_ccfg_mac(&cj, "77a9b885", page_buf) == 1);
+    CHECK(sim.erases == erases0 && memcmp(sim.flash + CJTAG_CCFG_ADDR + CJTAG_CCFG_MAC, "77A9B885", 8) == 0);
+    memcpy(orig_page31 + (CJTAG_CCFG_ADDR + CJTAG_CCFG_MAC - CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE), "77A9B885", 8);
+    CHECK(memcmp(sim.flash + (size_t)CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, orig_page31, CJTAG_PAGE) == 0);
+    CHECK(cj.has_ccfg_mac && strcmp(cj.mac, "77A9B885") == 0);
+    CHECK(cjtag_fill_ccfg_mac(&cj, "77A9B885", page_buf) == 0);                   // already so
+    CHECK(cjtag_write_image(&cj, image_fn, image, sizeof image, page_buf) >= 1);  // and the unit can be flashed now
+    cjtag_init(&cj, &io);
+    CHECK(cjtag_connect(&cj, true) && cj.has_ccfg_mac && strcmp(cj.mac, "77A9B885") == 0);
+    memcpy(sim.flash + CJTAG_PAGE29_MAC_ADDR, "77A9B886", 8);  // a slot already holding another MAC: never touched
+    memcpy(orig_page31, sim.flash + (size_t)CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, CJTAG_PAGE);
+    erases0 = sim.erases;
+    CHECK(cjtag_fill_ccfg_mac(&cj, "77A9B886", page_buf) == -1 && sim.erases == erases0);
+    CHECK(memcmp(sim.flash + (size_t)CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, orig_page31, CJTAG_PAGE) == 0);
+
+    // 10. Clean release and VECTRESET (0x05FA0001)
     cjtag_release_and_reset(&cj);
     CHECK(sim.aircr == 0x05FA0001u);
     CHECK(!sim.in_oscan1);
