@@ -7,6 +7,7 @@
 bool board_battery(void);  // board.h (which needs the board's board_config.h): a battery board?
 #include "chip.h"
 #include "phy_settings.h"
+#include DeviceFamily_constructPath(driverlib / rf_prop_mailbox.h)
 // clang-format off: a TI include path, not a division
 #include DeviceFamily_constructPath(driverlib/rf_data_entry.h)
 #include DeviceFamily_constructPath(driverlib/aon_batmon.h)
@@ -15,12 +16,12 @@ bool board_battery(void);  // board.h (which needs the board's board_config.h): 
 #include <ti/drivers/dpl/HwiP.h>
 
 // RX data entries: [2-byte length][PHR 2][MAC frame][RSSI 1][timestamp 4] per element (rxConf in phy_settings.c)
-#define RX_ENTRIES        4
-#define RX_ENTRY_DATA     (2 + 2 + RADIO_MAX_FRAME + 1 + 4)
-#define RX_ENTRY_SIZE     ((sizeof(rfc_dataEntryGeneral_t) - 1 + RX_ENTRY_DATA + 3) & ~3u)
-#define FRAME_FIFO        8      // frames waiting for the main loop (power of two)
-#define BEACON_LBT_DBM    (-90)  // a beacon waits while the channel is louder than this...
-#define BEACON_LBT_MAX_MS 90u    // ...for at most about two frames
+#define RX_ENTRIES    4
+#define RX_ENTRY_DATA (2 + 2 + RADIO_MAX_FRAME + 1 + 4)
+#define RX_ENTRY_SIZE ((sizeof(rfc_dataEntryGeneral_t) - 1 + RX_ENTRY_DATA + 3) & ~3u)
+#define FRAME_FIFO    8   // frames waiting for the main loop (power of two)
+#define CS_TRIES      4   // carrier sense attempts before a frame is dropped (802.15.4 macMaxCSMABackoffs + 1)
+#define CS_BACKOFF    8u  // ms: after a busy channel, 1-8 ms before the next attempt
 
 static RF_Object rf_object;
 static RF_Handle rf;
@@ -232,6 +233,68 @@ uint32_t radio_tx_stuck(void)
     return tx_stuck;
 }
 
+// One transmit chain posted and waited for: true if phy_cmd_tx ended DONE_OK. A chain the radio core never finishes
+// (#85: a beacon stuck ACTIVE for hours) restarts the chip, whose start-up resets the RF core (board.c): after an abort
+// alone the radio stayed deaf (#85, v0.2.7 on the house dongle).
+static bool chain_ended(bool ack)
+{
+    uint16_t cs = phy_cmd_cs.status, tx = phy_cmd_tx.status;
+    if (ack) {
+        return tx >= 0x0400;
+    }
+    // the carrier sense ended: idle runs the frame (wait for it), anything else (busy, a timeout, an error) ends it
+    return cs >= 0x0400 && (cs != PROP_DONE_IDLE || tx >= 0x0400);
+}
+
+static bool send_chain(rfc_radioOp_t *first, bool ack)
+{
+    // the battery under load (#75), on a battery board only: BATMON measures continuously while the frame is on the
+    // air (status ACTIVE: the PA on; a report is ~86 ms), and the lowest reading is kept. A mains-powered board (a
+    // gateway) has no battery to watch, and that tight loop of BATMON and radio-timer reads made #85 several times
+    // likelier: it only waits for the frame to end, on the system clock.
+    bool battery = board_battery();
+    if (battery) {
+        (void)chip_battery_mv();  // BATMON on
+    }
+    tx_min_raw = UINT32_MAX;
+    // IDLE: the RF driver dispatches the chain after RF_postCmd returns; until then the fields still held the last
+    // frame's results (DONE), and the loop below saw them as done
+    phy_cmd_cs.status = 0x0000;
+    phy_cmd_tx.status = 0x0000;
+    RF_CmdHandle h = RF_postCmd(rf, (RF_Op *)first, RF_PriorityNormal, NULL, 0);
+    if (h < 0) {
+        return false;
+    }
+    const volatile uint16_t *status = &phy_cmd_tx.status;
+    if (battery) {
+        uint32_t meascfg = HWREG(AON_BATMON_BASE + AON_BATMON_O_MEASCFG);
+        HWREG(AON_BATMON_BASE + AON_BATMON_O_MEASCFG) = AON_BATMON_MEASCFG_PER_CONT;
+        // BAT always holds the latest measurement: read it all along (BATUPD, AONBatMonNewBatteryMeasureReady(),
+        // flags only a reading that differs from the last, so a frame right after another read nothing)
+        uint32_t t0 = RF_getCurrentTime();
+        while (!chain_ended(ack) && RF_getCurrentTime() - t0 < 4u * 400000u) {  // at most 400 ms
+            if (*status == 0x0002) {                                            // ACTIVE
+                uint32_t v = AONBatMonBatteryVoltageGet();
+                if (v < tx_min_raw) {
+                    tx_min_raw = v;
+                }
+            }
+        }
+        HWREG(AON_BATMON_BASE + AON_BATMON_O_MEASCFG) = meascfg;
+    } else {
+        uint32_t ms0 = clock_now_ms();
+        while (!chain_ended(ack) && clock_now_ms() - ms0 < 400u) {  // at most 400 ms
+        }
+    }
+    if (!chain_ended(ack)) {
+        tx_stuck++;
+        RF_cancelCmd(rf, h, 0);
+        chip_reset();
+    }
+    (void)RF_pendCmd(rf, h, RF_EventLastCmdDone);  // the chain has ended: no wait
+    return *status == PROP_DONE_OK;
+}
+
 bool radio_tx(const uint8_t *frame, size_t len, uint32_t gap_us)
 {
     static uint32_t last_start;  // radio timer (4 MHz) at the start of the previous frame
@@ -249,75 +312,35 @@ bool radio_tx(const uint8_t *frame, size_t len, uint32_t gap_us)
     reverse_bits(tx_buf + 2, len);
     phy_cmd_tx.pktLen = (uint16_t)(2 + len);
     phy_cmd_tx.pPkt = tx_buf;
-    // a beacon (802.15.4 frame type 0, the one frame a gateway sends at a moment of its own choosing) waits while the
-    // channel is busy, as the stock gateway does (FACTS.md §3: 38-156 ms after the request, "as if it listened
-    // first"); ACKs and replies, timed to a received frame, never wait
-    if (len >= 1 && (frame[0] & 7) == 0 && rx_on) {
-        uint32_t ms0 = clock_now_ms();
-        while (clock_now_ms() - ms0 < BEACON_LBT_MAX_MS) {
-            int8_t rssi = RF_getRssi(rf);
-            if (rssi == RF_GET_RSSI_ERROR_VAL || rssi < BEACON_LBT_DBM) {
-                break;
-            }
-        }
-    }
+    // Every frame but an ACK goes out behind a carrier sense in the same command chain (phy_cmd_cs -> phy_cmd_tx), as
+    // the stock gateway sends (#85: it never posts a bare transmit; FACTS.md §1). A busy channel ends the chain without
+    // the frame: tried again after a short backoff, dropped after CS_TRIES. An ACK, due 2 ms after its frame, goes bare.
+    bool ack = len >= 1 && (frame[0] & 7) == 2;
     radio_rx_stop();  // the receiver: stopped for the frame, on again after it
-    if (gap_us) {
-        last_start += gap_us * 4;
-        phy_cmd_tx.startTrigger.triggerType = TRIG_ABSTIME;
-        phy_cmd_tx.startTrigger.pastTrig = 1;  // already late: start now
-        phy_cmd_tx.startTime = last_start;
-    } else {
-        phy_cmd_tx.startTrigger.triggerType = TRIG_NOW;
-        last_start = RF_getCurrentTime();
-    }
-    // the battery under load (#75), on a battery board only: BATMON measures continuously while the frame is on the
-    // air (status ACTIVE: the PA on; a report is ~86 ms), and the lowest reading is kept. A mains-powered board (a
-    // gateway) has no battery to watch, and that tight loop of BATMON and radio-timer reads made #85 several times
-    // likelier: it only waits for the frame to end, on the system clock.
-    bool battery = board_battery();
-    if (battery) {
-        (void)chip_battery_mv();  // BATMON on
-    }
-    tx_min_raw = UINT32_MAX;
-    phy_cmd_tx.status = 0x0000;  // IDLE: the RF driver dispatches it after RF_postCmd returns; until then the field
-                                 // still held the last frame's result (DONE), and the loop below saw it as done
-    RF_CmdHandle h = RF_postCmd(rf, (RF_Op *)&phy_cmd_tx, RF_PriorityNormal, NULL, 0);
-    if (h >= 0) {
-        const volatile uint16_t *status = &phy_cmd_tx.status;
-        uint32_t t0;
-        if (battery) {
-            uint32_t meascfg = HWREG(AON_BATMON_BASE + AON_BATMON_O_MEASCFG);
-            HWREG(AON_BATMON_BASE + AON_BATMON_O_MEASCFG) = AON_BATMON_MEASCFG_PER_CONT;
-            // BAT always holds the latest measurement: read it all along (BATUPD, AONBatMonNewBatteryMeasureReady(),
-            // flags only a reading that differs from the last, so a frame right after another read nothing)
-            t0 = RF_getCurrentTime();
-            while (*status < 0x0400 && RF_getCurrentTime() - t0 < 4u * 400000u) {  // < DONE_OK; at most 400 ms
-                if (*status == 0x0002) {                                           // ACTIVE
-                    uint32_t v = AONBatMonBatteryVoltageGet();
-                    if (v < tx_min_raw) {
-                        tx_min_raw = v;
-                    }
-                }
+    ok = false;
+    for (int attempt = 0; attempt < CS_TRIES; attempt++) {
+        rfc_radioOp_t *first = ack ? (rfc_radioOp_t *)&phy_cmd_tx : (rfc_radioOp_t *)&phy_cmd_cs;
+        if (attempt) {
+            uint32_t ms0 = clock_now_ms(), wait = 1u + RF_getCurrentTime() % CS_BACKOFF;
+            while (clock_now_ms() - ms0 < wait) {
             }
-            HWREG(AON_BATMON_BASE + AON_BATMON_O_MEASCFG) = meascfg;
+        }
+        if (gap_us && !attempt) {
+            last_start += gap_us * 4;
+            first->startTrigger.triggerType = TRIG_ABSTIME;
+            first->startTrigger.pastTrig = 1;  // already late: start now
+            first->startTime = last_start;
         } else {
-            uint32_t ms0 = clock_now_ms();
-            while (*status < 0x0400 && clock_now_ms() - ms0 < 400u) {  // < DONE_OK; at most 400 ms
-            }
+            first->startTrigger.triggerType = TRIG_NOW;
+            last_start = RF_getCurrentTime();
         }
-        if (*status < 0x0400) {
-            // the radio core never finished it (#85: a beacon stuck ACTIVE for hours, RF_pendCmd waiting with it):
-            // aborted; if the core does not answer even that, a restart, whose start-up resets the RF core (board.c)
-            // a restart even when the abort works: on the house dongle the radio stayed deaf after that abort (#85,
-            // v0.2.7: tx_stuck 1, then nothing received for 1.5 h)
-            tx_stuck++;
-            RF_cancelCmd(rf, h, 0);
-            chip_reset();
+        if (!ack) {
+            phy_cmd_tx.startTrigger.triggerType = TRIG_NOW;  // right after the carrier sense
         }
-        ok = RF_pendCmd(rf, h, RF_EventLastCmdDone) & RF_EventLastCmdDone;  // the command has ended: no wait
-    } else {
-        ok = false;
+        ok = send_chain(first, ack);
+        if (ok || ack || phy_cmd_cs.status == PROP_DONE_IDLE) {
+            break;  // sent, or failed for another reason than a busy channel: no retry
+        }
     }
     return radio_rx_start() && ok;
 }

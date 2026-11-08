@@ -88,6 +88,8 @@ def test_radio_settings_are_the_stock_ones():
         elf.initial('phy_cmd_setup'), ram[0x2648 : 0x2648 + 40], STATUS, (4, 4), (13, 1), (28, 4)
     )  # pRegOverride
     assert same_except(elf.initial('phy_cmd_fs'), ram[0x25D8 : 0x25D8 + 24], STATUS)
+    # the carrier sense chained before each frame (#85), as stock's (TI 15.4 MAC RF_cmdPropCs); pNextOp: its transmit
+    assert same_except(elf.initial('phy_cmd_cs'), ram[0x25F0 : 0x25F0 + 28], STATUS, (4, 4))
     assert same_except(elf.initial('phy_cmd_rx'), ram[0x2670 : 0x2670 + 48], STATUS, (36, 12))  # pAddr, pQueue, pOutput
     ovr = elf.initial('phy_overrides')
     assert ovr == ram[0x2728 : 0x2728 + len(ovr)] and ovr.endswith(b'\xff' * 4)

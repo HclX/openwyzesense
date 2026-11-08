@@ -15,3 +15,4 @@ extern rfc_CMD_FS_t phy_cmd_fs;
 extern rfc_CMD_PROP_RX_ADV_t phy_cmd_rx;
 extern uint32_t phy_overrides[];
 extern rfc_CMD_PROP_TX_ADV_t phy_cmd_tx;
+extern rfc_CMD_PROP_CS_t phy_cmd_cs;

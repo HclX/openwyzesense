@@ -62,6 +62,22 @@ rfc_CMD_PROP_RX_ADV_t phy_cmd_rx = {
     .endTime = 0x6422C400,  // 420 s at 4 MHz; then restarted
 };
 
+// Carrier sense before a frame, chained to phy_cmd_tx, as the stock gateway (TI's 15.4 MAC, mac_settings.c
+// RF_cmdPropCs): RSSI only, -83 dBm, ends on the first idle or busy decision, 2 ms timeout counted busy; a busy
+// channel stops the chain (the frame not sent). Field for field the stock one (RAM 0x25F0, FACTS.md §1, #85).
+rfc_CMD_PROP_CS_t phy_cmd_cs = {
+    .commandNo = CMD_PROP_CS,
+    .pNextOp = (rfc_radioOp_t *)&phy_cmd_tx,
+    .startTrigger = {.triggerType = TRIG_NOW, .pastTrig = 1},
+    .condition.rule = COND_STOP_ON_TRUE,  // busy (TRUE): stop; idle: the frame
+    .csConf = {.bEnaRssi = 1, .busyOp = 1, .idleOp = 1},
+    .rssiThr = -83,
+    .corrPeriod = 640,
+    .corrConfig.numCorrInv = 3,
+    .csEndTrigger.triggerType = TRIG_REL_START,
+    .csEndTime = 8000,  // 2 ms at 4 MHz
+};
+
 rfc_CMD_PROP_TX_ADV_t phy_cmd_tx = {
     .commandNo = CMD_PROP_TX_ADV,
     .startTrigger.triggerType = TRIG_NOW,
