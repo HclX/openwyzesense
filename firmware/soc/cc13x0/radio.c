@@ -133,10 +133,11 @@ static bool rx_wait_ended(uint32_t max_us)
     return rx_ended;
 }
 
-// The receiver stopped gracefully (a frame being received is finished first) and waited for, before anything else
-// is given to the radio. #85: a hard abort followed at once by a transmit (a beacon, sent at a random moment, often
-// in the middle of someone else's frame) left the radio core stuck in that transmit for hours. Bounded: a frame on
-// the air is at most ~45 ms long; then a hard abort.
+// The receiver stopped gracefully (a frame being received is finished first) and waited for until its command has
+// ended, before anything else is given to the radio. #85: a hard abort followed at once by a transmit (posted while
+// the receive command had not ended yet) now and then left the transmit ACTIVE for hours without it ever going on
+// the air (the SDR: no carrier, and no other frame arriving at the time); a beacon hit it within ~10-30 tries, on the
+// gateway and on a sensor alike. Bounded: a frame on the air is at most ~45 ms long; then a hard abort.
 void radio_rx_stop(void)
 {
     if (!rx_on) {
