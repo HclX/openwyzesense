@@ -49,6 +49,21 @@ void sbl_init(sbl_t *s, const sbl_io_t *io);
 // checked (a MAC; expect_mac if not NULL; the bootloader enabled).
 bool sbl_connect(sbl_t *s, const char *expect_mac);
 
+// Read 32-bit chip ID (COMMAND_GET_CHIP_ID, 0x28) into s->chip_id (and *chip_id if non-NULL).
+bool sbl_get_chip_id(sbl_t *s, uint32_t *chip_id);
+
+// Read 32-bit aligned memory (COMMAND_MEMORY_READ, 0x2A, access type 1 = 32-bit, up to 63 words per packet).
+bool sbl_read_memory(sbl_t *s, uint32_t addr, uint8_t *out, size_t len);
+
+// Read a 4 KB flash page (0..31) twice via sbl_read_memory() and verify both passes match byte-for-byte.
+bool sbl_dump_page(sbl_t *s, uint32_t page_idx, uint8_t *out_4k);
+
+// Read back a 4 KB flash page (0..31) via sbl_read_memory() and verify it matches expect_4k byte-for-byte.
+bool sbl_verify_page(sbl_t *s, uint32_t page_idx, const uint8_t *expect_4k);
+
+// Read all 32 4 KB flash pages (128 KB) via sbl_dump_page().
+bool sbl_dump_flash(sbl_t *s, uint8_t *out_128k);
+
 // image at 0x0 (pages 0-29 only), verified by the chip's CRC32, page 31 checked unchanged.
 bool sbl_flash(sbl_t *s, const uint8_t *image, size_t len);
 

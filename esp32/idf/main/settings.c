@@ -39,6 +39,8 @@ void settings_load(void)
     get(h, "url", settings.url, sizeof settings.url);
     get(h, "token", settings.token, sizeof settings.token);
     get(h, "admin_pass", settings.admin_pass, sizeof settings.admin_pass);
+    get(h, "wire_r", settings.wire_r, sizeof settings.wire_r);
+    get(h, "wire_t", settings.wire_t, sizeof settings.wire_t);
     uint8_t skip = 0;
     if (nvs_get_u8(h, "skip_gwsync", &skip) == ESP_OK) {
         settings.skip_gwsync = skip != 0;
@@ -46,6 +48,14 @@ void settings_load(void)
     uint8_t rig = 0;
     if (nvs_get_u8(h, "rig", &rig) == ESP_OK) {
         settings.rig = rig != 0;
+    }
+    uint8_t cflash = 0;  // GWSYNC_VIA_AUTO when never set
+    if (nvs_get_u8(h, "cflash", &cflash) == ESP_OK && cflash <= 2) {
+        settings.contact_flash = cflash;
+    }
+    uint8_t role = 0;
+    if (nvs_get_u8(h, "role", &role) == ESP_OK) {
+        settings.role = role == ROLE_STATION ? ROLE_STATION : ROLE_RELAY;
     }
     nvs_close(h);
     trim(settings.ssid);
@@ -62,8 +72,11 @@ bool settings_save(void)
     bool ok = nvs_set_str(h, "ssid", settings.ssid) == ESP_OK && nvs_set_str(h, "pass", settings.pass) == ESP_OK &&
               nvs_set_str(h, "url", settings.url) == ESP_OK && nvs_set_str(h, "token", settings.token) == ESP_OK &&
               nvs_set_str(h, "admin_pass", settings.admin_pass) == ESP_OK &&
+              nvs_set_str(h, "wire_r", settings.wire_r) == ESP_OK &&
+              nvs_set_str(h, "wire_t", settings.wire_t) == ESP_OK &&
               nvs_set_u8(h, "skip_gwsync", settings.skip_gwsync ? 1 : 0) == ESP_OK &&
-              nvs_set_u8(h, "rig", settings.rig ? 1 : 0) == ESP_OK && nvs_commit(h) == ESP_OK;
+              nvs_set_u8(h, "rig", settings.rig ? 1 : 0) == ESP_OK && nvs_set_u8(h, "role", settings.role) == ESP_OK &&
+              nvs_set_u8(h, "cflash", settings.contact_flash) == ESP_OK && nvs_commit(h) == ESP_OK;
     nvs_close(h);
     return ok;
 }

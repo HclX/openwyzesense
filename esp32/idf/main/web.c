@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "cjtag_task.h"
 #include "contact.h"
 #include "esp_app_desc.h"
 #include "esp_http_server.h"
@@ -20,6 +21,7 @@
 #include "relay_task.h"
 #include "rig_task.h"
 #include "settings.h"
+#include "pins.h"
 
 #define MAX_CONTACT_IMAGE 0x1E000  // pages 0-29
 
@@ -73,24 +75,31 @@ static esp_err_t api_status(httpd_req_t *req)
         return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "out of memory");
     }
     char name[48], mdns[48], ssid[80], url[300], ip[40], flash[340], build[80], gwmsg[340], carried[120], running[120];
-    char log_raw[128], log_js[280], gw_mac[9], cmac_js[24];
-    const gwsync_report_t *g = contact_gwsync_report();
-    char steps_raw[760], steps[900];
-    contact_gwsync_steps(steps_raw, sizeof steps_raw);
+    char log_raw[128] = "", log_js[280], gw_mac[9] = "", cmac_js[24];
+    const gwsync_report_t *g = (settings.role == ROLE_STATION) ? NULL : contact_gwsync_report();
+    char steps_raw[760] = "", steps[900];
+    if (settings.role != ROLE_STATION) {
+        contact_gwsync_steps(steps_raw, sizeof steps_raw);
+    }
     js(steps, sizeof steps, steps_raw);
     const esp_partition_t *run = esp_ota_get_running_partition();
     wifi_ap_record_t ap;
     int rssi = net_connected() && esp_wifi_sta_get_ap_info(&ap) == ESP_OK ? ap.rssi : 0;
-    uint32_t queued, replayed, dropped, sns_now = 0, uart_tx = 0, uart_rx = 0;
-    unsigned waiting;
+    uint32_t queued = 0, replayed = 0, dropped = 0, sns_now = 0, uart_tx = 0, uart_rx = 0;
+    unsigned waiting = 0, n_sns = 0;
     buffer_sensor_t sns[BUFFER_SENSORS];
-    unsigned n_sns = relay_task_sensors(sns, BUFFER_SENSORS, &sns_now);
-    relay_task_buffer(&queued, &replayed, &dropped, &waiting);
-    contact_uart_counts(&uart_tx, &uart_rx);
-    relay_task_last_log(log_raw, sizeof log_raw);
-    relay_task_gateway_mac(gw_mac);
+    if (settings.role != ROLE_STATION) {
+        n_sns = relay_task_sensors(sns, BUFFER_SENSORS, &sns_now);
+        relay_task_buffer(&queued, &replayed, &dropped, &waiting);
+        contact_uart_counts(&uart_tx, &uart_rx);
+        relay_task_last_log(log_raw, sizeof log_raw);
+        relay_task_gateway_mac(gw_mac);
+    } else {
+        snprintf(log_raw, sizeof log_raw, "station-only mode");
+    }
     snprintf(build, sizeof build, "%s (%s)", relay_tag + 18, run ? run->label : "?");
-    js(gwmsg, sizeof gwmsg, g ? g->msg : "");
+    js(gwmsg, sizeof gwmsg,
+       g ? g->msg : (settings.role == ROLE_STATION ? "provisioning station (the relay is off)" : ""));
     carried[0] = running[0] = 0;
     if (g) {
         char v[96];
@@ -110,23 +119,34 @@ static esp_err_t api_status(httpd_req_t *req)
     js(ip, sizeof ip, net_connected() ? net_ip() : "");
     js(log_js, sizeof log_js, log_raw);
     js(flash, sizeof flash, last_flash);
+    char wr_js[40], wt_js[40];
+    js(wr_js, sizeof wr_js, settings.wire_r);
+    js(wt_js, sizeof wt_js, settings.wire_t);
     js(cmac_js, sizeof cmac_js, g && g->mac[0] ? g->mac : gw_mac);
-    int len = snprintf(body, 6144,
-                       "{\"name\":%s,\"mdns\":%s,\"ssid\":%s,\"url\":%s,\"ip\":%s,\"ap\":%s,\"auth\":%s,"
-                       "\"skip_gwsync\":%s,\"rssi\":%d,\"relay\":\"%s\",\"connects\":%lu,\"queued\":%lu,"
-                       "\"replayed\":%lu,\"dropped\":%lu,\"waiting\":%u,\"uart_tx\":%lu,\"uart_rx\":%lu,"
-                       "\"uptime\":%lu,\"heap\":%lu,\"log\":%s,\"flash\":%s,\"contact_mac\":%s,"
-                       "\"build\":\"%s\",\"chip\":\"" CHIP "\",\"fw_file\":\"" FW_FILE "\","
-                       "\"gw\":{\"checked\":%s,\"result\":\"%s\",\"msg\":%s,\"steps\":%s,\"carried\":%s,"
-                       "\"running\":%s},\"sensors\":[",
-                       name, mdns, ssid, url, ip, net_setup_ap() ? "true" : "false",
-                       http_auth_secret(settings.admin_pass, settings.token) ? "true" : "false",
-                       settings.skip_gwsync ? "true" : "false", rssi, states[relay_task_state()],
-                       (unsigned long)relay_task_connects(), (unsigned long)queued, (unsigned long)replayed,
-                       (unsigned long)dropped, waiting, (unsigned long)uart_tx, (unsigned long)uart_rx,
-                       (unsigned long)(esp_timer_get_time() / 1000000), (unsigned long)esp_get_free_heap_size(), log_js,
-                       flash, cmac_js, build, g ? "true" : "false", g ? results[g->result] : "same", gwmsg, steps,
-                       g ? carried : "null", g && (g->answered || g->result == GWSYNC_UPDATED) ? running : "null");
+    static const char *vias[] = {"auto", "cjtag", "sbl"};  // GWSYNC_VIA_*
+    bool gw_checked = (g != NULL) || (settings.role == ROLE_STATION);
+    const char *relay_state = (settings.role == ROLE_STATION) ? "down" : states[relay_task_state()];
+    int len = snprintf(
+        body, 6144,
+        "{\"name\":%s,\"mdns\":%s,\"ssid\":%s,\"url\":%s,\"ip\":%s,\"ap\":%s,\"auth\":%s,"
+        "\"role\":%u,\"skip_gwsync\":%s,\"contact_flash\":\"%s\",\"rssi\":%d,\"relay\":\"%s\",\"connects\":%"
+        "lu,\"queued\":%lu,"
+        "\"replayed\":%lu,\"dropped\":%lu,\"waiting\":%u,\"uart_tx\":%lu,\"uart_rx\":%lu,"
+        "\"uptime\":%lu,\"heap\":%lu,\"log\":%s,\"flash\":%s,\"contact_mac\":%s,"
+        "\"wires\":{\"r\":%s,\"t\":%s},\"pins\":{\"power\":%d,\"r\":%d,\"t\":%d,\"m\":%d,\"c\":%d,\"s\":%d,\"w\":%d},"
+        "\"build\":\"%s\",\"chip\":\"" CHIP "\",\"fw_file\":\"" FW_FILE "\","
+        "\"gw\":{\"checked\":%s,\"result\":\"%s\",\"via_cjtag\":%s,\"msg\":%s,\"steps\":%s,\"carried\":%s,"
+        "\"running\":%s},\"sensors\":[",
+        name, mdns, ssid, url, ip, net_setup_ap() ? "true" : "false",
+        http_auth_secret(settings.admin_pass, settings.token) ? "true" : "false", (unsigned)settings.role,
+        settings.skip_gwsync ? "true" : "false", vias[settings.contact_flash % 3], rssi, relay_state,
+        (unsigned long)(settings.role == ROLE_STATION ? 0 : relay_task_connects()), (unsigned long)queued,
+        (unsigned long)replayed, (unsigned long)dropped, waiting, (unsigned long)uart_tx, (unsigned long)uart_rx,
+        (unsigned long)(esp_timer_get_time() / 1000000), (unsigned long)esp_get_free_heap_size(), log_js, flash,
+        cmac_js, wr_js, wt_js, OWS_PIN_CONTACT_POWER, OWS_PIN_CONTACT_TX, OWS_PIN_CONTACT_RX, OWS_PIN_CONTACT_TMS,
+        OWS_PIN_CONTACT_TCK, OWS_PIN_CONTACT_RESET, OWS_PIN_CONTACT_BOOT, build, gw_checked ? "true" : "false",
+        g ? results[g->result] : "same", g && g->via_cjtag ? "true" : "false", gwmsg, steps, g ? carried : "null",
+        g && (g->answered || g->result == GWSYNC_UPDATED) ? running : "null");
     size_t pos = len > 0 && len < 6140 ? (size_t)len : 0;
     for (unsigned i = 0; i < n_sns && pos + 96 < 6144; i++) {
         uint32_t seen_s = (uint32_t)(sns_now - sns[i].last_seen_ms) / 1000u;
@@ -200,11 +220,29 @@ static void set_field(const char *body, const char *key, char *field, size_t cap
 // while the start-up gateway check runs (it may be writing the contact), nothing that restarts the relay
 static bool refused_busy(httpd_req_t *req)
 {
-    if (contact_gwsync_report()) {
+    if (settings.role == ROLE_STATION || contact_gwsync_report()) {
         return false;
     }
     httpd_resp_set_status(req, "503 Service Unavailable");
     httpd_resp_sendstr(req, "the start-up gateway check is running: try again in a moment");
+    return true;
+}
+
+static bool refused_relay_disabled(httpd_req_t *req)
+{
+    if (settings.role != ROLE_STATION) {
+        return false;
+    }
+    httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "the relay: set the role to relay (setup)");
+    return true;
+}
+
+static bool refused_station_disabled(httpd_req_t *req)
+{
+    if (settings.role == ROLE_STATION) {
+        return false;
+    }
+    httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "the provisioning station: set the role to station (setup)");
     return true;
 }
 
@@ -237,9 +275,18 @@ static esp_err_t setup_post(httpd_req_t *req)
     set_field(body, "url", settings.url, sizeof settings.url, true);
     set_field(body, "token", settings.token, sizeof settings.token, true);
     set_field(body, "admin_pass", settings.admin_pass, sizeof settings.admin_pass, false);
-    char skip[16] = "";
+    char skip[16] = "", via[8] = "";
     if (form_value(body, "skip_gwsync", skip, sizeof skip)) {
         settings.skip_gwsync = skip[0] == '1' || !strcmp(skip, "true") || !strcmp(skip, "on");
+    }
+    if (form_value(body, "contact_flash", via, sizeof via)) {  // how gwsync reflashes the contact (#81)
+        settings.contact_flash = !strcmp(via, "cjtag") ? GWSYNC_VIA_CJTAG
+                                 : !strcmp(via, "sbl") ? GWSYNC_VIA_SBL
+                                                       : GWSYNC_VIA_AUTO;
+    }
+    char role_s[16] = "";
+    if (form_value(body, "role", role_s, sizeof role_s) && role_s[0]) {
+        settings.role = !strcmp(role_s, "2") || !strcmp(role_s, "station") ? ROLE_STATION : ROLE_RELAY;
     }
     if (!settings_save()) {
         return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "saving failed");
@@ -251,7 +298,7 @@ static esp_err_t setup_post(httpd_req_t *req)
 
 static esp_err_t contact_gwsync_post(httpd_req_t *req)
 {
-    if (!require_auth(req)) {
+    if (!require_auth(req) || refused_relay_disabled(req)) {
         return ESP_OK;
     }
     char query[64] = "", body[64] = "", skip[16] = "";
@@ -272,7 +319,7 @@ static esp_err_t contact_gwsync_post(httpd_req_t *req)
 }
 
 // The battery rig (#95, rig_task.c). GET /api/rig: state and results. POST /rig (form): enable=1|0 (kept in the
-// settings; restarts: the contact's + pad must then be on CONFIG_OWS_RIG_SUPPLY_GPIO, esp32/README.md), measure=1
+// settings; restarts: the contact's + pad must then be on OWS_PIN_RIG_SUPPLY, esp32/README.md), measure=1
 // (fresh counters, with any of cap_nf v_low_mv v_high_mv v_busy_mv v_hold_mv v_release_mv pulse_us hold_us) or 0.
 static esp_err_t rig_get(httpd_req_t *req)
 {
@@ -290,9 +337,36 @@ static void rig_field(const char *body, const char *key, uint32_t *v)
     }
 }
 
-static esp_err_t rig_post(httpd_req_t *req)
+// The colours of the harness's R and T wires (POST /wires r=..&t=..; no restart): the page names a probe by its colour
+static esp_err_t wires_post(httpd_req_t *req)
 {
     if (!require_auth(req)) {
+        return ESP_OK;
+    }
+    char body[128];
+    int n =
+        req->content_len > 0 && req->content_len < (int)sizeof body ? httpd_req_recv(req, body, req->content_len) : -1;
+    if (n <= 0) {
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "r=<colour>&t=<colour>");
+    }
+    body[n] = 0;
+    set_field(body, "r", settings.wire_r, sizeof settings.wire_r, true);
+    set_field(body, "t", settings.wire_t, sizeof settings.wire_t, true);
+    if (!strcmp(settings.wire_r, "-")) {  // "-": back to the default (an empty field is left unchanged)
+        settings.wire_r[0] = 0;
+    }
+    if (!strcmp(settings.wire_t, "-")) {
+        settings.wire_t[0] = 0;
+    }
+    if (!settings_save()) {
+        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "saving failed");
+    }
+    return httpd_resp_sendstr(req, "wire colours saved");
+}
+
+static esp_err_t rig_post(httpd_req_t *req)
+{
+    if (!require_auth(req) || refused_relay_disabled(req)) {
         return ESP_OK;
     }
     char body[400];
@@ -347,7 +421,7 @@ static esp_err_t rig_post(httpd_req_t *req)
 // sensor whose console window ended wakes on the first byte and may drop it.
 static esp_err_t contact_console_post(httpd_req_t *req)
 {
-    if (!require_auth(req) || refused_busy(req)) {
+    if (!require_auth(req) || refused_relay_disabled(req) || refused_busy(req)) {
         return ESP_OK;
     }
     char query[32] = "", w[8] = "";
@@ -387,7 +461,7 @@ static esp_err_t contact_console_post(httpd_req_t *req)
 
 static esp_err_t contact_reset_post(httpd_req_t *req)
 {
-    if (!require_auth(req)) {
+    if (!require_auth(req) || refused_relay_disabled(req)) {
         return ESP_OK;
     }
     if (!contact_uart_take(2000)) {
@@ -433,7 +507,7 @@ static bool to_contact_flash(void *ctx, const uint8_t *data, size_t len)
 
 static esp_err_t contact_flash_post(httpd_req_t *req)
 {
-    if (!require_auth(req) || refused_busy(req)) {
+    if (!require_auth(req) || refused_relay_disabled(req) || refused_busy(req)) {
         return ESP_OK;
     }
     if (req->content_len <= 0 || req->content_len > MAX_CONTACT_IMAGE + 2048) {
@@ -482,7 +556,7 @@ static bool to_mem(void *ctx, const uint8_t *data, size_t len)
 
 static esp_err_t contact_nv_get(httpd_req_t *req)
 {
-    if (!require_auth(req) || refused_busy(req)) {
+    if (!require_auth(req) || refused_relay_disabled(req) || refused_busy(req)) {
         return ESP_OK;
     }
     char msg[128] = "";
@@ -503,7 +577,7 @@ static esp_err_t contact_nv_get(httpd_req_t *req)
 
 static esp_err_t contact_nv_post(httpd_req_t *req)
 {
-    if (!require_auth(req) || refused_busy(req)) {
+    if (!require_auth(req) || refused_relay_disabled(req) || refused_busy(req)) {
         return ESP_OK;
     }
     if (req->content_len <= 0 || req->content_len > 12288) {
@@ -532,6 +606,142 @@ static esp_err_t contact_nv_post(httpd_req_t *req)
     }
     relay_task_reconnect();
     return httpd_resp_sendstr(req, msg);
+}
+
+static bool to_cjtag_stage(void *ctx, const uint8_t *data, size_t len)
+{
+    (void)ctx;
+    return cjtag_task_stage_feed(data, len);
+}
+
+static cjtag_transport_t parse_transport(const char *s)  // the station's three modes, all on the two probes
+{
+    if (!strcmp(s, "sbl2")) {
+        return CJTAG_TRANSPORT_SBL2;
+    }
+    if (!strcmp(s, "ws")) {
+        return CJTAG_TRANSPORT_WS;
+    }
+    return CJTAG_TRANSPORT_CJTAG;
+}
+
+static esp_err_t cjtag_get(httpd_req_t *req)
+{
+    if (refused_station_disabled(req)) {
+        return ESP_OK;
+    }
+    static char out[2048];  // the station's status: a long message and the identification (one request at a time)
+    size_t n = cjtag_task_json(out, sizeof out);
+    httpd_resp_set_type(req, "application/json");
+    return httpd_resp_send(req, out, (ssize_t)n);
+}
+
+static esp_err_t cjtag_arm_post(httpd_req_t *req)
+{
+    if (!require_auth(req) || refused_station_disabled(req)) {
+        return ESP_OK;
+    }
+    char query[160] = "", body[160] = "", mode_s[16] = "", tr_s[16] = "";
+    httpd_req_get_url_query_str(req, query, sizeof query);
+    httpd_query_key_value(query, "mode", mode_s, sizeof mode_s);
+    httpd_query_key_value(query, "transport", tr_s, sizeof tr_s);
+    if (!mode_s[0] && req->content_len > 0 && req->content_len < (int)sizeof body) {
+        int n = httpd_req_recv(req, body, req->content_len);
+        if (n > 0) {
+            body[n] = 0;
+            form_value(body, "mode", mode_s, sizeof mode_s);
+            form_value(body, "transport", tr_s, sizeof tr_s);
+        }
+    }
+    cjtag_mode_t m = CJTAG_MODE_NONE;
+    if (!strcmp(mode_s, "dump")) {
+        m = CJTAG_MODE_DUMP;
+    } else if (!strcmp(mode_s, "flash")) {
+        m = CJTAG_MODE_FLASH;
+    } else if (!strcmp(mode_s, "identify")) {
+        m = CJTAG_MODE_IDENTIFY;
+    }
+    cjtag_transport_t tr = parse_transport(tr_s);
+    char msg[160] = "";
+    if (!cjtag_task_arm(m, tr, msg, sizeof msg)) {
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, msg);
+    }
+    return httpd_resp_sendstr(req, msg);
+}
+
+static esp_err_t cjtag_stage_post(httpd_req_t *req)
+{
+    if (!require_auth(req) || refused_station_disabled(req)) {
+        return ESP_OK;
+    }
+    if (req->content_len <= 0 || req->content_len > MAX_CONTACT_IMAGE + 2048) {
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
+                                   "an image for pages 0-29, a multiple of 4 bytes (a form field image, or the body)");
+    }
+    char query[160] = "", nv[8] = "", tr_s[16] = "", msg[160] = "";
+    httpd_req_get_url_query_str(req, query, sizeof query);
+    httpd_query_key_value(query, "nv", nv, sizeof nv);
+    httpd_query_key_value(query, "transport", tr_s, sizeof tr_s);
+    cjtag_transport_t tr = parse_transport(tr_s);
+    if (!cjtag_task_stage_begin(!strcmp(nv, "wipe"), msg, sizeof msg)) {
+        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, msg);
+    }
+    bool rx_ok = receive(req, "image", to_cjtag_stage, NULL);
+    if (!cjtag_task_stage_end(rx_ok, tr, msg, sizeof msg)) {
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, msg);
+    }
+    return httpd_resp_sendstr(req, msg);
+}
+
+static esp_err_t cjtag_dump_get(httpd_req_t *req)
+{
+    if (!require_auth(req) || refused_station_disabled(req)) {
+        return ESP_OK;
+    }
+    uint8_t *page = malloc(CJTAG_PAGE);
+    if (!page) {
+        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "out of memory");
+    }
+    if (!cjtag_task_get_dump_page(0, page)) {
+        free(page);
+        return httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "no completed station flash dump available");
+    }
+    char disp[80];
+    snprintf(disp, sizeof disp, "attachment; filename=\"sensor_%s_flash.bin\"", cjtag_task_mac());
+    httpd_resp_set_type(req, "application/octet-stream");
+    httpd_resp_set_hdr(req, "Content-Disposition", disp);
+    for (uint32_t p = 0; p < CJTAG_TOTAL_PAGES; p++) {
+        if (!cjtag_task_get_dump_page(p, page) ||
+            httpd_resp_send_chunk(req, (const char *)page, CJTAG_PAGE) != ESP_OK) {
+            free(page);
+            return ESP_FAIL;
+        }
+    }
+    free(page);
+    cjtag_task_note_dump_downloaded();
+    return httpd_resp_send_chunk(req, NULL, 0);
+}
+
+static esp_err_t cjtag_fcfg1_get(httpd_req_t *req)
+{
+    if (!require_auth(req) || refused_station_disabled(req)) {
+        return ESP_OK;
+    }
+    uint8_t *fcfg1 = malloc(CJTAG_FCFG1_SIZE);
+    if (!fcfg1) {
+        return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "out of memory");
+    }
+    if (!cjtag_task_get_fcfg1(fcfg1)) {
+        free(fcfg1);
+        return httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "no completed cJTAG FCFG1 dump available");
+    }
+    char disp[80];
+    snprintf(disp, sizeof disp, "attachment; filename=\"sensor_%s_fcfg1.bin\"", cjtag_task_mac());
+    httpd_resp_set_type(req, "application/octet-stream");
+    httpd_resp_set_hdr(req, "Content-Disposition", disp);
+    esp_err_t err = httpd_resp_send(req, (const char *)fcfg1, CJTAG_FCFG1_SIZE);
+    free(fcfg1);
+    return err;
 }
 
 static bool to_ota(void *ctx, const uint8_t *data, size_t len)
@@ -566,7 +776,7 @@ void web_start(void)
     httpd_config_t cfg = HTTPD_DEFAULT_CONFIG();
     cfg.stack_size = 8192;
     cfg.recv_wait_timeout = 30;
-    cfg.max_uri_handlers = 15;
+    cfg.max_uri_handlers = 24;
     httpd_handle_t h;
     if (httpd_start(&h, &cfg) != ESP_OK) {
         ESP_LOGE(TAG, "the web server did not start");
@@ -586,6 +796,12 @@ void web_start(void)
         {.uri = "/api/rig", .method = HTTP_GET, .handler = rig_get},
         {.uri = "/rig", .method = HTTP_POST, .handler = rig_post},
         {.uri = "/contact/console", .method = HTTP_POST, .handler = contact_console_post},
+        {.uri = "/api/cjtag", .method = HTTP_GET, .handler = cjtag_get},
+        {.uri = "/cjtag/arm", .method = HTTP_POST, .handler = cjtag_arm_post},
+        {.uri = "/cjtag/stage", .method = HTTP_POST, .handler = cjtag_stage_post},
+        {.uri = "/cjtag/dump.bin", .method = HTTP_GET, .handler = cjtag_dump_get},
+        {.uri = "/cjtag/fcfg1.bin", .method = HTTP_GET, .handler = cjtag_fcfg1_get},
+        {.uri = "/wires", .method = HTTP_POST, .handler = wires_post},
     };
     for (size_t i = 0; i < sizeof uris / sizeof uris[0]; i++) {
         httpd_register_uri_handler(h, &uris[i]);

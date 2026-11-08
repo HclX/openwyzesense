@@ -30,6 +30,28 @@ On 2026-11-03 (#67) this file took over what was open in `tasks.md` (the TASK-01
 Hardware checks of changes so far tested only headless (DESIGN.md §10.4 as of 2026-10-29). Tick with the date and
 the evidence.
 
+- **#81 relay wiring**: done on the LOLIN32 B15C with contact 777B42DF, 2026-11-06 (the user wired it; console logs
+  of each run). `+` on GPIO27: starts and runs. Updates through `M`/`C`: ~20 s (four runs; the first build overflowed
+  the relay task's stack, fixed). Unchanged code is left alone. Fallback with `M`/`C` off: bootloader by a power cycle
+  with `R`/`W` low, ~10 s, with `S` and with `S` floating; the debug-port update with `S` floating too, so `S` is
+  optional; `W` only for the fallback on units with that backdoor. Trap: an ESP32's GPIO4 pulls down at reset, so `S` wired to it but unconfigured holds the
+  contact in reset. Station role on the same harness (fixed pins, 2026-11-06): a cJTAG dump of 777B42DF (powered from
+  GPIO27, M/C polarity found, 32 pages, ~27 s, equal to the carried gateway image) and an SBL dump with the pad search
+  (R/T/backdoor W found on GPIO17/18/23, chip ID 0x20018000), the two dumps byte-identical. 2026-11-07, Identify then
+  Dump/Flash as separate steps: dump refused before Identify; per transport Identify, Dump (equal) and Flash of the
+  running gateway image (10 pages verified, page 31 intact). `sbl2` (two hand probes on TX/RX, + and − clipped,
+  2026-11-07): touch seen on the soldered 777B42DF, one round, then waiting for a lift (its backdoor is W, not on the
+  probes). The leak sensor 77C685AE was dumped this way by the user (2026-11-07, `backups/`), so touch, lift and the
+  DIO1 backdoor work on a real sensor; dumped again at 10:55 after a run with + and - swapped by mistake, so it
+  survived that. Since: the station on four wires (two probes on GPIO17/18 for every mode) and the
+  W/S check (probe 1 on T or R as the witness, probe 2's pad held low across a power-up: S keeps the chip in reset):
+  on the leak sensor it called both remaining pads W (2026-11-07). Hypothesis to check: the board pulls its T line up,
+  so the witness reads high even with the chip held in reset; a fix could compare the witness against the chip
+  unpowered, or watch T for real UART activity instead of a level. Check on sensors whose pads are known; cJTAG
+  on the two probes; a slip during an SBL dump.
+  Left: a sensor that is not a v1 contact (the leak sensor), the user guide's level 4 and its wiring SVGs (`tools/wiring_svg.py`) on the new wiring; the
+  ESP32-S3 (GPIO7, 15/16); a stock-backdoor unit (`R`) on the bootloader path; transmit bursts on GPIO power.
+
 - `TASK-01` relays: the fallback access point closes as soon as Wi-Fi is back (watch it from a phone); with a
   password set, every changing endpoint answers 401 without it, on ESP-IDF and ESP8266, and `GET /setup` shows no
   secrets.

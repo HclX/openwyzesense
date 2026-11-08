@@ -1,4 +1,4 @@
-// The battery rig on a classic ESP32 (#95, esp32/rig/rig.h): one GPIO (CONFIG_OWS_RIG_SUPPLY_GPIO, ADC1-capable)
+// The battery rig on a classic ESP32 (#95, esp32/rig/rig.h): one GPIO (OWS_PIN_RIG_SUPPLY, ADC1-capable)
 // is the contact board's supply. Off unless enabled in the settings (settings.rig): then the GPIO supplies the board
 // from boot ("supply"), and on request the rig measures ("measure").
 #pragma once
@@ -7,6 +7,7 @@
 #include <stddef.h>
 
 #include "rig.h"
+#include "pins.h"
 
 void rig_task_start(void);                             // supplies the board at once when the rig is enabled
 bool rig_task_available(void);                         // enabled and built with a supply GPIO

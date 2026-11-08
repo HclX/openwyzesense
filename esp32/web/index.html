@@ -34,7 +34,7 @@ dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px}
 dt{color:var(--mute)}dd{margin:0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
 .big{font-size:26px;font-weight:650;font-variant-numeric:tabular-nums}
 label{display:block;margin:10px 0 4px;color:var(--mute);font-size:13px}
-input[type=text],input[type=password]{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;
+input[type=text],input[type=password],select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;
 background:var(--bg);color:var(--fg);font:inherit}
 input[type=file]{width:100%;font:inherit;color:var(--mute)}
 .check{display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--fg);font-size:14px;cursor:pointer}
@@ -49,6 +49,16 @@ font:inherit;font-weight:600;cursor:pointer}
 .msg{margin-top:10px;font-size:14px;min-height:1.2em;overflow-wrap:anywhere}
 .msg.ok{color:var(--ok)}.msg.bad{color:var(--bad)}
 .note{color:var(--mute);font-size:13px;margin:6px 0 0}
+.wrow{display:flex;align-items:center;gap:8px;margin:7px 0;max-width:460px}
+.wpad{flex:none;width:34px;height:24px;border:1px solid var(--line);background:var(--bar);border-radius:5px;
+display:flex;align-items:center;justify-content:center;font-weight:650}
+.wdesc{flex:1;min-width:0;border-bottom:2px solid var(--acc);font-size:12px;color:var(--mute);white-space:nowrap;
+overflow:hidden;text-overflow:ellipsis;padding-bottom:2px}
+.wdot{flex:none;width:12px;height:12px;border-radius:50%;border:1px solid var(--fg)}
+.wgpio{flex:none;min-width:64px;text-align:center;border:1px solid var(--acc);border-radius:5px;padding:2px 6px;
+font-size:13px;background:var(--card)}
+.wrow select.wsel{flex:none;width:96px;margin:0;padding:3px 4px}
+.wrow input.wcol{flex:none;width:80px;margin:0;padding:3px 6px}
 table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
 th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
 th{color:var(--mute);font-size:12px;font-weight:600}
@@ -59,7 +69,7 @@ tr:last-child td{border-bottom:0}
 <header><div class=wrap>
 <div class=top><div><h1 id=name>OpenWyzeSense relay</h1><div class=sub id=where>&nbsp;</div></div>
 <span class=pill id=pill><span class=dot></span><span id=pilltext>loading</span></span></div>
-<nav><button data-tab=status class=on>Status</button><button data-tab=update>Update</button>
+<nav><button data-tab=status class=on>Status</button><button data-tab=probe id=probetab>Probe (M/C &amp; SBL)</button><button data-tab=update>Update</button>
 <button data-tab=setup>Setup</button></nav></div></header>
 <main class=wrap>
 
@@ -91,6 +101,55 @@ tr:last-child td{border-bottom:0}
 </thead><tbody id=snsbody></tbody></table></div></div>
 </div></section>
 
+<section id=probe hidden><div class=grid>
+<div class="card wide"><h2>Hands-free provisioning station (2-pin cJTAG &amp; 4-pad SBL)</h2>
+<p class=note>Two separate steps. <b>1. Identify</b>: hold a sensor on the probes; the station finds its pins with the
+chosen transport (<code>cJTAG</code> on M/C, polarity found; <code>SBL</code>: which of four unmarked pads are R, T and
+the backdoor; <code>Auto</code>: cJTAG, then SBL), confirms them, and lets it go. Nothing is read but what identifies
+it, nothing written. <b>2. Dump</b> or <b>Flash</b>: put a sensor back on the same pads; only the identified pins are
+used. Page 31 (CCFG + factory MAC) is never erased or written.</p>
+<div class=wiring style="margin-top:8px"></div>
+<div class=big id=cjstate style="margin-top:8px">Disarmed</div>
+<div class=prog id=cjprog style="display:block;height:12px"><i id=cjbar></i></div>
+<div class=msg id=cjmsg>Start with Identify.</div>
+<dl style="margin-top:10px">
+<dt>Sensor MAC</dt><dd id=cjmac>–</dd>
+<dt>Identified pins</dt><dd id=cjident>– (Identify first)</dd>
+<dt>Transport / Pins</dt><dd id=cjpins>–</dd>
+<dt>SBL pad map</dt><dd id=cjsblmap>–</dd>
+<dt>Progress</dt><dd id=cjpages>0 / 0 pages</dd>
+<dt>CCFG / Chip</dt><dd id=cjchip>–</dd>
+</dl>
+<p class=hint>Four wires: the sensor's <b>+</b> and <b>−</b> on clips (its battery out), and two hand probes, used for
+every mode. cJTAG: the probes on <b>M</b> and <b>C</b>. Bootloader: on its <b>T</b> and <b>R</b> pads (found which is
+which). Then <b>W/S</b>: probe 1 on <b>T</b> (or <b>R</b>), probe 2 on one of the other two pads: the station
+powers the sensor up with that pad released and then held low; if holding it kept the sensor from starting, it is
+<b>S</b> (reset), otherwise <b>W</b>.</p>
+<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-top:10px">
+<div><label style="margin-top:0">Identify with</label><select id=cjtrans style="width:200px">
+<option value=cjtag>2 probes: cJTAG (M, C)</option>
+<option value=sbl2>2 probes: bootloader T/R</option>
+<option value=ws>2 probes: W/S (probe 1 on T or R, probe 2 on the pad to test)</option></select></div>
+
+<label class=check style="margin-top:0"><input type=checkbox id=cjsound checked>Audio cues (lock, page ticks, slip, done)</label>
+</div>
+<div class=btns style="margin-top:14px">
+<button class=btn id=cjarmid>1. Identify (hands-free)</button>
+<button class=btn id=cjarmdump disabled>2. Dump</button>
+<button class="btn ghost" id=cjdisarm>Disarm</button>
+<button class="btn ghost" id=cjdlflash hidden>Save flash.bin again (128 KB)</button>
+<button class="btn ghost" id=cjdlfcfg1 hidden>Download fcfg1.bin (1 KB)</button>
+</div></div>
+
+<div class="card wide"><h2>Hands-free station flash (pages 0–29)</h2>
+<p class=note>Stage a CC1310 binary (up to 120 KB, pages 0–29) and arm hands-free flashing over the selected transport
+on the identified pins (Identify first). Requires a completed and downloaded stock flash dump for that sensor MAC first.</p>
+<label>CC1310 image (.bin)</label><input type=file id=cjfile accept=".bin">
+<label class=check><input type=checkbox id=cjwipe>Wipe NV page 30 (0x1E000)</label>
+<button class=btn id=cjarmflash disabled>2. Stage &amp; Flash</button>
+</div>
+</div></section>
+
 <section id=update hidden><div class=grid>
 <div class=card><h2>Relay firmware (<span class=chip>this relay</span>)</h2>
 <p class=note>The relay's build, <code id=fwhint>firmware.bin</code>. It carries the gateway firmware for the
@@ -112,13 +171,19 @@ bootloader without reflashing the ESP.</p>
 <div class=prog id=gwprog><i></i></div><div class=msg id=gwmsg></div></div>
 </div></section>
 
-<section id=setup hidden><div class=grid><div class=card><h2>Setup</h2>
+<section id=setup hidden><div class=grid><div class=card><h2>Wiring (<span class=chip>this relay</span>)</h2>
+<div class=wiring></div></div>
+<div class=card><h2>Setup</h2>
 <p class=note>An empty field leaves that setting unchanged. Saving restarts the relay.</p>
 <form id=setupform><label>Wi-Fi network (2.4 GHz)</label><input type=text name=ssid id=ssid autocomplete=off>
 <label>Wi-Fi password</label><input type=password name=pass autocomplete=new-password>
 <label>wyzesense2mqtt-rs bridge</label><input type=text name=url id=seturl placeholder=ws://host:8080/ws/bridge>
 <label>Bridge token</label><input type=password name=token autocomplete=new-password>
 <label>Admin password (protects setup &amp; updates)</label><input type=password name=admin_pass autocomplete=new-password placeholder="uses bridge token if unset">
+<label>Contact updates through</label><select name=contact_flash id=setcflash><option value=auto>Auto: debug port (M/C), else bootloader</option><option value=cjtag>Debug port (M/C) only</option><option value=sbl>Bootloader (R/T) only</option></select>
+<div id=rolewrap><label>Device role</label><select name=role id=setrole>
+<option value=0>Relay (its contact the gateway)</option>
+<option value=2>Provisioning station (a sensor on the same wires)</option></select></div>
 <button class=btn>Save and restart</button><div class=msg id=setupmsg></div></form></div></div></section>
 </main>
 <script>
@@ -142,26 +207,92 @@ const tr=document.createElement('tr'),vals=[x.mac,TYPES[x.type]||('0x'+x.type.to
 x.bat_mv?(x.bat_mv/1000).toFixed(2)+' V ('+x.bat_mv+' mV)':'–',ago(x.seen_s)];
 vals.forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;if(i==2&&x.rssi<-85)td.className='weak';
 tr.appendChild(td)});tb.appendChild(tr)})}
+// Wire colours offered (any other name: "custom…"); text in black or white, whichever reads on it
+const COLOURS=['red','black','white','yellow','green','blue','orange','purple','brown','grey','pink','cyan'];
+const LIGHT={white:1,yellow:1,orange:1,pink:1,cyan:1,grey:1};
+function colourStyle(c){return CSS.supports('color',c)?'background:'+c+';color:'+(LIGHT[c]?'#000':'#fff'):''}
+function colourSelect(k,cur,dflt){const v=cur||dflt,known=COLOURS.includes(v),
+esc=t=>String(t).replace(/[&<>"]/g,c=>'&#'+c.charCodeAt(0)+';');
+return '<select class=wsel data-k='+k+' style="'+colourStyle(v)+'" aria-label="probe colour">'+
+COLOURS.map(c=>'<option value="'+c+'" style="'+colourStyle(c)+'"'+(c==v?' selected':'')+'>'+c+(c==dflt&&!cur?' (default)':'')+'</option>').join('')+
+'<option value="" style="background:var(--card);color:var(--fg)"'+(known?'':' selected')+'>custom…</option></select>'+
+'<input class=wcol data-k='+k+' maxlength=15 value="'+(known?'':esc(v))+'" placeholder="colour"'+(known?' hidden':'')+'>'}
+// The hand probes by the colours of their wires (saved on the station: POST /wires), wherever a GPIO is named
+let WIRES={},wiresFilled=false;
+function wireOf(n){return WIRES[n]||''}
+function withWire(t){return String(t||'').replace(/GPIO(\d+)/g,(m,n)=>wireOf(n)?wireOf(n)+' wire '+m:m)}
+function noteWires(s){const p=s.pins||{},w=s.wires||{};WIRES={};if(s.role==2&&p.r>=0){WIRES[p.r]=w.r||'yellow';WIRES[p.t]=w.t||'green'}
+if(p.r>=0){document.querySelectorAll('.pinr').forEach(e=>e.textContent='GPIO'+p.r);document.querySelectorAll('.pint').forEach(e=>e.textContent='GPIO'+p.t)}
+}
+async function saveWires(k,v){const b=new URLSearchParams({[k]:v.trim()||'-'});
+try{const r=await fetch('/wires',{method:'POST',body:b});showMsg($('cjmsg'),r.ok,(await r.text()).trim());wiringKey='';poll()}
+catch(e){showMsg($('cjmsg'),false,'saving the wire colours failed')}}
+// The wiring, drawn from the firmware's own pin map (pins.h, reported in /api/status); the ESP8266's pins are fixed
+let wiringKey='';
+function drawWiring(s){const role=s.role==2?2:0,e8=s.chip=='ESP8266',p=s.pins||{};
+const key=s.chip+role+JSON.stringify(p)+JSON.stringify(s.wires||{});if(key==wiringKey)return;wiringKey=key;
+const wcol=(g,txt)=>wireOf(g)?txt+' · '+wireOf(g):txt;
+const g=n=>n>=0?'GPIO'+n:'–',st=role==2;
+const rows=st&&!e8?[['+',g(p.power),'the sensor’s supply, switched (a clip)',null,'red'],
+['−','GND','a clip',null,'black'],['1',g(p.r),'probe 1',p.r],['2',g(p.t),'probe 2',p.t]]:e8?[['+','3V3',''],['−','G',''],['R','D4','its input (DIO1)'],['T','D7','its output (DIO0)'],
+['S','D2','RESET_N'],['W','D1','bootloader backdoor (DIO10)']]:
+[['+',g(p.power),st?'supply, switched (clip: battery +)':'its supply: a reset is a power cycle'],
+['−','GND',st?'clip: battery −':''],
+['R',g(p.r),wcol(p.r,st?'hand probe / SBL pad':'its input (DIO1)'),p.r],['T',g(p.t),wcol(p.t,st?'hand probe / SBL pad':'its output (DIO0)'),p.t],
+['M',g(p.m),st?'cJTAG (TMSC)':'debug port TMSC: updates'],['C',g(p.c),st?'cJTAG (TCKC)':'debug port TCKC'],
+['S',g(p.s),st?'SBL pad':'RESET_N (optional)'],['W',g(p.w),st?'SBL pad':'bootloader backdoor (optional)']];
+if(st&&!e8){const w=s.wires||{},esc=t=>String(t).replace(/[&<>"]/g,c=>'&#'+c.charCodeAt(0)+';');
+let v=rows.map(r=>{const col=r[4]||wireOf(r[3]),k=r[3]===p.r?'r':r[3]===p.t?'t':'';
+return '<div class=wrow><span class=wpad>'+r[0]+'</span><span class=wdesc>'+r[2]+'</span>'+
+'<span class=wdot style="background:'+(CSS.supports('color',col)?col:'transparent')+'"></span><span class=wgpio>'+r[1]+'</span>'+
+(k?colourSelect(k,w[k]||'',k=='r'?'yellow':'green'):'<span style="flex:none;width:96px"></span>')+'</div>'}).join('');
+v+='<p class=hint>The sensor’s <b>+</b> and <b>−</b> clipped to its battery holder (battery out); the two probes on its pads: '+
+'<b>M</b>/<b>C</b> for cJTAG, <b>T</b>/<b>R</b> for the bootloader, either way round. Name each probe’s colour in its box.</p>';
+document.querySelectorAll('.wiring').forEach(d=>d.innerHTML=v);return}
+const H=30,W=360,top=34,h=top+rows.length*H+6;
+let v='<svg viewBox="0 0 '+W+' '+h+'" width="100%" style="max-width:420px;display:block" role="img" aria-label="wiring">'+
+'<text x="8" y="20" font-size="12" fill="var(--mute)">'+(st?'sensor':'contact')+' pad</text>'+
+'<text x="'+(W-8)+'" y="20" font-size="12" fill="var(--mute)" text-anchor="end">'+s.chip+'</text>';
+rows.forEach((r,i)=>{const y=top+i*H,c=y+H/2-3;
+v+='<rect x="8" y="'+(y)+'" width="34" height="'+(H-8)+'" rx="5" fill="var(--bar)" stroke="var(--line)"/>'+
+'<text x="25" y="'+(c+5)+'" font-size="14" font-weight="600" text-anchor="middle" fill="var(--fg)">'+r[0]+'</text>'+
+'<line x1="42" y1="'+c+'" x2="'+(W-92)+'" y2="'+c+'" stroke="var(--acc)" stroke-width="2"/>'+
+'<text x="52" y="'+(c-5)+'" font-size="11" fill="var(--mute)">'+r[2]+'</text>'+
+'<rect x="'+(W-92)+'" y="'+y+'" width="84" height="'+(H-8)+'" rx="5" fill="var(--card)" stroke="var(--acc)"/>'+
+'<text x="'+(W-50)+'" y="'+(c+5)+'" font-size="13" text-anchor="middle" fill="var(--fg)">'+r[1]+'</text>'+
+((col=>col&&CSS.supports('color',col)?'<circle cx="'+(W-100)+'" cy="'+c+'" r="6" fill="'+col+'" stroke="var(--fg)"/>':'')
+(r[4]||(r[3]!=null?wireOf(r[3]):'')))});
+v+='</svg><p class=hint>'+(e8?'Nothing on D8 (GPIO15): it must be low at start.':st?
+'Station: <b>+</b> and <b>−</b> clipped to the battery holder (battery out), the two probes on the pads: '+
+'<b>M</b>/<b>C</b> for cJTAG, <b>T</b>/<b>R</b> for the bootloader, either way round. Probe colours: set them on the Probe tab.':
+'Relay: the contact on all eight. <b>+</b> on 3V3 instead also works (then <b>S</b> resets it); <b>S</b> and <b>W</b> are '+
+'optional with <b>+</b> on its GPIO.')+'</p>';
+document.querySelectorAll('.wiring').forEach(d=>d.innerHTML=v)}
 async function poll(){if(busy)return;try{const r=await fetch('/api/status',{cache:'no-store'});const s=await r.json();
+const role=s.role==2?2:0,relayOnly=role!=2||s.chip=='ESP8266',stationOnly=role==2;
+$('probetab').hidden=relayOnly;$('rolewrap').hidden=s.chip=='ESP8266';
+if(relayOnly&&!$('probe').hidden)document.querySelector('nav button[data-tab=status]').click();
 $('name').textContent=s.name;document.title=s.name;
 $('where').textContent=(s.ip?s.ip+(s.mdns?' · '+s.mdns:''):'not on Wi-Fi')+(s.ap?' · setup access point '+s.name+' up':'');
-const st={connected:['ok','connected'],handshake:['warn','connecting'],down:['bad','not connected']}[s.relay];
+if(stationOnly){pill(s.ip?'ok':'warn',s.ip?'station ready':'not on Wi-Fi');$('relay').textContent='disabled (station only)'}
+else{const st={connected:['ok','connected'],handshake:['warn','connecting'],down:['bad','not connected']}[s.relay];
 pill(s.url?st[0]:'warn',s.url?'gateway link '+st[1]:'no bridge set up');
-$('relay').textContent=s.url?st[1]:'not set up';$('url').textContent=s.url||'(not set)';
+$('relay').textContent=s.url?st[1]:'not set up'}
+$('url').textContent=s.url||'(not set)';
 $('connects').textContent=s.connects;$('log').textContent=s.log||'–';
 $('uart').textContent=s.uart_tx==null?'–':s.uart_tx+' B out · '+s.uart_rx+' B in';
 $('flashlast').textContent=s.flash||'–';$('skipgw').checked=!!s.skip_gwsync;
 const g=s.gw||{},v=x=>x?x.version+' · '+x.id.slice(0,8):'unknown';$('gwrun').textContent=v(g.running);
 $('gwcar').textContent=v(g.carried);$('gwmsg').textContent=g.checked?g.msg:'checking…';
 $('gwsteps').textContent=(g.steps||'').trim()||'–';if(!g.checked)$('gwdet').open=true;
-$('gwmsg').className=g.result=='failed'||g.result=='refused'?'msg bad':'';$('mac').textContent=s.contact_mac||'–';
+$('gwmsg').className=!stationOnly&&(g.result=='failed'||g.result=='refused')?'msg bad':'';$('mac').textContent=s.contact_mac||'–';
 $('queued').textContent=s.queued+' alarms';$('replayed').textContent=s.replayed;$('dropped').textContent=s.dropped;
 $('waiting').textContent=s.waiting;$('wifi').textContent=s.ssid||'(not set)';
 $('rssi').textContent=s.ip?s.rssi+' dBm':'–';$('up').textContent=dur(s.uptime);
 $('heap').textContent=(s.heap/1024).toFixed(1)+' KB';$('auth').textContent=s.auth?'password set':'open (set in Setup)';
 $('build').textContent=s.build;renderSensors(s.sensors||[]);
-document.querySelectorAll('.chip').forEach(e=>e.textContent=s.chip);$('fwhint').textContent=s.fw_file;
-if(!filled){filled=true;$('ssid').value=s.ssid;$('seturl').value=s.url}
+document.querySelectorAll('.chip').forEach(e=>e.textContent=s.chip);noteWires(s);drawWiring(s);$('fwhint').textContent=s.fw_file;
+if(!filled){filled=true;$('ssid').value=s.ssid;$('seturl').value=s.url;$('setrole').value=String(role);if(s.contact_flash)$('setcflash').value=s.contact_flash}
 }catch(e){pill('bad','relay not answering')}}
 setInterval(poll,2000);poll();
 function upload(url,field,file,prog,msg,btn,done){
@@ -216,4 +347,71 @@ $('setupform').onsubmit=async e=>{e.preventDefault();const b=new URLSearchParams
 ['ssid','url','token'].forEach(k=>b.set(k,b.get(k).trim()));
 $('setupmsg').className='msg';$('setupmsg').textContent='Saving…';try{const r=await fetch('/setup',{method:'POST',body:b});
 showMsg($('setupmsg'),r.ok,(await r.text()).trim())}catch(_){showMsg($('setupmsg'),true,'Saved; restarting.')}};
+let actx=null,cjLastState='idle',cjLastPage=0,cjLastDoneSeq=0,cjPinsFilled=false;
+function tone(freq,ms,delayMs,type){if(!$('cjsound').checked)return;try{
+if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();if(actx.state=='suspended')actx.resume();
+const o=actx.createOscillator(),g=actx.createGain(),t0=actx.currentTime+(delayMs||0)/1000;
+o.type=type||'sine';o.frequency.setValueAtTime(freq,t0);
+g.gain.setValueAtTime(0.15,t0);g.gain.exponentialRampToValueAtTime(0.001,t0+ms/1000);
+o.connect(g);g.connect(actx.destination);o.start(t0);o.stop(t0+ms/1000)}catch(_){}}
+// Saved from a blob made here, not as a direct http download: Chrome flags those as unsafe and holds them unconfirmed
+// (2026-11-07, the leak sensor's 128 KB dump). `want`: the size it must have, or it is not saved.
+async function dlUrl(url,name,want){try{const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error(r.status+' '+(await r.text()).trim());
+const b=await r.blob();if(want&&b.size!=want)throw new Error(b.size+' bytes, not '+want);
+const u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=name||url.split('/').pop();
+document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),30000);return true}
+catch(e){showMsg($('cjmsg'),false,'Saving '+(name||url)+' failed: '+e.message+' (the dump is kept: save it again)');return false}}
+function cjQuery(){
+return 'transport='+encodeURIComponent($('cjtrans').value)}
+async function pollCjtag(){if($('probe').hidden&&cjLastState=='idle')return;try{
+const r=await fetch('/api/cjtag',{cache:'no-store'});if(!r.ok)return;const c=await r.json();
+if(!cjPinsFilled){cjPinsFilled=true;if(c.transport)$('cjtrans').value=c.transport}
+const tr=c.active_transport&&c.active_transport!='none'?c.active_transport:(c.transport||'cjtag');
+const labels={idle:'Disarmed',armed:c.mode=='identify'?'Identifying — connect sensor':'Armed ('+c.mode+') — connect sensor',
+running:c.mode=='dump'?'Dumping…':'Flashing…',slipped:'Paused (probe slip) — reconnect sensor',
+done:c.mode=='identify'?'Identified':'Complete!',error:'Error'};
+$('cjident').textContent=!c.identified?'– (Identify first)':c.id_transport=='cjtag'?
+('cJTAG: TCKC (C) = GPIO'+c.id_tck+' · TMSC (M) = GPIO'+c.id_tms):
+withWire('SBL: the sensor’s RX = GPIO'+c.sbl_map.r_gpio+' · its TX = GPIO'+c.sbl_map.t_gpio+' · backdoor = GPIO'+c.sbl_map.backdoor_gpio);
+$('cjarmdump').disabled=$('cjarmflash').disabled=!c.identified;
+$('cjstate').textContent=labels[c.state]||c.state;
+const pct=c.total_pages?Math.round(100*c.pages_done/c.total_pages):0;
+$('cjbar').style.width=pct+'%';
+$('cjmsg').className='msg '+(c.state=='done'?'ok':c.state=='error'||c.state=='slipped'?'bad':'');
+$('cjmsg').textContent=withWire(c.msg);
+$('cjmac').textContent=c.mac||'–';
+$('cjpins').textContent=c.tck_pin>=0?'cJTAG: TCKC (C) = GPIO'+c.tck_pin+' · TMSC (M) = GPIO'+c.tms_pin:
+(tr=='sbl'?'SBL 4-pad + power GPIO':'cJTAG GPIO'+c.pin_a+' / GPIO'+c.pin_b+' (auto-polarity)');
+const m=c.sbl_map;
+$('cjsblmap').textContent=m&&m.found?withWire(('R=pad '+m.r_pad+' (GPIO'+m.r_gpio+') · T=pad '+m.t_pad+' (GPIO'+m.t_gpio+') · backdoor=pad '+m.backdoor_pad+' (GPIO'+m.backdoor_gpio+') · chip '+m.chip_id)):'–';
+$('cjpages').textContent=c.pages_done+' / '+c.total_pages+' pages ('+pct+'%)'+(c.slips?' · '+c.slips+' slip(s)':'');
+$('cjchip').textContent=c.mac?('USER_ID '+c.user_id+' · BL_CONFIG '+c.bl_config+' · IEEE '+c.ieee_mac):'–';
+$('cjdlflash').hidden=!c.dump_ready;$('cjdlfcfg1').hidden=!(c.fcfg1_ready||c.dump_ready);
+if(c.state=='running'&&cjLastState!='running'){tone(660,90,0,'triangle');tone(880,120,100,'triangle')}
+if(c.state=='running'&&c.pages_done>cjLastPage){tone(900+c.pages_done*22,30,0,'sine')}
+if(c.state=='slipped'&&cjLastState!='slipped'){tone(330,140,0,'sawtooth');tone(260,180,160,'sawtooth')}
+if(c.state=='done'&&c.done_seq!=cjLastDoneSeq){
+cjLastDoneSeq=c.done_seq;tone(523,110,0,'triangle');tone(659,110,120,'triangle');tone(1046,260,240,'triangle');
+if(c.mode=='dump'&&c.dump_ready){dlUrl('/cjtag/dump.bin','sensor_'+c.mac+'_flash.bin',131072).then(()=>
+dlUrl('/cjtag/fcfg1.bin','sensor_'+c.mac+'_fcfg1.bin',1024))}}
+cjLastState=c.state;cjLastPage=c.pages_done}catch(_){}}
+setInterval(pollCjtag,350);
+$('cjarmid').onclick=async()=>{tone(520,60,0,'sine');
+const r=await fetch('/cjtag/arm?mode=identify&'+cjQuery(),{method:'POST'});const t=(await r.text()).trim();
+showMsg($('cjmsg'),r.ok,t);cjLastState='armed';cjLastPage=0;pollCjtag()};
+document.addEventListener('change',e=>{const t=e.target;
+if(t.classList.contains('wcol')&&t.value.trim())saveWires(t.dataset.k,t.value);
+if(t.classList.contains('wsel')){if(t.value){saveWires(t.dataset.k,t.value)}else{const i=t.nextElementSibling;i.hidden=false;i.focus()}}});
+$('cjarmdump').onclick=async()=>{tone(520,60,0,'sine');
+const r=await fetch('/cjtag/arm?mode=dump&'+cjQuery(),{method:'POST'});const t=(await r.text()).trim();
+showMsg($('cjmsg'),r.ok,t);cjLastState='armed';cjLastPage=0;pollCjtag()};
+$('cjdisarm').onclick=async()=>{const r=await fetch('/cjtag/arm?mode=none',{method:'POST'});
+showMsg($('cjmsg'),r.ok,(await r.text()).trim());cjLastState='idle';pollCjtag()};
+$('cjarmflash').onclick=()=>{const f=$('cjfile').files[0];
+if(!f){showMsg($('cjmsg'),false,'Pick a CC1310 .bin file first.');return}
+tone(520,60,0,'sine');
+const q=cjQuery()+($('cjwipe').checked?'&nv=wipe':'');
+upload('/cjtag/stage?'+q,'image',f,$('cjprog'),$('cjmsg'),$('cjarmflash'),()=>{cjLastState='armed';cjLastPage=0;pollCjtag()})};
+$('cjdlflash').onclick=()=>dlUrl('/cjtag/dump.bin','sensor_'+($('cjmac').textContent||'unknown')+'_flash.bin',131072);
+$('cjdlfcfg1').onclick=()=>dlUrl('/cjtag/fcfg1.bin','sensor_'+($('cjmac').textContent||'unknown')+'_fcfg1.bin',1024);
 </script></body></html>

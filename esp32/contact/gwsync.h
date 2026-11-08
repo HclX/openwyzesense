@@ -3,7 +3,8 @@
 // difference it reflashes the contact (sbl.c: pages 0-29 only, the NV page with the sensors and the CCFG with the MAC
 // kept). When the gateway does not answer (older firmware, stock, a hung board), the bootloader's CRC32 of the image's
 // range decides, so an image already there is not written again. Once per call; the caller calls it once per boot.
-// Portable C: the platform gives the UART, the S and W pads and the carried image's bytes.
+// Portable C: the platform gives the UART, the S and W pads and the carried image's bytes, and optionally the
+// contact's debug port (cJTAG on its M and C pads, #81): then the reflash can go that way instead (transport).
 #pragma once
 
 #include <stdbool.h>
@@ -26,7 +27,17 @@ typedef struct {
     // each step as it starts, for a status page while the check runs (may be NULL)
     void (*progress)(void *ctx, const char *step);
     void *ctx;
+    // The contact's debug port (cJTAG, #81; may be NULL: none wired): write the carried image's pages 0-29 (pages
+    // already equal are skipped; never page 30 or 31), the CCFG's factory MAC checked first, every page verified; then
+    // reset it into its firmware. Returns the pages written (0: all already equal), or -1 when it failed (not
+    // connected, no MAC, a write or a verify failed). mac: its CCFG MAC (9 bytes). err: why it failed.
+    int (*cjtag_flash)(void *ctx, uint32_t image_len, char *mac, char *err, size_t err_cap);
+    uint8_t transport;  // GWSYNC_VIA_*: how to reflash (0, auto, when left out)
 } gwsync_io_t;
+
+// How gwsync_run reflashes: auto tries the debug port first (when there is one) and the bootloader if that fails;
+// cjtag and sbl use only that one.
+enum { GWSYNC_VIA_AUTO = 0, GWSYNC_VIA_CJTAG = 1, GWSYNC_VIA_SBL = 2 };
 
 typedef enum {
     GWSYNC_SAME,     // the contact runs the carried image: nothing written
@@ -40,7 +51,8 @@ typedef struct {
     bool answered;         // the gateway answered HOST_OWS_BUILD_INFO (before any reflash)
     build_info_t running;  // what it answered (the last answer: after a reflash, the new one)
     build_info_t carried;  // the carried image's block
-    char mac[9];           // the contact's CCFG MAC, if the bootloader was entered
+    char mac[9];           // the contact's CCFG MAC, if the bootloader or the debug port was entered
+    bool via_cjtag;        // the reflash (or the check) went through the debug port
     uint32_t junk;         // bytes from the contact that were not the answer (a noisy or chattering line)
     char msg[160];         // for the status page
 } gwsync_report_t;

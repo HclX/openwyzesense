@@ -31,13 +31,49 @@ Hardware bench test: `reference/tests/test_hw_esp32.py`, with the board wired as
 
 ## Wiring
 
-| Contact pad | ESP32-S3 (default GPIO; `tools/idf.sh menuconfig` -> OpenWyzeSense relay) |
+The GPIOs are fixed per chip (`esp32/idf/main/pins.h`; the user, 2026-11-06).
+
+| Contact pad | ESP32-S3 |
 |---|---|
-| `+` / `-` | 3V3 / GND |
+| `+` | GPIO7 (#81: a reset is a power cycle); or 3V3, as before |
+| `-` | GND |
 | `RX` (DIO1) | GPIO17 (UART1 TX) |
 | `TX` (DIO0) | GPIO18 (UART1 RX) |
-| `S` (RESET_N) | GPIO4, open-drain (hardware reset; optional in 4-wire mode once OWS firmware is running, recommended for recovery) |
-| `W` (DIO10) | GPIO5, open-drain: low at a reset = the ROM bootloader (the contact's CCFG has backdoor `w`: `0xC5FE0AC5`, #14) |
+| `M` (TMSC) | GPIO15 (#81: updates through the debug port) |
+| `C` (TCKC) | GPIO16 |
+| `S` (RESET_N) | GPIO4, open-drain; optional when `+` is on GPIO7 |
+| `W` (DIO10) | GPIO5, open-drain: low at a start = the ROM bootloader on units provisioned with backdoor `w` (`0xC5FE0AC5`, #14); needed only for the bootloader fallback on such units |
+
+Since #81 the relay powers the contact from a GPIO and updates it through its 2-pin debug port (cJTAG on `M`/`C`),
+like the LaunchPad does: no bootloader backdoor needed. Setup page "Contact updates through" (`auto`, the default:
+the debug port, else the ROM bootloader; `cjtag`; `sbl`). Into the bootloader, `R` and `W` are both held low across
+the start, so stock units (backdoor on `R`/DIO1, `0xC5FE01C5`) and ours (`W`) both enter it. While the power is off,
+the relay drives no line high (`R` low, `T`'s pull-up off, `S`/`W` released), so nothing feeds the chip through its
+pins. A relay wired the old way (`+` on 3V3, `S`, `W`) keeps working: the power GPIO then does nothing and a debug
+port that does not answer falls back to the bootloader. Tried on the LOLIN32 (docs/TODO.md, bench checklist).
+
+### Relay or provisioning station
+
+One image, two roles, chosen on the setup page ("Device role"; one at a time, the ESP restarts to switch): the
+**relay** (the default) or the **provisioning station**, which dumps and flashes other sensors (no relay meanwhile).
+The station has four wires (the user, 2026-11-07): the sensor's `+` (the supply pin, switched) and `−` on clips at its
+battery holder (battery out), and two hand-held probes, the harness's `R` and `T` wires (probe 1, probe 2; colours
+set on the Probe tab), used for every mode:
+- **cJTAG**: the probes on `M` and `C` (polarity found).
+- **Bootloader T/R** (`sbl2`): the probes on its TX and RX pads, either way round. The station tries only once both
+  probes have been on the sensor for 200 ms (a 20 us pull-up pulse on each, the sensor unpowered with its supply
+  driven low: low on a pad, high in the air), holds the candidate RX (the stock backdoor, DIO1) or the other pad low
+  across a power-up, and listens for the bootloader; after a try that found nothing, it waits for the probes to be
+  lifted.
+- **W/S** (after T/R): probe 1 on `T` (or `R`), probe 2 on one of the two other pads. The sensor is powered up with
+  that pad released, then held low, twice each: if holding it kept probe 1's pad dead (the chip held in reset), it is
+  `S`, otherwise `W`. Needs a firmware that drives `T` (or pulls `R` up) while it runs, else "can't tell". It keeps the
+  T/R identification.
+
+Probe tab, two steps: **Identify** with one of those modes (the pins found and confirmed, the sensor let go; nothing
+read but what identifies it, nothing written), then **Dump** or **Flash**, on the identified pins only (refused
+before an identification). A dump of the unit, saved, before any flash of it; it stays on the station until the next
+Dump, staged image or Disarm. Pages 0-29 (30 only for an NV wipe), every page verified, page 31 never.
 
 Provision the contact board once over JTAG (`docs/design/v1-contact.md`), backing up its stock flash first:
 `tools/uniflash.py provision --gateway --backup backups/contact_<MAC>` (or step by step:
@@ -121,11 +157,14 @@ tools/idf.sh -B build-esp32 -D SDKCONFIG=build-esp32/sdkconfig -p /dev/ttyUSB0 f
 
 | Contact pad | LOLIN32 |
 |---|---|
-| `+` / `-` | 3V3 / GND |
+| `+` | GPIO27; or 3V3 |
+| `-` | GND |
 | `R` (the contact's input) | GPIO17 (UART1 TX) |
 | `T` (the contact's output) | GPIO18 (UART1 RX) |
-| `S` (RESET_N) | GPIO4 |
-| `W` (DIO10) | GPIO23 |
+| `M` (TMSC) | GPIO25 |
+| `C` (TCKC) | GPIO26 |
+| `S` (RESET_N) | GPIO4 (optional with `+` on GPIO27) |
+| `W` (DIO10) | GPIO23 (optional) |
 
 Both relays pull their UART RX pin up: a contact that does not drive its T pad (a half-written image after an
 interrupted flash) leaves the line floating, and the noise came in as bytes (`00 ff 00 fe …`, hundreds a second), which
@@ -138,7 +177,7 @@ start, it sets the flash to 1.8 V. The console is UART0, the board's USB serial 
 
 The LOLIN32 can be the contact's battery instead of its 3V3 pin, to measure the sensor's sleep current with no meter
 (`docs/design/low-battery.md` §3, Option B; core `esp32/rig/`, tests `test_rig`). Move one wire: the contact's `+` from
-**3V3** to **GPIO32** (`CONFIG_OWS_RIG_SUPPLY_GPIO`, ADC1 channel 4: ADC2 pins do not work with Wi-Fi on). Then:
+**3V3** to **GPIO32** (ADC1 channel 4: ADC2 pins do not work with Wi-Fi on). Then:
 
 ```
 curl -d enable=1 http://<ip>/rig            # kept in the settings; restarts; GPIO32 supplies the contact from boot
@@ -198,7 +237,7 @@ The pads' silkscreen is the contact's own side: T is its output, R its input (th
 1. The contact board: back up and provision our gateway + backdoor `w` (`tools/uniflash.py provision --gateway --backup
    backups/contact_<MAC>`, or `backup` -> `flash --backup ... build/fw/firmware/gateway-contact-v1-app.bin` ->
    `enable-bootloader w --backup ... --yes`); then unwire it from the LaunchPad.
-2. Wire it to the S3 (the table above); set the GPIOs if they differ (`tools/idf.sh menuconfig`).
+2. Wire it to the S3 (the table above); the GPIOs are fixed (`pins.h`).
 3. `tools/idf.sh -p /dev/ttyACM0 flash monitor`: the log shows `OpenWyzeSense relay OWS-relay-XXXX up` and the
    setup access point.
 4. Join `OWS-relay-XXXX`, http://192.168.4.1/setup: Wi-Fi, the bridge URL, optional token / `admin_pass`. After its
