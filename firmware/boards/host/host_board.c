@@ -581,6 +581,12 @@ static void rx_off(host_dev_t *d)
     d->rx_on = false;
 }
 
+bool radio_rx_check(void)
+{
+    radio_rx_stop();
+    return radio_rx_start();
+}
+
 void radio_rx_stop(void)
 {
     rx_off(cur);

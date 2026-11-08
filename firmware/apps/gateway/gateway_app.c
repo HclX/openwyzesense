@@ -12,6 +12,8 @@
 #include "radio.h"
 #include "uart.h"
 
+#define RADIO_CHECK_MS 60000u  // #85: the receiver stopped and started again, once a minute
+
 // Identity. 0 = derive from the chip's IEEE address. Set at build time with -DOWS_PAN=... -DOWS_SHORT=...
 #ifndef OWS_PAN
 #define OWS_PAN 0
@@ -129,6 +131,11 @@ void gateway_app_init(gateway_app_t *a)
     board_keep_awake();  // the host link and the receiver never sleep
     a->now_ms = clock_now_ms();
     radio_start(a);
+    a->radio_check_ms = a->now_ms + RADIO_CHECK_MS;
+    // the time asked for from the start, as the stock dongle does (0x5332 right after its boot): a gateway restarted
+    // behind its host's back (the watchdog, the radio recovery, #85) fixes its clock without a new handshake
+    a->gw.time_req_armed = true;
+    a->gw.next_time_req_ms = a->gw.now_ms + 300;
 }
 
 uint32_t gateway_app_step(gateway_app_t *a)
@@ -144,6 +151,12 @@ uint32_t gateway_app_step(gateway_app_t *a)
     uint32_t now = clock_now_ms();
     if (!a->radio_ok && (int32_t)(now - a->radio_retry_ms) >= 0) {
         radio_start(a);
+    }
+    if (a->radio_ok && (int32_t)(now - a->radio_check_ms) >= 0) {
+        a->radio_check_ms = now + RADIO_CHECK_MS;
+        if (!radio_rx_check()) {
+            chip_reset();  // a frozen radio core (#85): the restart resets it (board.c)
+        }
     }
     bool got_rf = false;
     while (a->radio_ok && radio_poll(&f)) {

@@ -17,6 +17,7 @@ typedef struct {
     bool in_sbl;    // handed over to the ROM bootloader (OWS_SUB_ENTER_SBL): nothing more to do
     bool radio_ok;  // the receiver runs; if not, the host link still does (#70) and the radio is retried
     uint32_t radio_retry_ms;
+    uint32_t radio_check_ms;  // the next receiver health check (#85)
     bool scan_was_on, scan_led_on;
     uint32_t scan_next_ms;
     bool rx_pulsing;

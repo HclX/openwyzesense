@@ -22,6 +22,10 @@ bool radio_rx_start(void);
 // Stops receiving; the RF core then powers down. radio_tx() turns the receiver on again after sending.
 void radio_rx_stop(void);
 
+// The receiver stopped and started again, as a check that the radio core answers (#85): false if it did not stop
+// (a frozen radio core, which only a chip restart resets).
+bool radio_rx_check(void);
+
 // Takes the oldest received frame, if any. Call from the main loop.
 bool radio_poll(radio_frame_t *out);
 
