@@ -7,8 +7,8 @@
 bool board_battery(void);  // board.h (which needs the board's board_config.h): a battery board?
 #include "chip.h"
 #include "phy_settings.h"
-#include DeviceFamily_constructPath(driverlib / rf_prop_mailbox.h)
 // clang-format off: a TI include path, not a division
+#include DeviceFamily_constructPath(driverlib/rf_prop_mailbox.h)
 #include DeviceFamily_constructPath(driverlib/rf_data_entry.h)
 #include DeviceFamily_constructPath(driverlib/aon_batmon.h)
 #include DeviceFamily_constructPath(inc/hw_aon_batmon.h)
