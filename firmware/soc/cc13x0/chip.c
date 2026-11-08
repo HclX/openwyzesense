@@ -101,6 +101,23 @@ void chip_reset(void)
     }
 }
 
+void chip_watchdog_start(uint32_t timeout_ms)
+{
+    WatchdogUnlock();
+    WatchdogReloadSet(timeout_ms * 1500u);  // the watchdog clock: 48 MHz / 32
+    WatchdogStallEnable();                  // paused while a debugger halts the CPU
+    WatchdogResetEnable();                  // the second timeout resets the chip
+    WatchdogEnable();
+    WatchdogLock();
+}
+
+void chip_watchdog_feed(void)
+{
+    WatchdogUnlock();
+    WatchdogIntClear();  // reloads the counter
+    WatchdogLock();
+}
+
 bool chip_can_enter_sbl(void)
 {
     return (HWREG(CCFG_BASE + CCFG_O_BL_CONFIG) >> 24) == 0xC5u;

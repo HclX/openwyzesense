@@ -806,6 +806,20 @@ bool boot_update_ok(uint32_t version)
     return cur->slot >= 0 && boot_written_ok(&f, 1 - cur->slot, boot_board(), version);
 }
 
+void chip_watchdog_start(uint32_t timeout_ms)
+{
+    (void)timeout_ms;
+}
+
+void chip_watchdog_feed(void)
+{
+}
+
+uint32_t radio_tx_stuck(void)
+{
+    return 0;
+}
+
 void chip_reset(void)
 {
     cur->reset_pending = true;
