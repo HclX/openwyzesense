@@ -1,25 +1,31 @@
 // 2-pin IEEE 1149.7 cJTAG (OScan1) + TI ICEPick-C + ARM CoreSight JTAG-DP/AHB-AP + CC1310 flash engine (issue #69).
 // Operates over two GPIOs only (M = TMSC, C = TCKC; no RESET_N or W strap needed), with auto-polarity detection on
 // the two probe pins and page-by-page dump/flash support so hand-held probes can slip and resume without restarting.
-// Hard rule (CLAUDE.md / AGENTS.md): page 31 (0x0001F000..0x0001FFFF, CCFG + factory MAC) is NEVER erased or written.
+// Hard rule (CLAUDE.md / AGENTS.md): page 31 (0x0001F000..0x0001FFFF, CCFG + factory MAC) is never erased or written,
+// except BL_CONFIG through cjtag_set_backdoor (the one CCFG write allowed, #14).
 #pragma once
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#define CJTAG_PAGE           0x1000u
-#define CJTAG_TOTAL_PAGES    32u
-#define CJTAG_FLASH_SIZE     (CJTAG_PAGE * CJTAG_TOTAL_PAGES)  // 128 KB
-#define CJTAG_APP_PAGES      30u                               // pages 0-29 (0x00000..0x1DFFF)
-#define CJTAG_APP_END        (CJTAG_PAGE * CJTAG_APP_PAGES)    // 0x1E000
-#define CJTAG_NV_PAGE_IDX    30u                               // page 30 (0x1E000)
-#define CJTAG_CCFG_PAGE_IDX  31u                               // page 31 (0x1F000): never erased or written
-#define CJTAG_CCFG_ADDR      0x0001FFA8u
-#define CJTAG_FCFG1_ADDR     0x50001000u
-#define CJTAG_FCFG1_SIZE     0x00000400u  // 1 KB factory configuration
-#define CJTAG_ICEPICK_IDCODE 0x0B9BE02Fu  // CC13x0 ICEPick-C IDCODE (ignoring 4-bit version)
-#define CJTAG_DAP_IDCODE     0x4BA00477u  // ARM Cortex-M3 CoreSight JTAG-DP IDCODE
+#define CJTAG_PAGE             0x1000u
+#define CJTAG_TOTAL_PAGES      32u
+#define CJTAG_FLASH_SIZE       (CJTAG_PAGE * CJTAG_TOTAL_PAGES)  // 128 KB
+#define CJTAG_APP_PAGES        30u                               // pages 0-29 (0x00000..0x1DFFF)
+#define CJTAG_APP_END          (CJTAG_PAGE * CJTAG_APP_PAGES)    // 0x1E000
+#define CJTAG_NV_PAGE_IDX      30u                               // page 30 (0x1E000)
+#define CJTAG_CCFG_PAGE_IDX    31u                               // page 31 (0x1F000): never erased or written
+#define CJTAG_CCFG_ADDR        0x0001FFA8u
+#define CJTAG_FCFG1_ADDR       0x50001000u
+#define CJTAG_FCFG1_SIZE       0x00000400u  // 1 KB factory configuration
+#define CJTAG_CCFG_SIZE        88u          // 0x0001FFA8..0x0001FFFF
+#define CJTAG_CCFG_BL_CONFIG   0x30u        // offsets in the CCFG
+#define CJTAG_CCFG_TAP_DAP_0   0x3Cu
+#define CJTAG_CCFG_IMAGE_VALID 0x44u
+#define CJTAG_MAX_BL_PIN       14u          // 5x5 package: DIO0-14 (TI errata SWRZ062F advisory 13)
+#define CJTAG_ICEPICK_IDCODE   0x0B9BE02Fu  // CC13x0 ICEPick-C IDCODE (ignoring 4-bit version)
+#define CJTAG_DAP_IDCODE       0x4BA00477u  // ARM Cortex-M3 CoreSight JTAG-DP IDCODE
 
 typedef struct {
     void (*set_pins)(void *ctx, bool tck, bool tms);
@@ -76,6 +82,16 @@ bool cjtag_dump_fcfg1(cjtag_t *c, uint8_t *out_1k);
 // Hard rule: page_idx >= 31 is unconditionally refused; page_idx == 30 requires allow_nv == true.
 bool cjtag_flash_page(cjtag_t *c, uint32_t page_idx, const uint8_t *data_4k, bool allow_nv);
 
+// Writes the image (image(ctx, off, buf, n) fills buf from the image) to pages 0-29 page by page, pages already equal
+// skipped, through cjtag_flash_page (its checks). buf_4k: the caller's 4 KB buffer. Returns the pages written, or
+// -1 (c->error says why).
+typedef bool (*cjtag_image_fn)(void *ctx, uint32_t off, uint8_t *buf, size_t n);
+int cjtag_write_image(cjtag_t *c, cjtag_image_fn image, void *ctx, uint32_t image_len, uint8_t *buf_4k);
+// The one page-31 write allowed (docs/design/v1-contact.md, #14): the ROM bootloader on, its backdoor DIO<pin>
+// active low, nothing else changed. Page 31 is read twice and compared and must match the connect's CRC; the CCFG must
+// hold a factory MAC, the CPU debug port enabled and a valid image; after the erase the page is written and verified
+// whole, and on a failure written back as it was. Returns 1 written, 0 already so, -1 refused or failed (c->error).
+int cjtag_set_backdoor(cjtag_t *c, uint8_t pin, uint8_t *buf_4k);
 // Release the debug domain, trigger a Cortex-M3 VECTRESET so the chip boots cleanly without hanging in ROM
 // Halt-In-Boot (HIB), and return the cJTAG adapter to offline mode.
 void cjtag_release_and_reset(cjtag_t *c);

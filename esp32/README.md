@@ -211,9 +211,24 @@ builds it). Verified on NodeMCU and D1 mini hardware (2026-10-26).
 | `T` (silkscreen; the contact's output) | D7 (GPIO13: UART0 RX after `Serial.swap()`) |
 | `W` (DIO10) | D1 (GPIO5); optional: only for units whose bootloader backdoor is `W` (our earlier provisioning) |
 | `S` (RESET_N) | D2 (GPIO4) |
+| `M` (TMSC) | D5 (GPIO14): the debug port, optional |
+| `C` (TCKC) | D6 (GPIO12) |
 
 Into the bootloader the relay holds both `R` (D4, taken from UART1 meanwhile) and `W` low through an `S` reset, so a
-unit with the stock backdoor (`R`/DIO1, `BL_CONFIG 0xC5FE01C5`) needs only five wires (#81, 2026-11-07).
+unit with the stock backdoor (`R`/DIO1, `BL_CONFIG 0xC5FE01C5`) needs only five wires (#81, 2026-11-07). With `M` and
+`C` wired, the start-up check updates the gateway through the debug port first (`esp32/contact/cjtag.c`, as the ESP32
+does; 65 s for 10 pages through Arduino's `digitalWrite`, the bootloader fallback after it), and the bootloader's
+backdoor can be read and set (the one CCFG write allowed, `cjtag_set_backdoor`: page 31 read twice, only `BL_CONFIG`
+changed, the page verified whole, put back on a failure; the unit's MAC must be given):
+
+```
+curl http://<ip>/contact/bootloader                                       # {"mac", "bl_config", "backdoor": r|w|button|off|other}
+curl -u admin:<pass> -d 'backdoor=r&mac=<MAC>' http://<ip>/contact/bootloader  # r (DIO1, stock), w (DIO10) or button (DIO11)
+```
+
+Verified on a NodeMCU with 777B42DF, 2026-11-07: `BL_CONFIG` `c5fe0ac5` -> `c5fe01c5`, then a reflash through `R`
+alone (our sensor firmware running, so no software entry), a gateway update through the debug port, and
+`test_hw_esp32.py` (the relay, reset, `nv.json`, a reflash, OTA).
 
 ```
 tools/pio.sh run -t upload --upload-port /dev/ttyUSB0      # its start-up report: 115200 on the USB port

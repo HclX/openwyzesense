@@ -81,6 +81,8 @@ Leave GPIO0, 2, 5, 12 and 15 free: they decide how the ESP32 starts.
 | `T` | D7 |
 | `S` | D2 |
 | `W` | D1 (optional: not needed when the board's bootloader is on `R`, the factory setting) |
+| `M` | D5 (optional: updates through the debug port, and setting the bootloader pin) |
+| `C` | D6 (with `M`) |
 
 Nothing goes on D8: the ESP8266 does not start if D8 is pulled high.
 

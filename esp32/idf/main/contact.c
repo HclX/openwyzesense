@@ -433,7 +433,7 @@ static void cj_delay(void *ctx, uint32_t us)
 static int cjtag_flash_now(uint32_t image_len, char *mac, char *err, size_t cap)
 {
     static cjtag_t cj;
-    static uint8_t want[CJTAG_PAGE], have[CJTAG_PAGE];
+    static uint8_t want[CJTAG_PAGE];
     const int tck = OWS_PIN_CONTACT_TCK, tms = OWS_PIN_CONTACT_TMS;
     if (tck < 0 || tms < 0) {
         snprintf(err, cap, "no debug port wired (M, C)");
@@ -462,30 +462,10 @@ static int cjtag_flash_now(uint32_t image_len, char *mac, char *err, size_t cap)
         goto out;
     }
     memcpy(mac, cj.mac, 9);
-    if (!cj.has_ccfg_mac) {
-        snprintf(err, cap, "no factory MAC in its CCFG: not written");
-        goto release;
+    written = cjtag_write_image(&cj, gw_image, NULL, image_len, want);
+    if (written < 0) {
+        snprintf(err, cap, "%s", cj.error);
     }
-    written = 0;
-    for (uint32_t p = 0; p * CJTAG_PAGE < image_len; p++) {
-        uint32_t n = image_len - p * CJTAG_PAGE < CJTAG_PAGE ? image_len - p * CJTAG_PAGE : CJTAG_PAGE;
-        memset(want, 0xFF, sizeof want);
-        if (!gw_image(NULL, p * CJTAG_PAGE, want, n) || !cjtag_mem_read_block(&cj, p * CJTAG_PAGE, have, CJTAG_PAGE)) {
-            snprintf(err, cap, "page %lu: %s", (unsigned long)p, cj.error[0] ? cj.error : "image read failed");
-            written = -1;
-            break;
-        }
-        if (!memcmp(want, have, CJTAG_PAGE)) {
-            continue;
-        }
-        if (!cjtag_flash_page(&cj, p, want, false)) {
-            snprintf(err, cap, "page %lu: %s", (unsigned long)p, cj.error);
-            written = -1;
-            break;
-        }
-        written++;
-    }
-release:
     cjtag_release_and_reset(&cj);
 out:
     line_free(tck);
@@ -496,9 +476,9 @@ out:
     return written;
 }
 
-// cjtag.c keeps 4 KB page buffers on the stack, more than the relay task has (6 KB, which gwsync_run runs on): the
-// debug-port work runs in its own task, with room for them, only for as long as it takes (#81: the first bench run
-// overflowed the relay task's stack into the Wi-Fi driver's memory).
+// The debug-port work runs in its own task, with room to spare, only for as long as it takes (#81: the first bench
+// run, when cjtag.c still kept 4 KB page buffers on the stack, overflowed the relay task's 6 KB stack into the Wi-Fi
+// driver's memory; it now reads in 256-byte chunks, but the task costs nothing to keep).
 typedef struct {
     uint32_t image_len;
     char *mac, *err;

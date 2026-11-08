@@ -84,6 +84,8 @@ typedef struct {
     // Glitch injection for testing double-read verification & hands-free resume
     int glitch_on_read_count;
     int read_count;
+    int fail_programs;  // the next n HapiProgramFlash calls fail, after the erase (a write gone wrong)
+    int erases;         // HapiSectorErase calls so far
 
     // Simulated CC1310 memories
     uint8_t flash[CJTAG_FLASH_SIZE];
@@ -158,6 +160,7 @@ static void sim_bus_write32(sim_cc1310_t *s, uint32_t addr, uint32_t val)
                     // HapiSectorErase(r0 = sector_addr)
                     uint32_t sec = s->core_regs[0];
                     if (sec < sizeof s->flash && (sec % CJTAG_PAGE) == 0) {
+                        s->erases++;
                         memset(s->flash + sec, 0xFF, CJTAG_PAGE);
                         s->core_regs[0] = 0;  // FAPI_STATUS_SUCCESS
                     } else {
@@ -168,8 +171,11 @@ static void sim_bus_write32(sim_cc1310_t *s, uint32_t addr, uint32_t val)
                     uint32_t src = s->core_regs[0];
                     uint32_t dst = s->core_regs[1];
                     uint32_t cnt = s->core_regs[2];
-                    if (src >= 0x20000000u && src + cnt <= 0x20000000u + sizeof s->sram &&
-                        dst + cnt <= sizeof s->flash) {
+                    if (s->fail_programs > 0) {
+                        s->fail_programs--;
+                        s->core_regs[0] = 1;
+                    } else if (src >= 0x20000000u && src + cnt <= 0x20000000u + sizeof s->sram &&
+                               dst + cnt <= sizeof s->flash) {
                         for (uint32_t i = 0; i < cnt; i++) {
                             s->flash[dst + i] &= s->sram[(src - 0x20000000u) + i];
                         }
@@ -532,6 +538,12 @@ static void sim_delay_us(void *ctx, uint32_t us)
     (void)us;
 }
 
+static bool image_fn(void *ctx, uint32_t off, uint8_t *buf, size_t n)
+{
+    memcpy(buf, (const uint8_t *)ctx + off, n);
+    return true;
+}
+
 static void sim_init(sim_cc1310_t *s, const char *ccfg_mac)
 {
     memset(s, 0, sizeof *s);
@@ -657,7 +669,56 @@ int main(void)
     CHECK(memcmp(sim.flash + (size_t)CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, orig_page31, CJTAG_PAGE) == 0);
     CHECK(sim.vims_ctl == 0x00000001u);
 
-    // 7. Clean release and VECTRESET (0x05FA0001)
+    // 7. The image writer: pages already equal skipped, the rest written through cjtag_flash_page's checks
+    static uint8_t image[3 * CJTAG_PAGE - 100];
+    memcpy(image, sim.flash, sizeof image);  // pages 0 and 1 as now, page 2 different
+    memset(image + (size_t)2 * CJTAG_PAGE, 0x3C, sizeof image - (size_t)2 * CJTAG_PAGE);
+    int erases0 = sim.erases;
+    CHECK(cjtag_write_image(&cj, image_fn, image, sizeof image, page_buf) == 1);
+    CHECK(sim.erases == erases0 + 1 && memcmp(sim.flash, image, sizeof image) == 0);
+    CHECK(sim.flash[(size_t)3 * CJTAG_PAGE - 100] == 0xFF);                       // the rest of the last page: erased
+    CHECK(cjtag_write_image(&cj, image_fn, image, sizeof image, page_buf) == 0);  // nothing to do now
+    CHECK(cjtag_write_image(&cj, image_fn, image, CJTAG_APP_END + 4, page_buf) == -1);
+
+    // 8. BL_CONFIG (the one page-31 write allowed): only that word changes; refusals; a failed write put back
+    uint8_t *ccfg = sim.flash + CJTAG_CCFG_ADDR;
+    put_le32(ccfg + CJTAG_CCFG_TAP_DAP_0, 0xFFC500C5u);
+    put_le32(ccfg + CJTAG_CCFG_IMAGE_VALID, 0);
+    memset(sim.flash + (size_t)CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, 0x6B, 0x100);  // stock code before the CCFG
+    cjtag_init(&cj, &io);
+    CHECK(cjtag_connect(&cj, true));
+    memcpy(orig_page31, sim.flash + (size_t)CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, CJTAG_PAGE);
+    CHECK(cjtag_set_backdoor(&cj, 15, page_buf) == -1);  // no DIO15 on the 5x5 package
+    CHECK(cjtag_set_backdoor(&cj, 1, page_buf) == 1);
+    CHECK(le32(ccfg + CJTAG_CCFG_BL_CONFIG) == 0xC5FE01C5u && cj.bl_config == 0xC5FE01C5u);
+    put_le32(orig_page31 + (CJTAG_CCFG_ADDR - CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE) + CJTAG_CCFG_BL_CONFIG, 0xC5FE01C5u);
+    CHECK(memcmp(sim.flash + (size_t)CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, orig_page31, CJTAG_PAGE) == 0);
+    erases0 = sim.erases;
+    CHECK(cjtag_set_backdoor(&cj, 1, page_buf) == 0 && sim.erases == erases0);  // already so: no erase
+    CHECK(cjtag_flash_page(&cj, 3, new_page, false));  // the new page-31 CRC is the one checked now
+
+    sim.fail_programs = 1;  // erased, then the write fails: the page goes back as it was
+    CHECK(cjtag_set_backdoor(&cj, 10, page_buf) == -1 && strstr(cj.error, "restored"));
+    CHECK(memcmp(sim.flash + (size_t)CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, orig_page31, CJTAG_PAGE) == 0);
+    CHECK(cj.bl_config == 0xC5FE01C5u);
+    sim.fail_programs = 10;  // and if that fails too, it says so
+    CHECK(cjtag_set_backdoor(&cj, 10, page_buf) == -1 && strstr(cj.error, "NOT restored"));
+    sim.fail_programs = 0;
+    memcpy(sim.flash + (size_t)CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, orig_page31, CJTAG_PAGE);
+
+    put_le32(ccfg + CJTAG_CCFG_TAP_DAP_0, 0xFFC5C5C5u);  // an unexpected CCFG: refused, untouched
+    cjtag_init(&cj, &io);
+    CHECK(cjtag_connect(&cj, true));
+    erases0 = sim.erases;
+    CHECK(cjtag_set_backdoor(&cj, 10, page_buf) == -1 && sim.erases == erases0);
+    put_le32(ccfg + CJTAG_CCFG_TAP_DAP_0, 0xFFC500C5u);
+    memset(ccfg + 0x24, 0xFF, 8);  // no factory MAC: refused
+    cjtag_init(&cj, &io);
+    CHECK(cjtag_connect(&cj, true));
+    CHECK(cjtag_set_backdoor(&cj, 10, page_buf) == -1 && sim.erases == erases0);
+    CHECK(cjtag_write_image(&cj, image_fn, image, sizeof image, page_buf) == -1);
+
+    // 9. Clean release and VECTRESET (0x05FA0001)
     cjtag_release_and_reset(&cj);
     CHECK(sim.aircr == 0x05FA0001u);
     CHECK(!sim.in_oscan1);

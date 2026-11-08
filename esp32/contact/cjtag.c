@@ -64,16 +64,50 @@ static bool fail(cjtag_t *c, const char *why)
     return false;
 }
 
-static uint32_t crc32_ieee(const uint8_t *p, size_t n)
+static uint32_t crc32_update(uint32_t crc, const uint8_t *p, size_t n)  // start at 0xFFFFFFFF, end with ~
 {
-    uint32_t crc = 0xFFFFFFFFu;
     for (size_t i = 0; i < n; i++) {
         crc ^= p[i];
         for (int k = 0; k < 8; k++) {
             crc = (crc >> 1) ^ (0xEDB88320u & (0u - (crc & 1u)));
         }
     }
-    return ~crc;
+    return crc;
+}
+
+// Reads and checks go in chunks of this size, so that no call needs more than a few hundred bytes of stack (the
+// ESP8266's loop has 4 KB in all; the callers hand in the one 4 KB page buffer an operation needs)
+#define CHUNK 256u
+
+static bool page_crc(cjtag_t *c, uint32_t addr, uint32_t *out)
+{
+    uint8_t b[CHUNK];
+    uint32_t crc = 0xFFFFFFFFu;
+    for (uint32_t off = 0; off < CJTAG_PAGE; off += CHUNK) {
+        if (!cjtag_mem_read_block(c, addr + off, b, CHUNK)) {
+            return false;
+        }
+        crc = crc32_update(crc, b, CHUNK);
+    }
+    *out = ~crc;
+    return true;
+}
+
+// Flash at addr equals want (len bytes, a multiple of CHUNK)?
+static bool flash_equals(cjtag_t *c, uint32_t addr, const uint8_t *want, size_t len, bool *equal)
+{
+    uint8_t b[CHUNK];
+    *equal = true;
+    for (size_t off = 0; off < len; off += CHUNK) {
+        if (!cjtag_mem_read_block(c, addr + (uint32_t)off, b, CHUNK)) {
+            return false;
+        }
+        if (memcmp(b, want + off, CHUNK) != 0) {
+            *equal = false;
+            return true;
+        }
+    }
+    return true;
 }
 
 void cjtag_init(cjtag_t *c, const cjtag_io_t *io)
@@ -755,15 +789,15 @@ bool cjtag_connect(cjtag_t *c, bool halt_cpu)
     }
     c->ieee_mac = ((uint64_t)mac_hi << 32) | mac_lo;
 
-    // Read Page 31 (CCFG) to capture its baseline CRC32, BL_CONFIG, and CCFG ASCII MAC
-    uint8_t page31[CJTAG_PAGE] = {0};
-    if (!cjtag_mem_read_block(c, CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, page31, sizeof page31)) {
+    // Page 31 (CCFG): its baseline CRC32, BL_CONFIG and the CCFG's ASCII MAC
+    if (!page_crc(c, CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, &c->page31_crc)) {
         return fail(c, "failed to read page 31 (CCFG)");
     }
-    c->page31_crc = crc32_ieee(page31, sizeof page31);
-
-    const uint8_t *ccfg = page31 + (CJTAG_CCFG_ADDR - (CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE));
-    const uint8_t *bl = ccfg + 0x30;
+    uint8_t ccfg[CJTAG_CCFG_SIZE];
+    if (!cjtag_mem_read_block(c, CJTAG_CCFG_ADDR, ccfg, sizeof ccfg)) {
+        return fail(c, "failed to read the CCFG");
+    }
+    const uint8_t *bl = ccfg + CJTAG_CCFG_BL_CONFIG;
     c->bl_config = (uint32_t)bl[0] | ((uint32_t)bl[1] << 8) | ((uint32_t)bl[2] << 16) | ((uint32_t)bl[3] << 24);
 
     const uint8_t *ccfg_mac = ccfg + 0x24;  // 0x0001FFCC
@@ -790,12 +824,12 @@ bool cjtag_dump_page(cjtag_t *c, uint32_t page_idx, uint8_t *out_4k)
     if (page_idx >= CJTAG_TOTAL_PAGES) {
         return fail(c, "page index out of range (0..31)");
     }
-    uint8_t verify_buf[CJTAG_PAGE] = {0};
     uint32_t addr = page_idx * CJTAG_PAGE;
-    if (!cjtag_mem_read_block(c, addr, out_4k, CJTAG_PAGE) || !cjtag_mem_read_block(c, addr, verify_buf, CJTAG_PAGE)) {
+    bool equal = false;
+    if (!cjtag_mem_read_block(c, addr, out_4k, CJTAG_PAGE) || !flash_equals(c, addr, out_4k, CJTAG_PAGE, &equal)) {
         return false;
     }
-    if (memcmp(out_4k, verify_buf, CJTAG_PAGE) != 0) {
+    if (!equal) {
         return fail(c, "page read mismatch between pass 1 and pass 2 (probe glitch)");
     }
     return true;
@@ -803,12 +837,12 @@ bool cjtag_dump_page(cjtag_t *c, uint32_t page_idx, uint8_t *out_4k)
 
 bool cjtag_dump_fcfg1(cjtag_t *c, uint8_t *out_1k)
 {
-    uint8_t verify_buf[CJTAG_FCFG1_SIZE] = {0};
+    bool equal = false;
     if (!cjtag_mem_read_block(c, CJTAG_FCFG1_ADDR, out_1k, CJTAG_FCFG1_SIZE) ||
-        !cjtag_mem_read_block(c, CJTAG_FCFG1_ADDR, verify_buf, CJTAG_FCFG1_SIZE)) {
+        !flash_equals(c, CJTAG_FCFG1_ADDR, out_1k, CJTAG_FCFG1_SIZE, &equal)) {
         return false;
     }
-    if (memcmp(out_1k, verify_buf, CJTAG_FCFG1_SIZE) != 0) {
+    if (!equal) {
         return fail(c, "FCFG1 read mismatch between pass 1 and pass 2");
     }
     return true;
@@ -831,21 +865,10 @@ static bool is_all_ff(const uint8_t *p, size_t n)
     return true;
 }
 
-bool cjtag_flash_page(cjtag_t *c, uint32_t page_idx, const uint8_t *data_4k, bool allow_nv)
+// Erase and program one page and verify it whole. No refusals here: cjtag_flash_page (pages 0-30) and
+// cjtag_set_backdoor (page 31, BL_CONFIG only) decide what may be written.
+static bool flash_raw(cjtag_t *c, uint32_t page_idx, const uint8_t *data_4k)
 {
-    // Hard safety rule: NEVER erase or write page 31 (CCFG + factory MAC)
-    if (page_idx >= CJTAG_CCFG_PAGE_IDX) {
-        return fail(c, "refused: page 31 (CCFG) may never be erased or written");
-    }
-    if (page_idx == CJTAG_NV_PAGE_IDX && !allow_nv) {
-        return fail(c, "refused: page 30 (NV) requires allow_nv");
-    }
-    if (!c->has_ccfg_mac) {
-        return fail(c, "no valid ASCII MAC in CCFG (page 31): refusing to flash");
-    }
-    if (page_idx == 0 && !vector_table_ok(data_4k)) {
-        return fail(c, "page 0 does not start with a valid CC1310 Cortex-M3 vector table");
-    }
     if (!cpu_halt(c)) {
         return false;
     }
@@ -892,23 +915,141 @@ bool cjtag_flash_page(cjtag_t *c, uint32_t page_idx, const uint8_t *data_4k, boo
         (void)cjtag_mem_write32(c, CC1310_FLASH_CFG, fcfg & ~0x02u);
     }
 
-    // Read back the 4 KB page while VIMS cache is still OFF and verify every byte matches
-    uint8_t verify_buf[CJTAG_PAGE] = {0};
-    if (!cjtag_mem_read_block(c, sector_addr, verify_buf, CJTAG_PAGE) || memcmp(verify_buf, data_4k, CJTAG_PAGE) != 0) {
+    // Read back the page while the VIMS cache is still OFF and verify every byte matches
+    bool equal = false;
+    if (!flash_equals(c, sector_addr, data_4k, CJTAG_PAGE, &equal) || !equal) {
         (void)cjtag_mem_write32(c, CC1310_VIMS_CTL, orig_vims);
         return fail(c, "flash readback verification failed");
-    }
-
-    // Verify page 31 (CCFG) is completely untouched
-    if (!cjtag_mem_read_block(c, CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, verify_buf, CJTAG_PAGE) ||
-        crc32_ieee(verify_buf, CJTAG_PAGE) != c->page31_crc) {
-        (void)cjtag_mem_write32(c, CC1310_VIMS_CTL, orig_vims);
-        return fail(c, "page 31 CRC changed!");
     }
 
     // Restore original VIMS cache mode
     (void)cjtag_mem_write32(c, CC1310_VIMS_CTL, orig_vims);
     return true;
+}
+
+bool cjtag_flash_page(cjtag_t *c, uint32_t page_idx, const uint8_t *data_4k, bool allow_nv)
+{
+    // Hard safety rule: NEVER erase or write page 31 (CCFG + factory MAC) here
+    if (page_idx >= CJTAG_CCFG_PAGE_IDX) {
+        return fail(c, "refused: page 31 (CCFG) may never be erased or written");
+    }
+    if (page_idx == CJTAG_NV_PAGE_IDX && !allow_nv) {
+        return fail(c, "refused: page 30 (NV) requires allow_nv");
+    }
+    if (!c->has_ccfg_mac) {
+        return fail(c, "no valid ASCII MAC in CCFG (page 31): refusing to flash");
+    }
+    if (page_idx == 0 && !vector_table_ok(data_4k)) {
+        return fail(c, "page 0 does not start with a valid CC1310 Cortex-M3 vector table");
+    }
+    if (!flash_raw(c, page_idx, data_4k)) {
+        return false;
+    }
+    // Verify page 31 (CCFG) is completely untouched
+    uint32_t crc = 0;
+    if (!page_crc(c, CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, &crc) || crc != c->page31_crc) {
+        return fail(c, "page 31 CRC changed!");
+    }
+    return true;
+}
+
+int cjtag_write_image(cjtag_t *c, cjtag_image_fn image, void *ctx, uint32_t image_len, uint8_t *buf_4k)
+{
+    int written = 0;
+    if (!c->has_ccfg_mac) {
+        fail(c, "no factory MAC in its CCFG: not written");
+        return -1;
+    }
+    if (!image_len || image_len > CJTAG_APP_END) {
+        fail(c, "image size out of range (pages 0-29 only)");
+        return -1;
+    }
+    for (uint32_t p = 0; p * CJTAG_PAGE < image_len; p++) {
+        uint32_t n = image_len - p * CJTAG_PAGE < CJTAG_PAGE ? image_len - p * CJTAG_PAGE : CJTAG_PAGE;
+        bool equal = false;
+        memset(buf_4k, 0xFF, CJTAG_PAGE);
+        if (!image(ctx, p * CJTAG_PAGE, buf_4k, n)) {
+            snprintf(c->error, sizeof c->error, "page %lu: image read failed", (unsigned long)p);
+            return -1;
+        }
+        if (!flash_equals(c, p * CJTAG_PAGE, buf_4k, CJTAG_PAGE, &equal)) {
+            return -1;
+        }
+        if (equal) {
+            continue;  // already there
+        }
+        if (!cjtag_flash_page(c, p, buf_4k, false)) {
+            char why[sizeof c->error];
+            snprintf(why, sizeof why, "%s", c->error);
+            snprintf(c->error, sizeof c->error, "page %lu: %.70s", (unsigned long)p, why);
+            return -1;
+        }
+        written++;
+    }
+    return written;
+}
+
+static uint32_t le32(const uint8_t *p)
+{
+    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+}
+
+static void put_le32_(uint8_t *p, uint32_t v)
+{
+    for (int i = 0; i < 4; i++) {
+        p[i] = (uint8_t)(v >> (8 * i));
+    }
+}
+
+int cjtag_set_backdoor(cjtag_t *c, uint8_t pin, uint8_t *buf_4k)
+{
+    const uint32_t ccfg_off = CJTAG_CCFG_ADDR - CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE;
+    if (pin > CJTAG_MAX_BL_PIN) {
+        fail(c, "backdoor pin out of range (DIO0-14 on the 5x5 package)");
+        return -1;
+    }
+    if (!c->has_ccfg_mac) {
+        fail(c, "no factory MAC in its CCFG: not touching page 31");
+        return -1;
+    }
+    // the page read twice (compared), and the same as at the connect
+    uint32_t crc = 0;
+    if (!cjtag_dump_page(c, CJTAG_CCFG_PAGE_IDX, buf_4k)) {
+        return -1;
+    }
+    crc = ~crc32_update(0xFFFFFFFFu, buf_4k, CJTAG_PAGE);
+    if (crc != c->page31_crc) {
+        fail(c, "page 31 changed since the connect: not writing");
+        return -1;
+    }
+    uint8_t *ccfg = buf_4k + ccfg_off;
+    if (le32(ccfg + CJTAG_CCFG_TAP_DAP_0) != 0xFFC500C5u || le32(ccfg + CJTAG_CCFG_IMAGE_VALID) != 0) {
+        fail(c, "unexpected CCFG (CPU debug port or image-valid word): not writing");
+        return -1;
+    }
+    uint32_t old = le32(ccfg + CJTAG_CCFG_BL_CONFIG);
+    uint32_t want = 0xC5FE00C5u | (uint32_t)pin << 8;  // bootloader on, backdoor DIO<pin>, active low, enabled
+    if (old == want) {
+        return 0;
+    }
+    put_le32_(ccfg + CJTAG_CCFG_BL_CONFIG, want);
+    if (!flash_raw(c, CJTAG_CCFG_PAGE_IDX, buf_4k)) {
+        // the page as it was, at once: page 31 erased and not written leaves the chip without its CCFG and MAC
+        char why[sizeof c->error];
+        snprintf(why, sizeof why, "%s", c->error);
+        put_le32_(ccfg + CJTAG_CCFG_BL_CONFIG, old);
+        for (int i = 0; i < 3; i++) {
+            if (flash_raw(c, CJTAG_CCFG_PAGE_IDX, buf_4k)) {
+                snprintf(c->error, sizeof c->error, "page 31 restored; BL_CONFIG write failed: %.40s", why);
+                return -1;
+            }
+        }
+        snprintf(c->error, sizeof c->error, "BL_CONFIG write failed and page 31 NOT restored: restore the backup");
+        return -1;
+    }
+    c->bl_config = want;
+    c->page31_crc = ~crc32_update(0xFFFFFFFFu, buf_4k, CJTAG_PAGE);
+    return 1;
 }
 
 void cjtag_release_and_reset(cjtag_t *c)

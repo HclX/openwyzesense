@@ -106,6 +106,13 @@ with the SDR running.
 
 ## Small fixes (left from the code review)
 
+- ESP8266 debug port (#81): 65 s for a 10-page gateway update through `digitalWrite` (direct `GPOS`/`GPOC` register
+  writes would be far faster); its status lacks `via_cjtag`; no web-page button for `/contact/bootloader` yet, and the
+  ESP32 relay has no `/contact/bootloader` yet. `cjtag.c` now reads in 256-byte chunks (no 4 KB stack buffers): re-run
+  the ESP32 station and relay cJTAG paths on B15C. Backdoor on `R`: test a power cut of relay and contact together (a
+  floating `R` at the contact's start would leave it in its bootloader). `uniflash.py` / `ows-flash` `enable-bootloader`
+  could offer `r` too.
+
 - Relay on the old wiring (`+` on 3V3, no M/C; 9A78 + 7788CCF6, 2026-11-07, #81 build `b646e49`): after the relay's
   own OTA restart the contact answered nothing at all, not even its ROM bootloader, also under the v0.2.5 relay, until
   the user unplugged the relay (a real power cycle). Then gwsync fell back to the bootloader (W + S) and wrote all 10

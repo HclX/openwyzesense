@@ -17,6 +17,7 @@
 
 extern "C" {
 #include "buffer.h"
+#include "cjtag.h"
 #include "gwnv.h"
 #include "gwsync.h"
 #include "http_auth.h"
@@ -649,11 +650,164 @@ bool gw_image(void *, uint32_t off, uint8_t *buf, size_t len)
     return true;
 }
 
+// --- the contact's debug port (2-pin cJTAG on M and C, esp32/contact/cjtag.c, #81) ---
+
+constexpr int CONTACT_TMS_GPIO = 14;  // D5: M (TMSC, both ways)
+constexpr int CONTACT_TCK_GPIO = 12;  // D6: C (TCKC)
+uint32_t cj_yield_at;
+
+void cj_set_pins(void *, bool tck, bool tms)  // TMSC changes while TCKC is low
+{
+    if (!tck) {
+        digitalWrite(CONTACT_TCK_GPIO, LOW);
+        digitalWrite(CONTACT_TMS_GPIO, tms);
+    } else {
+        digitalWrite(CONTACT_TMS_GPIO, tms);
+        digitalWrite(CONTACT_TCK_GPIO, HIGH);
+    }
+}
+
+void cj_set_tms_dir(void *, bool output)
+{
+    pinMode(CONTACT_TMS_GPIO, output ? OUTPUT : INPUT_PULLUP);
+}
+
+bool cj_get_tms(void *)
+{
+    return digitalRead(CONTACT_TMS_GPIO) != 0;
+}
+
+void cj_delay(void *, uint32_t us)
+{
+    if (us > 1) {
+        delayMicroseconds(us);
+    }
+    if (millis() - cj_yield_at > 20) {  // the clock is ours: pausing only slows it; Wi-Fi and the watchdog need it
+        cj_yield_at = millis();
+        yield();
+    }
+}
+
+void cj_release_pins()
+{
+    pinMode(CONTACT_TMS_GPIO, INPUT);
+    pinMode(CONTACT_TCK_GPIO, INPUT);
+}
+
+cjtag_t cj;
+
+bool cj_connect()
+{
+    static const cjtag_io_t io = {cj_set_pins, cj_set_tms_dir, cj_get_tms, cj_delay, nullptr};
+    digitalWrite(CONTACT_TCK_GPIO, HIGH);
+    pinMode(CONTACT_TCK_GPIO, OUTPUT);
+    digitalWrite(CONTACT_TMS_GPIO, HIGH);
+    pinMode(CONTACT_TMS_GPIO, OUTPUT);
+    cj_yield_at = millis();
+    for (int i = 0; i < 3; i++) {
+        cjtag_init(&cj, &io);
+        if (cjtag_connect(&cj, true)) {
+            return true;
+        }
+        delay(50);
+    }
+    cj_release_pins();
+    return false;
+}
+
+void cj_done(bool restart)
+{
+    cjtag_release_and_reset(&cj);
+    cj_release_pins();
+    if (restart) {
+        contact_reset();  // a clean start (VECTRESET restarts the CPU only)
+    }
+}
+
+// gwsync's debug-port reflash: pages 0-29 of the carried image (sbl_page is free while gwsync calls this)
+int gw_cjtag_flash(void *, uint32_t image_len, char *mac, char *err, size_t cap)
+{
+    if (!cj_connect()) {
+        snprintf(err, cap, "%s", cj.error);
+        return -1;
+    }
+    memcpy(mac, cj.mac, 9);
+    int written = cjtag_write_image(&cj, gw_image, nullptr, image_len, sbl_page);
+    if (written < 0) {
+        snprintf(err, cap, "%s", cj.error);
+    }
+    cj_done(written > 0);
+    return written;
+}
+
+const char *backdoor_name(uint32_t bl)
+{
+    if ((bl & 0xFFu) != 0xC5u || ((bl >> 24) & 0xFFu) != 0xC5u || ((bl >> 16) & 0xFFu) != 0xFEu) {
+        return "off";  // bootloader or backdoor disabled
+    }
+    switch ((bl >> 8) & 0xFFu) {
+        case 1:
+            return "r";
+        case 10:
+            return "w";
+        case 11:
+            return "button";
+        default:
+            return "other";
+    }
+}
+
+String js(const char *v);  // below
+
+// GET /contact/bootloader: the contact's BL_CONFIG through the debug port (read only; the contact restarts).
+// POST /contact/bootloader backdoor=r|w|button mac=<its MAC>: the one CCFG write allowed (cjtag_set_backdoor).
+void contact_bootloader()
+{
+    bool write = server.method() == HTTP_POST;
+    if (write && (!require_auth() || refused_busy())) {
+        return;
+    }
+    if (!write && gw_busy) {
+        server.send(409, "text/plain", "busy: the gateway check runs\n");
+        return;
+    }
+    String want = server.arg("backdoor");
+    int pin = want == "r" ? 1 : want == "w" ? 10 : want == "button" ? 11 : -1;
+    if (write && pin < 0) {
+        server.send(400, "text/plain", "backdoor=r|w|button\n");
+        return;
+    }
+    gw_busy = true;
+    if (!cj_connect()) {
+        gw_busy = false;
+        contact_reset();
+        server.send(502, "text/plain", String("debug port: ") + cj.error + "\n");
+        return;
+    }
+    uint32_t before = cj.bl_config;
+    int r = 0;
+    String msg;
+    if (write && server.arg("mac") != cj.mac) {
+        r = -1;
+        msg = String("refused: mac=") + server.arg("mac") + " is not this contact (" + cj.mac + ")";
+    } else if (write) {
+        r = cjtag_set_backdoor(&cj, (uint8_t)pin, sbl_page);
+        msg = r > 0 ? "written" : r == 0 ? "already so" : String("failed: ") + cj.error;
+    }
+    char out[200];
+    snprintf(out, sizeof out,
+             "{\"mac\":\"%s\",\"factory_mac\":%s,\"bl_config\":\"%08lx\",\"backdoor\":\"%s\",\"before\":\"%08lx\"",
+             cj.mac, cj.has_ccfg_mac ? "true" : "false", (unsigned long)cj.bl_config, backdoor_name(cj.bl_config),
+             (unsigned long)before);
+    cj_done(true);
+    gw_busy = false;
+    server.send(r < 0 ? 500 : 200, "application/json", String(out) + ",\"result\":" + js(msg.c_str()) + "}\n");
+}
+
 void gw_sync()
 {
-    gwsync_io_t io = {
-        sbl_out,  sbl_in,      sbl_drain, gw_reset, gw_bootloader, gw_sleep,
-        gw_image, gw_progress, nullptr,   nullptr,  GWSYNC_VIA_SBL};  // no debug port on the ESP8266 (#81)
+    gwsync_io_t io = {sbl_out,  sbl_in,      sbl_drain, gw_reset,       gw_bootloader,  gw_sleep,
+                      gw_image, gw_progress, nullptr,   gw_cjtag_flash, GWSYNC_VIA_AUTO};  // the debug port first (#81)
     gw_busy = true;
     if (settings.skip_gwsync) {
         gwsync_probe(&io, kGatewayImageLen, sbl_page, &gw_report);
@@ -850,6 +1004,8 @@ void setup()
     server.on("/api/status", HTTP_GET, api_status);
     server.on("/setup", HTTP_POST, setup_post);
     server.on("/contact/reset", HTTP_POST, contact_reset_post);
+    server.on("/contact/bootloader", HTTP_GET, contact_bootloader);
+    server.on("/contact/bootloader", HTTP_POST, contact_bootloader);
     server.on("/contact/gwsync", HTTP_POST, contact_gwsync_post);
     server.on("/ota", HTTP_POST, ota_done, ota_upload);
     server.on("/contact/flash", HTTP_POST, contact_flash_done, contact_flash_upload);
