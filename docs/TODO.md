@@ -106,6 +106,13 @@ with the SDR running.
 
 ## Small fixes (left from the code review)
 
+- **Safety (2026-11-07, found on 9A78):** a relay's start-up check flashes our gateway onto any contact that does
+  not answer, stock units included, with no backup first: 9A78, rewired with v1 contact 7779749A, overwrote that
+  unit's firmware over cJTAG at its first start, and no backup of it exists. And a gateway with an empty table makes
+  up a network (seen: PAN 0x313B on 777B42DF, 0xC451 on 7779749A) and answers beacon requests on it, which the TX
+  rule forbids. To decide: gwsync reflashing only a contact that runs our firmware (or an explicit "provision" with a
+  dump saved first); a gateway without a network staying silent until the host sets one.
+
 - ESP8266 debug port (#81): 65 s for a 10-page gateway update through `digitalWrite` (direct `GPOS`/`GPOC` register
   writes would be far faster); its status lacks `via_cjtag`; no web-page button for `/contact/bootloader` yet, and the
   ESP32 relay has no `/contact/bootloader` yet. `cjtag.c` now reads in 256-byte chunks (no 4 KB stack buffers): re-run
