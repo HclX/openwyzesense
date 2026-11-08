@@ -111,6 +111,37 @@ def test_sensor_cfg_round_trip_and_validation():
             nvows.import_({**doc, 'cfg': bad_cfg})
 
 
+def test_sensor_secure_mark_round_trip_and_validation():
+    net = nvows.network_data(0x65FE, 0xD425, 0x00124B0012345678)
+    s_sec = nvows.sensor_data(0x65FE, 0x0005, b'77A8C793', secure=True)
+    s_old = nvows.sensor_data(0x65FE, 0x0006, b'777B42DF')
+    assert s_sec[17] == 0x01 and s_sec[18] == 0x01
+    assert s_old[17] == 0x01 and s_old[18] == 0x00
+
+    # Decode of byte 18 bit 0, and an old record (byte 18 = 0) exports without the 'secure' key.
+    s_bit1 = bytearray(nvows.sensor_data(0x65FE, 0x0007, b'77A8C794'))
+    s_bit1[18] = 0x02  # bit 0 is 0
+    page = nvows.encode({(1, 0): net, (4, 0): bytes([3, 0, 0, 0]), (5, 1): s_sec, (5, 2): s_old, (5, 3): bytes(s_bit1)})
+    doc = nvows.export(page)
+    assert doc['sensors'] == [
+        {'sub': 1, 'mac': '77A8C793', 'short': '0005', 'secure': True},
+        {'sub': 2, 'mac': '777B42DF', 'short': '0006'},
+        {'sub': 3, 'mac': '77A8C794', 'short': '0007'},
+    ]
+    assert 'secure' not in doc['sensors'][1] and 'secure' not in doc['sensors'][2]
+
+    # Round trip keeps 'secure', and explicit 'secure': False encodes byte 18 = 0 and re-exports without the key.
+    round_tripped = nvows.import_({**doc, 'sensors': [doc['sensors'][0], {**doc['sensors'][1], 'secure': False}]})
+    assert nvows.latest(round_tripped)[(5, 1)][18] == 1
+    assert nvows.latest(round_tripped)[(5, 2)][18] == 0
+    assert nvows.export(round_tripped)['sensors'] == doc['sensors'][:2]
+
+    # Non-bool 'secure' is rejected on import.
+    for bad_sec in (1, 0, 'true', None, [True]):
+        with pytest.raises(ValueError):
+            nvows.import_({**doc, 'sensors': [{**doc['sensors'][1], 'secure': bad_sec}]})
+
+
 def test_deleted_records_compact_and_import_validation():
     net = nvows.network_data(0x65FE, 0xD425, 1)
     s1 = nvows.sensor_data(0x65FE, 0x0005, b'77A8C793')

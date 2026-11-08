@@ -7,6 +7,7 @@
 
 #include "build_info.h"
 #include "gateway.h"
+#include "seclink.h"
 #include "host_proto.h"
 #include "mac154.h"
 #include "wyze_app.h"
@@ -175,6 +176,7 @@ static void test_replay(const char *path)
         if (sscanf(l, "SESSION %63s %u %u %u", name, &permit, &dsn, &bsn) == 4) {
             gw_init(&gw, PAN, SHORT, EXT, (const uint8_t *)"778B5F63", &io);
             gw.permit = permit, gw.dsn = (uint8_t)dsn, gw.bsn = (uint8_t)bsn;
+            gw.flags = 0;  // as the stock dongle: no "ours" mark in its A6
             sessions++;
         } else if (sscanf(l, "SENSOR %15s %x", mac, &addr) == 2) {
             CHECK(gw_add_sensor(&gw, (const uint8_t *)mac, (uint16_t)addr));
@@ -413,12 +415,12 @@ static void test_flags(void)
     gateway_t gw;
     uint32_t supported = 0;
     gw_init(&gw, PAN, SHORT, EXT, (const uint8_t *)"778B5F63", &io);
-    CHECK(flags_call(&gw, NULL, &supported) == 0);                                        // off after a reset
+    CHECK(flags_call(&gw, NULL, &supported) == GW_FLAG_ANNOUNCE);  // after a reset: the "ours" mark only (#28)
     CHECK(supported == (GW_FLAG_DEDUP | GW_FLAG_OTA | GW_FLAG_ANNOUNCE | GW_FLAG_ROAM));  // bit 1: reserved (#31)
     CHECK(flags_call(&gw, all, NULL) == GW_FLAGS_SUPPORTED);                              // only what it has
     CHECK(flags_call(&gw, dedup, NULL) == GW_FLAG_DEDUP);
     gw_init(&gw, PAN, SHORT, EXT, (const uint8_t *)"778B5F63", &io);
-    CHECK(flags_call(&gw, NULL, NULL) == 0);  // not kept across a reset
+    CHECK(flags_call(&gw, NULL, NULL) == GW_FLAG_ANNOUNCE);  // not kept across a reset
 }
 
 static void test_dedup(void)
@@ -1029,6 +1031,28 @@ static void test_network_and_nv_import(void)
           h.payload[4] == 1 && h.payload[5] == 5 && !memcmp(h.payload + 7, "77ABCDEF", 8) && h.payload[15] == 0x05 &&
           h.payload[17] == SENSOR_CONTACT_V2);
 
+    // The secured mark (#28): ADD_SENSOR's optional flags byte (after the sub-ID, or alone) sets it, GET_SENSOR
+    // [.., 1] reports it; without the flags byte an existing entry keeps its mark
+    uint8_t add5f[16];
+    memcpy(add5f, add5, sizeof add5);
+    add5f[15] = OWS_NV_SENSOR_SECURE;
+    call_ows(&gw, add5f, sizeof add5f, &h);
+    CHECK(h.len == 4 && h.payload[2] == 0x00 && gw.sensors[1].secure);
+    call_ows(&gw, add5, sizeof add5, &h);
+    CHECK(h.payload[2] == 0x00 && gw.sensors[1].secure && gw.sensors[1].nv_sub == 5);
+    uint8_t get1f[4] = {OWS_SUB_NV_IMPORT, OWS_NV_GET_SENSOR, 1, 1};
+    call_ows(&gw, get1f, sizeof get1f, &h);
+    CHECK(h.len == 19 && h.payload[17] == SENSOR_CONTACT_V2 && h.payload[18] == OWS_NV_SENSOR_SECURE);
+    uint8_t add2f[14];
+    memcpy(add2f, add2, 12);
+    add2f[12] = SENSOR_MOTION_V1;
+    add2f[13] = OWS_NV_SENSOR_SECURE;
+    call_ows(&gw, add2f, 14, &h);  // 13 bytes after the sub-command: mac, short, type, flags
+    CHECK(h.payload[2] == 0x00 && gw.sensors[0].secure && gw.sensors[0].nv_sub == 2);
+    add2f[13] = 0;
+    call_ows(&gw, add2f, 14, &h);
+    CHECK(h.payload[2] == 0x00 && !gw.sensors[0].secure);
+
     // Reload from Page 30 OWNV into a fresh gateway_t: network + sorted sensor table survive intact.
     gateway_t reloaded;
     nvstore_t nv2 = {page, mem_nv_prog, mem_nv_erase, page, 0};
@@ -1038,6 +1062,7 @@ static void test_network_and_nv_import(void)
     CHECK(reloaded.pan == 0x4242 && reloaded.short_addr == 0x0010 && reloaded.ext == 0x0012FFEEDDCCBBAAull);
     CHECK(reloaded.n_sensors == 2 && !memcmp(reloaded.sensors[0].mac, "77123456", 8) &&
           !memcmp(reloaded.sensors[1].mac, "77ABCDEF", 8));
+    CHECK(!reloaded.sensors[0].secure && reloaded.sensors[1].secure);
 }
 
 static void put_be64_test(uint8_t *p, uint64_t v)
@@ -1303,11 +1328,11 @@ static void test_ota_queue_and_wildcard(void)
     // Sensor 0x10 ("77000001") finishes with C3 -> marked in wildcard_done; subsequent poll gets no second C0,
     // while sensor 0x11 ("77000002") immediately gets C0!
     memset(pt, 0, sizeof pt);
-    pt[0] = APP_OTA_DONE;
-    memcpy(pt + 1, "77000001", 8);
-    pt[9] = OTA_DONE_OK;
-    ota_put_be32(pt + 10, 16u);
-    app_encrypt(pt, 14, ct);
+    pt[0] = APP_OURS, pt[1] = APP_OTA_DONE;
+    memcpy(pt + 2, "77000001", 8);
+    pt[10] = OTA_DONE_OK;
+    ota_put_be32(pt + 11, 16u);
+    app_encrypt(pt, 15, ct);
     n_host = 0;
     gw_rx(&gw, f, mac_build_data(f, 4, PAN, SHORT, 0x10, ct, 16, true), -50);
     CHECK(n_host == 1 && host_parse(host[0].b, host[0].n, &h) && h.cmd == HOST_OWS_RSP &&
@@ -1327,11 +1352,11 @@ static void test_ota_queue_and_wildcard(void)
         gw.sensors[i].nv_sub = (uint16_t)((i + 1) * 2);  // sub 2, 4, 6, ... so sub 1 inserts at index 0
     }
     memset(pt, 0, sizeof pt);
-    pt[0] = APP_OTA_DONE;
-    memcpy(pt + 1, "77000002", 8);
-    pt[9] = OTA_DONE_REFUSED;
-    ota_put_be32(pt + 10, 15u);
-    app_encrypt(pt, 14, ct);
+    pt[0] = APP_OURS, pt[1] = APP_OTA_DONE;
+    memcpy(pt + 2, "77000002", 8);
+    pt[10] = OTA_DONE_REFUSED;
+    ota_put_be32(pt + 11, 15u);
+    app_encrypt(pt, 15, ct);
     gw_rx(&gw, f, mac_build_data(f, 5, PAN, SHORT, 0x11, ct, 16, true), -50);
     gw_host(&gw, ack, host_build_ack(ack, HOST_OWS_RSP, false));
     CHECK(gw.ota.wildcard_done == (1ull << 0) && gw.ota.wildcard_skip == (1ull << 1));

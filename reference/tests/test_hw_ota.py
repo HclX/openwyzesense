@@ -126,8 +126,15 @@ def short_press():
     hw.release(BTN_PAIR)
 
 
-def test_ota_update_over_the_air():
-    tmp = pathlib.Path(os.environ.get('OWS_HW_SAVE') or '/tmp/ows-ota')
+@pytest.mark.parametrize('secure', [False, True], ids=['plain', 'secured'])
+def test_ota_update_over_the_air(secure):
+    """plain: the gateway without the network key (restarted first: its key is RAM only), the update started by a short
+    press of the sensor's button. secured (#28): the host pushes the key, the sensor gets a secured session, and the
+    sealed update needs no button: it starts at the sensor's next check-in (an A1 status, here asked for from its
+    console; in the field its periodic heartbeat)."""
+    from test_hw_secure import A6_OURS_SECURE, restart_gateway
+
+    tmp = pathlib.Path(os.environ.get('OWS_HW_SAVE') or '/tmp/ows-ota') / ('secured' if secure else 'plain')
     tmp.mkdir(parents=True, exist_ok=True)
     log = []
     board = Board(UART)
@@ -143,6 +150,7 @@ def test_ota_update_over_the_air():
         mac = banner.split('MAC ')[1][:8].encode()
         update = builds(version + 1, tmp)
 
+        restart_gateway()  # no key left from an earlier run
         dongle = HostLink(DONGLE, log=log)
         hs = dongle.handshake()
         assert hs['mac'] == SPARE_MAC, 'not the spare dongle'
@@ -151,9 +159,18 @@ def test_ota_update_over_the_air():
         assert flags and flags[0] == host.FLAG_OTA | host.FLAG_ANNOUNCE, f'not a gateway with OTA: {flags}'
         if mac in dongle.sensors():
             dongle.call(host.DELETE_SENSOR, mac)
+        if secure:
+            assert dongle.net_key(os.urandom(16)), 'the gateway did not take the network key'
 
         pair(board, dongle, mac)
         dongle.packets(10)  # its first reports and polls
+        t_info = time.time()
+        board.say('info')
+        line = board.wait('info', 2, since=t_info) or ''
+        if secure:
+            assert ' secure session' in line and int(line.split('gw ours ')[1][:4], 16) & A6_OURS_SECURE, line
+        else:
+            assert ' secure' not in line, line
         t0 = time.time()
         last = [0.0]
 
@@ -162,11 +179,19 @@ def test_ota_update_over_the_air():
                 last[0] = time.time()
                 print(f'  slot {"AB"[slot]}: {done}/{total} bytes, {time.time() - t0:.0f} s', flush=True)
 
-        status = dongle.ota_update(mac, update, timeout=600, progress=progress, staged=short_press)
+        status = dongle.ota_update(
+            mac, update, timeout=600, progress=progress, staged=(lambda: board.say('status')) if secure else short_press
+        )
         took = time.time() - t0
-        print(f'update: status {status}, {len(update[1])} bytes in {took:.0f} s from the button press', flush=True)
+        print(
+            f'update ({"secured" if secure else "plain"}): status {status}, {len(update[1])} bytes in {took:.0f} s',
+            flush=True,
+        )
         assert status == 0, host.OTA_DONE_STATUS.get(status, status)
-        assert board.wait('button short', 1, since=t0)
+        if secure:
+            assert not board.wait('button', 0, since=t0)  # nobody pressed it
+        else:
+            assert board.wait('button short', 1, since=t0)
         assert board.wait(f'ota offer {version + 1}, slot B', 1, since=t0)
         assert board.wait('ota done, restarting', 5, since=t0)
         banner = board.wait('OpenWyzeSense sensor', 10, since=t0)

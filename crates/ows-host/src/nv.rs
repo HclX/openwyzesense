@@ -170,6 +170,8 @@ pub struct Sensor {
     pub sub: u32,
     pub mac: String,
     pub short: String,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub secure: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -280,12 +282,13 @@ pub fn network_data(pan: u16, short: u16, ext: u64) -> Vec<u8> {
     d
 }
 
-pub fn sensor_data(pan: u16, short: u16, mac: &[u8]) -> Vec<u8> {
+pub fn sensor_data(pan: u16, short: u16, mac: &[u8], secure: bool) -> Vec<u8> {
     let mut r = vec![0u8; 24];
     r[0..2].copy_from_slice(&pan.to_le_bytes());
     r[2..4].copy_from_slice(&short.to_le_bytes());
     r[4..12].copy_from_slice(mac);
     r[17] = 0x01;
+    r[18] = secure as u8;
     r
 }
 
@@ -391,7 +394,7 @@ pub fn export(page: &[u8]) -> NvDoc {
         } else {
             by_mac.insert(mac.to_vec(), sub);
             by_short.insert(s, mac_s.clone());
-            out.sensors.push(Sensor { sub: sub as u32, mac: mac_s, short: h16(s) });
+            out.sensors.push(Sensor { sub: sub as u32, mac: mac_s, short: h16(s), secure: d[18] & 1 != 0 });
         }
     }
     if layout == "ows" {
@@ -474,7 +477,7 @@ pub fn import(doc: &NvDoc) -> Result<Vec<u8>, Error> {
             subs.push(s.sub);
             macs.push(mac);
             shorts.push(short);
-            items.insert((ITEM_SENSOR, s.sub as u16), sensor_data(pan, short as u16, mac));
+            items.insert((ITEM_SENSOR, s.sub as u16), sensor_data(pan, short as u16, mac, s.secure));
         }
         items.insert((ITEM_COUNT, 0), vec![doc.sensors.len() as u8, 0, 0, 0]);
     } else if !doc.sensors.is_empty() {

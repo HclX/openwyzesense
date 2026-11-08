@@ -63,7 +63,10 @@ size_t app_build_join_done(uint8_t *pt, const uint8_t status[2], uint64_t time_m
 // knows from its pairing on that its gateway is ours. A stock sensor is expected to ignore them (to be checked:
 // docs/stock-unknowns.md J6).
 #define A6_OURS_VERSION 1
-enum { A6_OURS_OTA = 1u << 0 };  // the gateway takes OTA offers from its host (GW_FLAG_OTA)
+enum {
+    A6_OURS_OTA = 1u << 0,     // the gateway takes OTA offers from its host (GW_FLAG_OTA)
+    A6_OURS_SECURE = 1u << 1,  // the gateway secures the link (seclink.h): it has the network key from its host
+};
 
 // Marks an A6 built by app_build_join_done (n = 11) as ours; returns the new length, 16
 size_t app_mark_ours(uint8_t *pt, size_t n, uint16_t features);

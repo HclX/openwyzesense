@@ -200,6 +200,18 @@ class HostLink:
             return None
         return int.from_bytes(p[:4], 'big'), int.from_bytes(p[4:], 'big')
 
+    def net_key(self, key=None, timeout=1.0):
+        """Our gateway's secured-link network key (OWS_SUB_NET_KEY, RAM only): pushes the 16-byte key (or queries with
+        key=None); returns has_key as a bool, or None from a stock dongle."""
+        if key is not None:
+            key = bytes(key)
+            if len(key) != 16:
+                raise ValueError(f'network key must be 16 bytes, got {len(key)}')
+        p = self.ows_call(host.OWS_SUB_NET_KEY, b'' if key is None else key, timeout=timeout)
+        if p is None or len(p) != 1:
+            return None
+        return bool(p[0])
+
     def build_info(self, timeout=1.0):
         """Our gateway's three-page build info block (OWS_SUB_BUILD_INFO, <= 56 B CH554-safe), or None."""
         p0 = self.ows_call(host.OWS_SUB_BUILD_INFO, b'\x00', timeout=timeout)

@@ -41,7 +41,7 @@ The tag `vX.Y.Z` is the crate's version, and its GitHub release holds the firmwa
   the end. GW_FLAG_OTA must be on (`host::FLAG_OTA`). `ota::run(&mut Link, ...)` does all of it, flags included,
   over a blocking `host::Link` (on a `host::ByteLink`: `hidraw::HidrawHost`, `hidraw::Serial`).
 - `host`: the host protocol (`build`, `parse`, `Framer`, `Packet`, `Link` with `call` / `ows_call` / `flags` /
-  `sensors`).
+  `net_key` / `sensors`).
 - `uniflash` (#50): a v1 contact / motion unit on a LaunchPad's XDS110 over 2-pin cJTAG, with TI's DSLite:
   `Probe::new(Dslite { exe: find_dslite(None)? })`, then `backup(dir)`, `flash(app, &nv, Some(backup))`,
   `slots(boot, slot_a, ..)`, `enable_bootloader(pin)` (BL_CONFIG only), `provision(&Provision { .. })`, `reset()`,

@@ -6,6 +6,7 @@
 
 #include "host_proto.h"
 #include "mac154.h"
+#include "seclink.h"
 #include "wyze_app.h"
 
 static int failures, checks;
@@ -228,6 +229,62 @@ static void test_host(void)
     CHECK(!host_parse(bad_b2, sizeof bad_b2, &pkt));
 }
 
+// The secured link's crypto (common/seclink.c) against the published vectors, then a seal / open round trip
+static void test_seclink(void)
+{
+    static const uint8_t k[16] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
+                                  0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
+    static const uint8_t m[64] = {0x6b, 0xc1, 0xbe, 0xe2, 0x2e, 0x40, 0x9f, 0x96, 0xe9, 0x3d, 0x7e, 0x11, 0x73,
+                                  0x93, 0x17, 0x2a, 0xae, 0x2d, 0x8a, 0x57, 0x1e, 0x03, 0xac, 0x9c, 0x9e, 0xb7,
+                                  0x6f, 0xac, 0x45, 0xaf, 0x8e, 0x51, 0x30, 0xc8, 0x1c, 0x46, 0xa3, 0x5c, 0xe4,
+                                  0x11, 0xe5, 0xfb, 0xc1, 0x19, 0x1a, 0x0a, 0x52, 0xef, 0xf6, 0x9f, 0x24, 0x45,
+                                  0xdf, 0x4f, 0x9b, 0x17, 0xad, 0x2b, 0x41, 0x7b, 0xe6, 0x6c, 0x37, 0x10};
+    uint8_t t[16];
+    // RFC 4493 section 4, examples 1-4
+    sl_cmac(k, m, 0, t);
+    CHECK(!memcmp(t, "\xbb\x1d\x69\x29\xe9\x59\x37\x28\x7f\xa3\x7d\x12\x9b\x75\x67\x46", 16));
+    sl_cmac(k, m, 16, t);
+    CHECK(!memcmp(t, "\x07\x0a\x16\xb4\x6b\x4d\x41\x44\xf7\x9b\xdd\x9d\xd0\x4a\x28\x7c", 16));
+    sl_cmac(k, m, 40, t);
+    CHECK(!memcmp(t, "\xdf\xa6\x67\x47\xde\x9a\xe6\x30\x30\xca\x32\x61\x14\x97\xc8\x27", 16));
+    sl_cmac(k, m, 64, t);
+    CHECK(!memcmp(t, "\x51\xf0\xbe\xbf\x7e\x3b\x9d\x92\xfc\x49\x74\x17\x79\x36\x3c\xfe", 16));
+
+    // RFC 3610 packet vector #1: key C0..CF, nonce 00000003 020100 A0..A5, header 00..07, payload 08..1E
+    uint8_t ck[16], nonce[13] = {0, 0, 0, 3, 2, 1, 0, 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5}, hdr[8], data[23], tag[8];
+    for (int i = 0; i < 16; i++) {
+        ck[i] = (uint8_t)(0xC0 + i);
+    }
+    for (int i = 0; i < 8; i++) {
+        hdr[i] = (uint8_t)i;
+    }
+    for (int i = 0; i < 23; i++) {
+        data[i] = (uint8_t)(8 + i);
+    }
+    sl_ccm(ck, nonce, hdr, 8, data, 23, true, tag);
+    CHECK(!memcmp(data, "\x58\x8c\x97\x9a\x61\xc6\x63\xd2\xf0\x66\xd0\xc2\xc0\xf9\x89\x80\x6d\x5f\x6b\x61\xda\xc3\x84",
+                  23));
+    CHECK(!memcmp(tag, "\x17\xe8\xd1\x2c\xfd\xf9\x26\xe0", 8));
+    sl_ccm(ck, nonce, hdr, 8, data, 23, false, tag);  // and back
+    CHECK(data[0] == 8 && data[22] == 30 && !memcmp(tag, "\x17\xe8\xd1\x2c\xfd\xf9\x26\xe0", 8));
+
+    // seal / open: the right key, direction and bytes only
+    uint8_t in[17] = {APP_STATUS, '7', '7', 'A', 'B', 'C', 'D', 'E', 'F', 1, 0x14, 0x60, 0, 1, 0, 0, 5};
+    uint8_t f[64], pt[64];
+    size_t n = sl_seal(k, SL_UP, 7, in, sizeof in, f), len = 0;
+    uint32_t ctr = 0;
+    CHECK(n == sizeof in + SL_OVERHEAD && f[0] == APP_OURS && f[1] == SL_FRAME && f[2] == sizeof in);
+    CHECK(memcmp(f + SL_FRAME_HDR, in, sizeof in) != 0);  // encrypted
+    CHECK(sl_open(k, SL_UP, f, n, pt, &len, &ctr) && len == sizeof in && ctr == 7 && !memcmp(pt, in, len));
+    CHECK(!sl_open(k, SL_DOWN, f, n, pt, &len, &ctr));  // the other direction
+    CHECK(!sl_open(ck, SL_UP, f, n, pt, &len, &ctr));   // another key
+    f[SL_FRAME_HDR + 3] ^= 1;
+    CHECK(!sl_open(k, SL_UP, f, n, pt, &len, &ctr));  // a flipped bit
+    f[SL_FRAME_HDR + 3] ^= 1;
+    f[6] ^= 1;
+    CHECK(!sl_open(k, SL_UP, f, n, pt, &len, &ctr));  // a changed counter (associated data)
+}
+
 int main(int argc, char **argv)
 {
     if (argc != 2) {
@@ -239,6 +296,7 @@ int main(int argc, char **argv)
     test_mac();
     test_app();
     test_host();
+    test_seclink();
     printf("%d checks, %d failed\n", checks, failures);
     return failures != 0;
 }

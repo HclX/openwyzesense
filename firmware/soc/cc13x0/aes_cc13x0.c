@@ -1,11 +1,13 @@
 // AES-128-ECB on the CC13x0 crypto engine, for wyze_app.c.
 #include <string.h>
 
+#include "seclink.h"
 #include "wyze_app.h"
 
 #include <ti/devices/DeviceFamily.h>
 // clang-format off: a TI include path, not a division
 #include DeviceFamily_constructPath(driverlib/crypto.h)
+#include DeviceFamily_constructPath(driverlib/trng.h)
 // clang-format on
 #include <ti/drivers/Power.h>
 #include <ti/drivers/power/PowerCC26XX.h>
@@ -35,4 +37,22 @@ void aes128_ecb_encrypt(const uint8_t key[16], const uint8_t *in, uint8_t *out, 
 void aes128_ecb_decrypt(const uint8_t key[16], const uint8_t *in, uint8_t *out, size_t n)
 {
     ecb(key, in, out, n, false);
+}
+
+// The secured link's random numbers (seclink.h): the CC13x0 TRNG, 64 bits per conversion
+void platform_random(uint8_t *out, size_t n)
+{
+    Power_setDependency(PowerCC26XX_PERIPH_TRNG);
+    TRNGConfigure(1u << 6, 1u << 8, 0);  // min / max samples per cycle (TI's defaults order), clocks per sample 1
+    TRNGEnable();
+    while (n) {
+        while (!(TRNGStatusGet() & TRNG_NUMBER_READY)) {
+        }
+        uint32_t w[2] = {TRNGNumberGet(TRNG_LOW_WORD), TRNGNumberGet(TRNG_HI_WORD)};
+        size_t k = n < sizeof w ? n : sizeof w;
+        memcpy(out, w, k);
+        out += k, n -= k;
+    }
+    TRNGDisable();
+    Power_releaseDependency(PowerCC26XX_PERIPH_TRNG);
 }

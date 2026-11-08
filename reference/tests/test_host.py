@@ -1,9 +1,11 @@
 # Host <-> dongle protocol (FACTS.md §9): codec vectors, and checks against host-side captures of stock dongles
 # (ground_truth/host/: what wyzesense2mqtt read from / wrote to /dev/hidraw, May 2026).
 import json
+import os
 import pathlib
 
 import gt
+import pytest
 from wyzesense_ref import app, host
 
 GT = pathlib.Path(__file__).resolve().parents[2] / 'ground_truth'
@@ -265,3 +267,44 @@ def test_parse_build_info_pages_and_host_slot_cli(tmp_path):
         bad = tmp_path / 'empty.img'
         bad.write_bytes(b'')
         assert subprocess.run([str(sensor_bin), '--slot-a', str(bad)], capture_output=True, timeout=5).returncode != 0
+
+
+HOST_GW = pathlib.Path(os.environ.get('OWS_HOST_BUILD', GT.parent / 'build' / 'host')) / 'firmware' / 'ows-host-gateway'
+
+
+@pytest.mark.skipif(not HOST_GW.exists(), reason='build the host tests first: cmake --build --preset host')
+def test_host_link_net_key(tmp_path):
+    import subprocess
+    import sys
+    import time
+
+    sys.path.insert(0, str(GT.parent / 'tools'))
+    import host_link
+
+    pty_path = tmp_path / 'gw.tty'
+    proc = subprocess.Popen(
+        [str(HOST_GW), '--console', 'pty', '--pty-link', str(pty_path), '--nv', str(tmp_path / 'gw.nv')],
+        stderr=subprocess.PIPE,
+    )
+    try:
+        deadline = time.time() + 3.0
+        while not pty_path.exists() and time.time() < deadline:
+            time.sleep(0.02)
+        assert pty_path.exists()
+
+        log = []
+        link = host_link.HostLink(str(pty_path), log=log)
+        try:
+            link.handshake()
+            assert link.net_key() is False
+            sent = [r for r in log if r['dir'] == 'W']
+            with pytest.raises(ValueError):
+                link.net_key(b'\xaa' * 15)
+            assert [r for r in log if r['dir'] == 'W'] == sent
+            assert link.net_key(bytes(range(16))) is True
+            assert link.net_key() is True
+        finally:
+            link.close()
+    finally:
+        proc.terminate()
+        proc.wait(timeout=3)

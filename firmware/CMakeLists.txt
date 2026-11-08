@@ -9,7 +9,7 @@ get_filename_component(OWS_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-add_library(ows_common STATIC common/mac154.c common/host_proto.c common/wyze_app.c common/gateway.c common/sensor.c common/nvstore.c common/ccfg_check.c common/boot_slot.c)
+add_library(ows_common STATIC common/mac154.c common/host_proto.c common/wyze_app.c common/gateway.c common/sensor.c common/nvstore.c common/ccfg_check.c common/boot_slot.c common/seclink.c)
 target_include_directories(ows_common PUBLIC common)
 target_compile_options(ows_common PRIVATE -Wall -Wextra -Werror)
 

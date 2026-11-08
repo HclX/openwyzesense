@@ -235,3 +235,20 @@ fn sim_ows_is_what_a_flash_leaves() {
     gone.fail_io = Some(io::ErrorKind::NotFound);
     assert!(matches!(dongle::backup(&mut gone, &mut |_| {}), Err(Error::Io(_))));
 }
+
+#[test]
+fn net_key_is_held_in_ram_only() {
+    let mut d = SimDongle::ows("v0.1.0");
+    let key = [0x42; 16];
+    let mut link = ows_host::host::Link::new(&mut d);
+    assert_eq!(link.net_key(None).unwrap(), Some(false));
+    assert_eq!(link.net_key(Some(key)).unwrap(), Some(true));
+    assert_eq!(link.net_key(None).unwrap(), Some(true));
+    assert_eq!(d.net_key, Some(key));
+    d.replug();
+    assert_eq!(d.net_key, None);
+    assert_eq!(ows_host::host::Link::new(&mut d).net_key(None).unwrap(), Some(false));
+
+    let mut stock = SimDongle::stock();
+    assert_eq!(ows_host::host::Link::new(&mut stock).net_key(Some(key)).unwrap(), None);
+}
