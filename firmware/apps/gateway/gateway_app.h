@@ -18,6 +18,7 @@ typedef struct {
     bool radio_ok;  // the receiver runs; if not, the host link still does (#70) and the radio is retried
     uint32_t radio_retry_ms;
     uint32_t radio_check_ms;  // the next receiver health check (#85)
+    uint32_t last_rx_ms;      // the last frame received (#85: 30 min without one restart the chip)
     bool scan_was_on, scan_led_on;
     uint32_t scan_next_ms;
     bool rx_pulsing;

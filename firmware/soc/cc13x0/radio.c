@@ -15,10 +15,12 @@ bool board_battery(void);  // board.h (which needs the board's board_config.h): 
 #include <ti/drivers/dpl/HwiP.h>
 
 // RX data entries: [2-byte length][PHR 2][MAC frame][RSSI 1][timestamp 4] per element (rxConf in phy_settings.c)
-#define RX_ENTRIES    4
-#define RX_ENTRY_DATA (2 + 2 + RADIO_MAX_FRAME + 1 + 4)
-#define RX_ENTRY_SIZE ((sizeof(rfc_dataEntryGeneral_t) - 1 + RX_ENTRY_DATA + 3) & ~3u)
-#define FRAME_FIFO    8  // frames waiting for the main loop (power of two)
+#define RX_ENTRIES        4
+#define RX_ENTRY_DATA     (2 + 2 + RADIO_MAX_FRAME + 1 + 4)
+#define RX_ENTRY_SIZE     ((sizeof(rfc_dataEntryGeneral_t) - 1 + RX_ENTRY_DATA + 3) & ~3u)
+#define FRAME_FIFO        8      // frames waiting for the main loop (power of two)
+#define BEACON_LBT_DBM    (-90)  // a beacon waits while the channel is louder than this...
+#define BEACON_LBT_MAX_MS 90u    // ...for at most about two frames
 
 static RF_Object rf_object;
 static RF_Handle rf;
@@ -114,17 +116,10 @@ bool radio_init(void)
     RF_Params params;
     RF_Params_init(&params);
     params.pErrCb = rf_error;
-    if (board_battery()) {
-        params.nInactivityTimeout = 2000;  // µs: with nothing to do (a sensor between events), the RF core powers down
-    }
+    params.nInactivityTimeout = 2000;  // µs: with nothing to do (a sensor between events), the RF core powers down
     rf = RF_open(&rf_object, &phy_mode, (RF_RadioSetup *)&phy_cmd_setup, &params);
     if (!rf) {
         return false;
-    }
-    if (!board_battery()) {
-        // a mains-powered board (a gateway) keeps its RF core powered: otherwise the driver powers it down and boots
-        // it again between an ACK and a reply scheduled after it (TRIG_ABSTIME), as stock never does (#85)
-        RF_control(rf, RF_CTRL_SET_POWER_MGMT, (void *)0);
     }
     return RF_runCmd(rf, (RF_Op *)&phy_cmd_fs, RF_PriorityNormal, NULL, 0) & RF_EventLastCmdDone;
 }
@@ -194,6 +189,21 @@ bool radio_rx_check(void)
     if (!rx_stop_ended()) {
         return false;
     }
+    // the synthesizer calibrated again (CMD_FS, ~0.2 ms): #85, the receiver went deaf (and a transmit stuck ACTIVE
+    // without ever going on the air) after hours on one calibration; a restarted receive command reuses it
+    phy_cmd_fs.status = 0x0000;
+    RF_CmdHandle h = RF_postCmd(rf, (RF_Op *)&phy_cmd_fs, RF_PriorityNormal, NULL, 0);
+    if (h < 0) {
+        return false;
+    }
+    const volatile uint16_t *status = &phy_cmd_fs.status;
+    uint32_t ms0 = clock_now_ms();
+    while (*status < 0x0400 && clock_now_ms() - ms0 < 50u) {
+    }
+    if (*status != 0x0400) {  // not DONE_OK: still running, or a synthesizer error (ERROR_SYNTH_PROG, ...)
+        return false;
+    }
+    (void)RF_pendCmd(rf, h, RF_EventLastCmdDone);  // ended: no wait
     return radio_rx_start();
 }
 
@@ -239,6 +249,18 @@ bool radio_tx(const uint8_t *frame, size_t len, uint32_t gap_us)
     reverse_bits(tx_buf + 2, len);
     phy_cmd_tx.pktLen = (uint16_t)(2 + len);
     phy_cmd_tx.pPkt = tx_buf;
+    // a beacon (802.15.4 frame type 0, the one frame a gateway sends at a moment of its own choosing) waits while the
+    // channel is busy, as the stock gateway does (FACTS.md §3: 38-156 ms after the request, "as if it listened
+    // first"); ACKs and replies, timed to a received frame, never wait
+    if (len >= 1 && (frame[0] & 7) == 0 && rx_on) {
+        uint32_t ms0 = clock_now_ms();
+        while (clock_now_ms() - ms0 < BEACON_LBT_MAX_MS) {
+            int8_t rssi = RF_getRssi(rf);
+            if (rssi == RF_GET_RSSI_ERROR_VAL || rssi < BEACON_LBT_DBM) {
+                break;
+            }
+        }
+    }
     radio_rx_stop();  // the receiver: stopped for the frame, on again after it
     if (gap_us) {
         last_start += gap_us * 4;
@@ -287,14 +309,11 @@ bool radio_tx(const uint8_t *frame, size_t len, uint32_t gap_us)
         if (*status < 0x0400) {
             // the radio core never finished it (#85: a beacon stuck ACTIVE for hours, RF_pendCmd waiting with it):
             // aborted; if the core does not answer even that, a restart, whose start-up resets the RF core (board.c)
+            // a restart even when the abort works: on the house dongle the radio stayed deaf after that abort (#85,
+            // v0.2.7: tx_stuck 1, then nothing received for 1.5 h)
             tx_stuck++;
             RF_cancelCmd(rf, h, 0);
-            t0 = RF_getCurrentTime();
-            while (*status < 0x0400 && RF_getCurrentTime() - t0 < 4u * 20000u) {
-            }
-            if (*status < 0x0400) {
-                chip_reset();
-            }
+            chip_reset();
         }
         ok = RF_pendCmd(rf, h, RF_EventLastCmdDone) & RF_EventLastCmdDone;  // the command has ended: no wait
     } else {
