@@ -706,7 +706,7 @@ int main(void)
     sim.fail_programs = 0;
     memcpy(sim.flash + (size_t)CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, orig_page31, CJTAG_PAGE);
 
-    put_le32(ccfg + CJTAG_CCFG_TAP_DAP_0, 0xFFC5C5C5u);  // an unexpected CCFG: refused, untouched
+    put_le32(ccfg + CJTAG_CCFG_TAP_DAP_0, 0xFF0000C5u);  // the CPU debug port off (ccfg-rule.md): refused, untouched
     cjtag_init(&cj, &io);
     CHECK(cjtag_connect(&cj, true));
     erases0 = sim.erases;
@@ -718,9 +718,20 @@ int main(void)
     CHECK(cjtag_set_backdoor(&cj, 10, page_buf) == -1 && sim.erases == erases0);
     CHECK(cjtag_write_image(&cj, image_fn, image, sizeof image, page_buf) == -1);
 
+    // 8b. ccfg-rule.md: a disabled bootloader may be turned on (an erase-and-rewrite, BL_CONFIG only)
+    sim_init(&sim, "77A1B2C3");
+    put_le32(sim.flash + CJTAG_CCFG_ADDR + CJTAG_CCFG_TAP_DAP_0, 0xFFC500C5u);
+    put_le32(sim.flash + CJTAG_CCFG_ADDR + CJTAG_CCFG_IMAGE_VALID, 0);
+    put_le32(sim.flash + CJTAG_CCFG_ADDR + CJTAG_CCFG_BL_CONFIG, 0x00FE0100u);
+    cjtag_init(&cj, &io);
+    CHECK(cjtag_connect(&cj, true));
+    CHECK(cjtag_set_backdoor(&cj, 1, page_buf) == 1 && cj.bl_config == 0xC5FE01C5u);
+
     // 9. The CCFG MAC fill (newer units: MAC in page 29, the CCFG slot blank): program only, never an erase
     sim_init(&sim, NULL);
     memcpy(sim.flash + CJTAG_PAGE29_MAC_ADDR, "77A9B885", 8);
+    put_le32(sim.flash + CJTAG_CCFG_ADDR + CJTAG_CCFG_TAP_DAP_0, 0xFFC500C5u);  // a real unit's CCFG (77A9B885)
+    put_le32(sim.flash + CJTAG_CCFG_ADDR + CJTAG_CCFG_IMAGE_VALID, 0);
     memset(sim.flash + (size_t)CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE, 0x6B, 0x100);
     cjtag_init(&cj, &io);
     CHECK(cjtag_connect(&cj, true) && !cj.has_ccfg_mac && strcmp(cj.mac, "77A9B885") == 0);
@@ -766,7 +777,7 @@ int main(void)
         CHECK(memcmp(p31, code, sizeof code) == 0 && memcmp(p31 + sizeof code, before + sizeof code, 88) == 0);
         CHECK(cjtag_write_page31_code(&cj, code, page_buf, orig) == 0);  // already so
         CHECK(cjtag_flash_page(&cj, 2, new_page, false));                // the new CRC is the one checked now
-        put_le32(cc + CJTAG_CCFG_BL_CONFIG, 0x00FE0100u);                // bootloader off: refused, untouched
+        put_le32(cc + CJTAG_CCFG_IMAGE_VALID, 0x00000001u);  // image not valid (ccfg-rule.md): refused, untouched
         cjtag_init(&cj, &io);
         CHECK(cjtag_connect(&cj, true));
         memcpy(before, p31, CJTAG_PAGE);

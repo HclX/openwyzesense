@@ -853,9 +853,10 @@ void contact_bootloader()
         return;
     }
     String want = server.arg("backdoor");
-    int pin = want == "r" ? 1 : want == "w" ? 10 : want == "button" ? 11 : -1;
+    // only pins this relay drives (docs/design/ccfg-rule.md: never a backdoor nothing can reach): R (D4), W (D1)
+    int pin = want == "r" ? 1 : want == "w" ? 10 : -1;
     if (write && pin < 0) {
-        server.send(400, "text/plain", "backdoor=r|w|button\n");
+        server.send(400, "text/plain", "backdoor=r|w (pins this relay drives)\n");
         return;
     }
     gw_busy = true;

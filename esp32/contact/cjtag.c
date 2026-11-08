@@ -1029,6 +1029,34 @@ static bool program_only(cjtag_t *c, uint32_t addr, const uint8_t *data, uint32_
     return ok;
 }
 
+// docs/design/ccfg-rule.md: the CCFG about to be written (now) against the chip's (was). Never: a debug port off
+// (CCFG_TAP_DAP_0/1 unchanged, the CPU's on), IMAGE_VALID_CONF other than 0 or changed, a protection bit or an erase
+// lock (CCFG_PROT_*, ERASE_CONF unchanged), a bootloader that was on turned off. Only what the caller may change
+// (CCFG_MAY_*) may differ at all.
+enum { CCFG_MAY_BL = 1, CCFG_MAY_MAC = 2 };
+
+static bool ccfg_safe(cjtag_t *c, const uint8_t *was, const uint8_t *now, unsigned may)
+{
+    for (uint32_t o = 0; o < CJTAG_CCFG_SIZE; o++) {
+        bool bl = o >= CJTAG_CCFG_BL_CONFIG && o < CJTAG_CCFG_BL_CONFIG + 4;
+        bool mac = o >= CJTAG_CCFG_MAC && o < CJTAG_CCFG_MAC + 8;
+        if (now[o] != was[o] && !(bl && (may & CCFG_MAY_BL)) && !(mac && (may & CCFG_MAY_MAC))) {
+            return fail(c, "CCFG rule: only the field being written may change");
+        }
+    }
+    if (((le32(now + CJTAG_CCFG_TAP_DAP_0) >> 16) & 0xFFu) != 0xC5u) {
+        return fail(c, "CCFG rule: the CPU debug port must stay on");
+    }
+    if (le32(now + CJTAG_CCFG_IMAGE_VALID) != 0) {
+        return fail(c, "CCFG rule: IMAGE_VALID_CONF must be 0");
+    }
+    uint32_t bw = le32(was + CJTAG_CCFG_BL_CONFIG), bn = le32(now + CJTAG_CCFG_BL_CONFIG);
+    if ((bw & 0xFF0000FFu) == 0xC50000C5u && (bn & 0xFF0000FFu) != 0xC50000C5u) {
+        return fail(c, "CCFG rule: a bootloader that is on stays on");
+    }
+    return true;
+}
+
 int cjtag_fill_ccfg_mac(cjtag_t *c, const char *mac, uint8_t *buf_4k)
 {
     const uint32_t slot = CJTAG_CCFG_ADDR + CJTAG_CCFG_MAC;
@@ -1057,6 +1085,13 @@ int cjtag_fill_ccfg_mac(cjtag_t *c, const char *mac, uint8_t *buf_4k)
     }
     if (!cjtag_mem_read_block(c, CJTAG_PAGE29_MAC_ADDR, page29, sizeof page29) || memcmp(page29, m, 8) != 0) {
         fail(c, "the MAC is not the one in page 29 (0x1D000): not writing");
+        return -1;
+    }
+    const uint32_t ccfg_off = CJTAG_CCFG_ADDR - CJTAG_CCFG_PAGE_IDX * CJTAG_PAGE;
+    uint8_t now[CJTAG_CCFG_SIZE];
+    memcpy(now, buf_4k + ccfg_off, sizeof now);
+    memcpy(now + CJTAG_CCFG_MAC, m, 8);
+    if (!ccfg_safe(c, buf_4k + ccfg_off, now, CCFG_MAY_MAC)) {
         return -1;
     }
     if (!program_only(c, slot, m, 8)) {
@@ -1096,17 +1131,17 @@ int cjtag_set_backdoor(cjtag_t *c, uint8_t pin, uint8_t *buf_4k)
         fail(c, "page 31 changed since the connect: not writing");
         return -1;
     }
-    uint8_t *ccfg = buf_4k + ccfg_off;
-    if (le32(ccfg + CJTAG_CCFG_TAP_DAP_0) != 0xFFC500C5u || le32(ccfg + CJTAG_CCFG_IMAGE_VALID) != 0) {
-        fail(c, "unexpected CCFG (CPU debug port or image-valid word): not writing");
-        return -1;
-    }
+    uint8_t *ccfg = buf_4k + ccfg_off, was[CJTAG_CCFG_SIZE];
+    memcpy(was, ccfg, sizeof was);
     uint32_t old = le32(ccfg + CJTAG_CCFG_BL_CONFIG);
     uint32_t want = 0xC5FE00C5u | (uint32_t)pin << 8;  // bootloader on, backdoor DIO<pin>, active low, enabled
     if (old == want) {
         return 0;
     }
     put_le32_(ccfg + CJTAG_CCFG_BL_CONFIG, want);
+    if (!ccfg_safe(c, was, ccfg, CCFG_MAY_BL)) {
+        return -1;
+    }
     if (!flash_raw(c, CJTAG_CCFG_PAGE_IDX, buf_4k)) {
         // the page as it was, at once: page 31 erased and not written leaves the chip without its CCFG and MAC
         char why[sizeof c->error];
@@ -1175,13 +1210,11 @@ int cjtag_write_page31_code(cjtag_t *c, const uint8_t *code, uint8_t *buf_4k, ui
         return -1;
     }
     const uint8_t *ccfg = orig_4k + ccfg_off;
-    if (le32(ccfg + CJTAG_CCFG_TAP_DAP_0) != 0xFFC500C5u || le32(ccfg + CJTAG_CCFG_IMAGE_VALID) != 0 ||
-        (le32(ccfg + CJTAG_CCFG_BL_CONFIG) & 0xFF0000FFu) != 0xC50000C5u) {
-        fail(c, "unexpected CCFG (debug port, image valid, bootloader on): not writing");
-        return -1;
-    }
     memcpy(buf_4k, code, ccfg_off);
     memcpy(buf_4k + ccfg_off, ccfg, CJTAG_PAGE - ccfg_off);  // the unit's own CCFG, byte for byte
+    if (!ccfg_safe(c, ccfg, buf_4k + ccfg_off, 0)) {
+        return -1;
+    }
     if (!memcmp(buf_4k, orig_4k, CJTAG_PAGE)) {
         return 0;
     }

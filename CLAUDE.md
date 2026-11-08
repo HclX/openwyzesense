@@ -36,8 +36,10 @@ decisions so far.
   time: the house dongle is in service. Receiving is fine.
   The user's second dongle (PAN 0x65FE, coordinator 0xD425) is the intended test network; a second test PAN, 0x65FD,
   is for our gateway on a v1 contact (the user's OK, 2026-10-24).
-- Before flashing any stock device, dump and back up its whole flash, including CCFG. Never erase flash page
-  31 (code + CCFG) except as part of a full reflash.
+- Before flashing any stock device, dump and back up its whole flash, including CCFG. Page 31 (code + CCFG) only
+  under `docs/design/ccfg-rule.md` (the user, 2026-11-07): never a debug port off, a protection bit, `IMAGE_VALID_CONF`
+  or an unreachable bootloader, never a dongle's page 31; program-only fills of blank bytes freely; an
+  erase-and-rewrite only with a backup, `M`/`C` wired, stable power and the guards (`ccfg_safe` in `cjtag.c`).
 - No SDR recording overnight.
 - Long recordings: run them as background tasks; a process started with `&` inside a short-lived shell call
   is killed when that call returns.
@@ -75,7 +77,7 @@ decisions so far.
 - **v1 contact sensors** (the user's many zero-MAC units, the DIY version's main hardware): `docs/design/v1-contact.md`
   (pads, wiring to the LaunchPad with RESET_N, UniFlash over 2-pin cJTAG since OpenOCD cannot, the bring-up steps, and
   the traps: cold joints, pin counting, a 3V3-only power-cycle that is none, the hang after a UniFlash run). Back up
-  every unit read-only first; never write its CCFG (its MAC) except enabling `BL_CONFIG` on `W` during provisioning.
+  every unit read-only first; its CCFG (its MAC) only as `docs/design/ccfg-rule.md` allows.
   `tools/uniflash.py` (`backup` / `flash` / `slots` / `enable-bootloader` / `provision` / `reset` / `read`; `flash` and
   `slots` require `--backup <dir>` verifying the chip's CCFG MAC, and `flash-*` CMake targets pass `OWS_BACKUP_DIR`)
   always ends with a board reset with the debug domain released: no hands needed, a stuck unit comes back.

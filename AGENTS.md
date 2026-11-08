@@ -21,8 +21,9 @@ with the user (HclX) reviewing. Read this file first, then the files it points t
 - **Hardware** (the LaunchPad, the dongles, the v1 contact on the bench, the SDR) is on the user's machine and used
   by one agent at a time: only touch it if your issue says the bench is yours. Hardware tests are opt-in
   (`OWS_HW=1`, `OWS_HW_TX=1`, …): do not set those variables otherwise.
-- **Never write a device's CCFG** (flash page 31; a Wyze sensor's MAC lives there) and never flash a stock device
-  without a full read-only backup first (CLAUDE.md).
+- **A device's CCFG** (flash page 31; a Wyze sensor's MAC lives there) only as `docs/design/ccfg-rule.md` allows
+  (never a dongle's; an erase only with the bench assigned to you), and never flash a stock device without a full
+  read-only backup first (CLAUDE.md).
 - **Never edit existing files in `ground_truth/`**; new evidence goes in a new session folder, with
   `ground_truth/SHA256SUMS` and `ground_truth/README.md` updated.
 - **GitHub**: only this repository (HclX/openwyzesense). No secrets in commits, issues or PRs.

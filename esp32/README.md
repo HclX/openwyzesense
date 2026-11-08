@@ -218,12 +218,12 @@ Into the bootloader the relay holds both `R` (D4, taken from UART1 meanwhile) an
 unit with the stock backdoor (`R`/DIO1, `BL_CONFIG 0xC5FE01C5`) needs only five wires (#81, 2026-11-07). With `M` and
 `C` wired, the start-up check updates the gateway through the debug port first (`esp32/contact/cjtag.c`, as the ESP32
 does; 65 s for 10 pages through Arduino's `digitalWrite`, the bootloader fallback after it), and the bootloader's
-backdoor can be read and set (the one CCFG write allowed, `cjtag_set_backdoor`: page 31 read twice, only `BL_CONFIG`
+backdoor can be read and set (`cjtag_set_backdoor`, under `docs/design/ccfg-rule.md`: page 31 read twice, only `BL_CONFIG`
 changed, the page verified whole, put back on a failure; the unit's MAC must be given):
 
 ```
 curl http://<ip>/contact/bootloader                                       # {"mac", "bl_config", "backdoor": r|w|button|off|other}
-curl -u admin:<pass> -d 'backdoor=r&mac=<MAC>' http://<ip>/contact/bootloader  # r (DIO1, stock), w (DIO10) or button (DIO11)
+curl -u admin:<pass> -d 'backdoor=r&mac=<MAC>' http://<ip>/contact/bootloader  # r (DIO1, stock) or w (DIO10): pins the relay drives
 ```
 
 Newer v1 contacts keep their MAC only in page 29 (`0x1D000`), the CCFG MAC slot blank (77A9B885, 2026-11-07); the
