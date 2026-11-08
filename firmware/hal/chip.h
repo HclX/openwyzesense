@@ -25,6 +25,11 @@ uint32_t chip_flash_min_mv(void);
 // A full system reset (the boot selector picks the slot to run again).
 void chip_reset(void);
 
+// The hardware watchdog (#85): started once, then fed at least every timeout_ms; not fed for twice that, the chip
+// resets (a system reset). It pauses while a debugger halts the CPU. Not for apps that sleep in standby (it stops).
+void chip_watchdog_start(uint32_t timeout_ms);
+void chip_watchdog_feed(void);
+
 // True when the chip's CCFG enables the ROM serial bootloader ((BL_CONFIG >> 24) == 0xC5).
 bool chip_can_enter_sbl(void);
 
