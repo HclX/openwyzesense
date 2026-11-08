@@ -209,8 +209,11 @@ builds it). Verified on NodeMCU and D1 mini hardware (2026-10-26).
 | `+` / `-` | 3V3 / G |
 | `R` (silkscreen; the contact's input) | D4 (GPIO2: UART1 TX) |
 | `T` (silkscreen; the contact's output) | D7 (GPIO13: UART0 RX after `Serial.swap()`) |
-| `W` (DIO10) | D1 (GPIO5) |
+| `W` (DIO10) | D1 (GPIO5); optional: only for units whose bootloader backdoor is `W` (our earlier provisioning) |
 | `S` (RESET_N) | D2 (GPIO4) |
+
+Into the bootloader the relay holds both `R` (D4, taken from UART1 meanwhile) and `W` low through an `S` reset, so a
+unit with the stock backdoor (`R`/DIO1, `BL_CONFIG 0xC5FE01C5`) needs only five wires (#81, 2026-11-07).
 
 ```
 tools/pio.sh run -t upload --upload-port /dev/ttyUSB0      # its start-up report: 115200 on the USB port

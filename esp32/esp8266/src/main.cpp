@@ -109,7 +109,9 @@ void log_line(void *, const char *msg)
     snprintf(last_log, sizeof last_log, "%s", msg);
 }
 
-// --- the contact's S and W pads, open-drain ---
+// --- the contact's S and W pads, open-drain; its R pad on UART1's TX ---
+
+constexpr int CONTACT_R_GPIO = 2;  // D4
 
 void pad(int gpio, bool low)
 {
@@ -129,16 +131,24 @@ void contact_reset()
     pad(OWS_CONTACT_RESET, false);
 }
 
-// W low through a reset: the ROM bootloader, if the unit's CCFG enables it on W (docs/design/v1-contact.md)
+// R and W low through a reset: the ROM bootloader, whichever backdoor the unit's CCFG enables: R (DIO1, the stock
+// BL_CONFIG 0xC5FE01C5, as the dongle's CH554 and the ESP32 relay do it; then W need not be wired) or W (DIO10, what
+// our earlier provisioning set; docs/design/v1-contact.md). R is UART1's TX on GPIO2: taken from the UART meanwhile
+// and driven low (GPIO2 is a boot strap of the ESP8266's own start only), then given back, idling high.
 void contact_enter_bootloader()
 {
+    Serial1.flush();
+    digitalWrite(CONTACT_R_GPIO, LOW);
+    pinMode(CONTACT_R_GPIO, OUTPUT);  // a plain GPIO now, out of UART1
     pad(OWS_CONTACT_BOOT, true);
     delay(5);
     pad(OWS_CONTACT_RESET, true);
     delay(20);
     pad(OWS_CONTACT_RESET, false);
-    delay(50);  // the ROM has looked at W by now
+    delay(50);  // the ROM has looked at its backdoor pin by now
+    digitalWrite(CONTACT_R_GPIO, HIGH);
     pad(OWS_CONTACT_BOOT, false);
+    Serial1.begin(115200);  // GPIO2 back to UART1's TX
 }
 
 // --- settings (EEPROM) and Wi-Fi ---
