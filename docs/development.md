@@ -13,19 +13,18 @@ A Linux PC (x86-64). Everything else is fetched and pinned by the repository's s
 git clone https://github.com/HclX/openwyzesense && cd openwyzesense
 tools/toolchain.sh                   # compiler + OpenOCD into .toolchain/ (pinned, checksummed)
 tools/toolchain.sh uniflash          # TI UniFlash, ~380 MB: only for the v1 contact bench
-tools/toolchain.sh esp-idf           # ESP-IDF for the ESP32 / ESP32-S3 relay (~6 GB): only for esp32/idf
 sudo cp tools/udev/*.rules /etc/udev/rules.d/ && sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
 `tools/udev/` grants non-root access to the Wyze USB dongle (`99-wyze-dongle.rules`, `1a86:e024`), the TI LaunchPad
-(`71-ti-xds110.rules`, `0451:bef3`), and ESP32/ESP8266 USB-serial boards (`72-esp-usb-serial.rules`). The Python tools
+(`71-ti-xds110.rules`, `0451:bef3`). The Python tools
 run with `uv run`; the Rust host crates (`crates/`) with `cargo`.
 
 ## Building and testing
 
 ### Without hardware
 
-Run these steps in order so that Python tests depending on built host tools (`test_ows_sbl.py`, `test_gwsync.py`) and firmware ELF images (`test_firmware.py`) execute instead of skipping:
+Run these steps in order so that Python tests depending on built host programs and firmware ELF images (`test_firmware.py`) execute instead of skipping:
 
 ```bash
 # 1. One-time toolchain setup (fetches pinned arm-none-eabi-gcc + OpenOCD into .toolchain/)
@@ -54,11 +53,8 @@ Additional headless checks:
   ```bash
   OWS_W2M=/path/to/wyzesense2mqtt-rs uv run pytest reference/tests/test_host_e2e.py
   ```
-- **ESP32 / ESP8266 IP relay firmware builds** (requires `build/fw/firmware/gateway-contact-v1-app.bin` built first):
-  ```bash
-  tools/idf.sh build     # ESP32-S3 and classic ESP32 (LOLIN32)
-  tools/pio.sh run       # ESP8266 (Wemos D1 mini / NodeMCU)
-  ```
+- **The ESP32 / ESP8266 IP relay** builds in its own repository, HclX/wyzesense_relay; with its host build,
+  `OWS_RELAY=<its build/host/ows-relay>` adds it to `test_host_e2e.py`.
 
 ### Hardware-in-the-loop tests (opt-in)
 
@@ -70,7 +66,6 @@ Hardware tests (`reference/tests/test_hw*.py`) are skipped by default and requir
 | `OWS_HW=1 OWS_HW_TX=1` | **Yes** (`0x65FE`) | `LAUNCHXL-CC1310` + spare dongle (`/dev/hidraw6`) / RTL-SDR | `test_hw_inputs.py`, `test_hw_sensor.py`, `test_hw_ota.py`.<br>For `test_hw_tx.py`, build `build/fw-tx-test` first:<br>`cmake --preset fw -B build/fw-tx-test -DOWS_DEBUG=ON -DOWS_PAN=0x65FE -DOWS_SHORT=0x0F0F && cmake --build build/fw-tx-test` |
 | `OWS_HW=1 OWS_HW_CONTACT=1` | **No** | `LAUNCHXL-CC1310` (jumpers pulled) wired via 2-pin cJTAG to `wyze_contact_v1` (`tools/toolchain.sh uniflash`) | `test_hw_contact_gateway.py` (requires `build/fw-mirror` built as above). |
 | `OWS_HW=1 OWS_HW_TX=1 OWS_HW_CONTACT=1` | **Yes** (`0x65FE`) | `LAUNCHXL-CC1310` (jumpers pulled) wired to `wyze_contact_v1` + spare dongle | `test_hw_contact_v1.py`, `test_hw_contact_battery.py`, `test_hw_contact_ota.py`. |
-| `OWS_HW=1 OWS_HW_ESP32=<ip> OWS_W2M=<bin>` | Optional (`OWS_HW_TX=1`) | Networked ESP32-S3 wired to `wyze_contact_v1` on LAN + `mosquitto` | `test_hw_esp32.py` (build `tools/idf.sh build` and `fw` first; add `OWS_HW_TX=1` to also test `/contact/flash`). |
 
 Optional HIL overrides: `OWS_HW_UART=/dev/ttyACMx` (serial port), `OWS_HW_DONGLE=/dev/hidrawX` (spare dongle), `OWS_HW_SECONDS=<n>` (capture duration for `test_hw.py` / `test_hw_gateway.py`), `OWS_HW_SAVE=<dir>` (save host/board logs), `OWS_HW_ESP32_AUTH=<secret>`, `OWS_HW_ESP32_PORT=/dev/ttyACMx`, `OWS_HW_CONTACT_MAC=<mac>`, `OWS_BRIDGE=<base URL>` (the house bridge `test_hw_gateway.py` compares with).
 
@@ -123,7 +118,6 @@ files directly (`build/fw/firmware/`):
 | `tools/nv_json.py` | page 30 to JSON and back (`export` / `import`), including a sensor's DIY profile (`"cfg": {...}`, [nv-format.md](design/nv-format.md)) | `ows-flash nv export` / `nv import` |
 | `tools/host_link.py` | a host for the dongle protocol over serial or hidraw (auto-detects `0451:bef3` / `1a86:e024`): sensor OTA (`--ota`, `--ota-all`), `--nv-export` / `--nv-import` | `ows-flash ota` |
 | `tools/ws_bridge.py` | a serial gateway (LaunchPad, contact board on a USB-serial adapter) to wyzesense2mqtt-rs's WebSocket bridge (below) | (the ESP relay) |
-| `tools/contact_image.py` | a sensor's boot selector + slot A as one image, for the relay's `/contact/flash` | |
 | `tools/release_bundle.py` | the release directory: per-device file names, `SHA256SUMS`, `manifest.json`, its README (CI, on a `v*` tag) | |
 | `tools/wiring_svg.py` | the user guide's wiring diagrams (`docs/img/wiring-*.svg`); rerun after changing a pin assignment | |
 
@@ -139,7 +133,7 @@ uv run python tools/uart_sbl.py --port /dev/ttyUSB0 flash build/fw/firmware/boot
                                                     build/fw/firmware/sensor-contact-v1-slot-a.img --yes
 ```
 
-The ESP relays' own build, flashing and bench notes: [esp32/README.md](../esp32/README.md).
+The ESP relays' own build, flashing and bench notes: HclX/wyzesense_relay.
 
 ## Bench hardware
 
@@ -179,9 +173,7 @@ All hardware verification across the project uses seven specific device classes 
 - **Setup**: USB SDR (`0bda:2838`) driven by `rtl_433` (`23.11`) recording raw `250 ksps` unsigned 8-bit IQ (`.cu8`) centered at **`906.7 MHz`** (`100 kHz` below the `906.8 MHz` carrier so the zero-IF DC spike stays out of the 5 kbps 2-GFSK passband), decoded by `reference/wyzesense_ref/iq.py`.
 - **Gain Staging**: `-g 35` for room/house captures (`test_hw.py`), `-g 10` for same-bench stock sensor captures, and **`-g 0`** when capturing a LaunchPad or dongle transmitting within `< 50 cm` (`test_hw_tx.py`) to avoid front-end saturation.
 
-### 7. Wi-Fi IP Relay Microcontrollers (`esp32/`, `Env 4C` & `Env 5`)
-- **ESP32-S3 DevKit** (`esp32/idf/`, `IDF_TARGET=esp32s3`): `3V3→+`, `GND→-`, `GPIO17→R`, `GPIO18←T` (internal pull-up), `GPIO4→S` (open-drain), `GPIO5→W` (open-drain).
-- **Classic ESP32 LOLIN32** (`esp32/idf/`, `IDF_TARGET=esp32`): Same as ESP32-S3 except **`GPIO23→W`** (open-drain; avoids `GPIO5` boot-strap/LED and `GPIO6–11` SPI flash pins).
-- **ESP8266 Wemos D1 mini / NodeMCU** (`esp32/esp8266/`, PlatformIO `d1_mini`): Split-UART wiring (`3V3→+`, `GND→-`, `D7`/`GPIO13` swapped `UART0_RX` `←T`, `D4`/`GPIO2` `UART1_TX` `→R`, `D8`/`GPIO15` **unconnected** to preserve SPI flash boot, `D2`/`GPIO4` `→S` open-drain, `D1`/`GPIO5` `→W` open-drain).
+### 7. Wi-Fi IP Relay Microcontrollers
+The ESP32-S3, LOLIN32 and ESP8266 relays and their wiring: HclX/wyzesense_relay.
 
 ---

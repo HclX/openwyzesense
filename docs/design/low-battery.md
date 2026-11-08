@@ -112,7 +112,7 @@ Every CC1310 GPIO has an internal upper ESD protection diode to `VDDS` ($V_F \ap
 lowered to `2.20 V` while any connected ESP32 pin drives push-pull `3.3 V`, that pin forward-biases the ESD diode and
 clamps `VDDS` up to $\approx 2.75\text{ V}$ (observed on 2026-10-24, `docs/FACTS.md` §5 line 193).
 
-**Pure-software pin configuration on the ESP32 (`esp32/idf/main/contact.c` / bench mode)**:
+**Pure-software pin configuration on the ESP32 (HclX/wyzesense_relay `idf/main/contact.c` / bench mode)**:
 - **`S` (`RESET_N`) and `W` (`DIO10`)**: Already `GPIO_MODE_OUTPUT_OD` with `GPIO_PULLUP_DISABLE` (`contact.c:18`); both
   pull up to the contact board's *own* lowered `VDDS`.
 - **ESP32 `UART1 TX` → Contact `R` (`DIO1`)**: Switch ESP32 TX to **`GPIO_MODE_OUTPUT_OD` + `GPIO_PULLUP_DISABLE`**

@@ -36,11 +36,10 @@ with the user (HclX) reviewing. Read this file first, then the files it points t
 4. Checks, all must pass before you push (CI runs the same and fails otherwise; run in this order so `pytest` does not
    skip host-tool or firmware-image tests):
    - `tools/toolchain.sh` (once, to install pinned `arm-none-eabi-gcc` and OpenOCD in `.toolchain/`)
-   - `cmake --preset host && cmake --build --preset host && ctest --preset host` (native C unit tests, host apps, and
-     `ows-sbl` / `ows-gwsync` binaries used by `pytest`)
+   - `cmake --preset host && cmake --build --preset host && ctest --preset host` (native C unit tests and host apps)
    - `cmake --preset fw && cmake --build --preset fw` (CC1310 firmware images)
-   - `uv run pytest` (Python reference, ground truth, host-tool PTY suites `test_ows_sbl.py` / `test_gwsync.py`, and
-     firmware ELF checks `test_firmware.py`)
+   - `uv run pytest` (Python reference, ground truth, host-tool PTY suites, and firmware ELF
+     checks `test_firmware.py`)
    - `tools/lint.sh` (clang-format, clang-tidy, ruff, shfmt, shellcheck; `tools/lint.sh --fix` rewrites what the
      formatters can). Style: K&R braces, a brace on every if / else / loop body, one statement per line, 120 columns;
      Python single quotes. Do not hand-format against the tools.

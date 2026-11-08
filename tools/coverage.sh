@@ -133,21 +133,12 @@ bins=(
     "$BUILD/firmware/ows-host-gateway"
     "$BUILD/firmware/ows-host-sensor"
     "$BUILD/firmware/ows-host-sniffer"
-    "$BUILD/esp32/test_relay"
-    "$BUILD/esp32/test_gwnv"
-    "$BUILD/esp32/test_buffer"
-    "$BUILD/esp32/test_multipart"
-    "$BUILD/esp32/test_http_auth"
-    "$BUILD/esp32/test_mdns"
-    "$BUILD/esp32/ows-relay"
-    "$BUILD/esp32/ows-sbl"
-    "$BUILD/esp32/ows-gwsync"
 )
 obj_args=("${bins[0]}")
 for b in "${bins[@]:1}"; do
     obj_args+=(-object "$b")
 done
-ignore_re='.*(/tests/|/esp32/host/test_).*'
+ignore_re='.*/tests/.*'
 
 echo ""
 echo "=== C Coverage (llvm-cov, excluding test_*.c) ==="

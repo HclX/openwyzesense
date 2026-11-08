@@ -4,13 +4,11 @@ on which device with which tool, and manifest.json (#42: each file's device, boa
 crates/ows-host's Manifest, so a host program such as wyzesense2mqtt-rs downloads an image and checks it). Every CI
 run assembles it as an artifact; a v* tag publishes it as a GitHub Release.
 
-    uv run tools/release_bundle.py --version v0.1.0 --firmware build/fw/firmware --esp32 esp32/idf \
-        --esp8266 esp32/esp8266/.pio/build/d1_mini/firmware.bin --out dist
+    uv run tools/release_bundle.py --version v0.1.0 --firmware build/fw/firmware --out dist
 
---esp32 is the directory holding build/ (ESP32-S3) and build-esp32/ (classic ESP32), each with ows_relay.bin and the
-merged first-flash image ows_relay_full.bin (esptool merge_bin, made in the esp32 job). Every image that carries a
-version string must carry --version: a bundle never mixes builds. --esp32 / --esp8266 may be left out (a partial
-bundle, for local use). --ows-flash adds the ows-flash binary (crates/ows-flash, Linux x86-64).
+Every image that carries a version string must carry --version: a bundle never mixes builds. --ows-flash adds the
+ows-flash binary (crates/ows-flash, Linux x86-64). The ESP32 / ESP8266 relay images are released from
+HclX/wyzesense_relay, which carries ows-gateway-contact-v1.
 """
 
 import argparse
@@ -34,7 +32,7 @@ FIRMWARE = [
         'ows-gateway-contact-v1-{v}.bin',
         'Wyze v1 contact',
         'gateway (for an ESP relay)',
-        'carried by the ESP relay images below; or `ows-flash v1 provision --gateway --app FILE`',
+        'carried by the ESP relay images (HclX/wyzesense_relay); or `ows-flash v1 provision --gateway --app FILE`',
     ),
     (
         'boot-wyze_contact_v1.bin',
@@ -79,10 +77,6 @@ FIRMWARE = [
         'OTA only (`ows-flash ota`, with slot A)',
     ),
 ]
-ESP32 = [  # (build directory under --esp32, chip name)
-    ('build', 'esp32s3', 'ESP32-S3'),
-    ('build-esp32', 'esp32', 'classic ESP32 (LOLIN32)'),
-]
 # (source name in --firmware) -> (product, board directory), as firmware/products.cmake names them
 PRODUCT_BOARD = {
     'gateway-dongle-app.bin': ('gateway-dongle', 'wyze_dongle'),
@@ -112,7 +106,7 @@ QUICK_START = [
     '4. Back to stock at any time: `ows-flash restore --backup backups/dongle-1 --yes`.',
     '',
     'Moving the sensors to an ESP relay instead: `ows-flash nv export backups/dongle-1/flash.bin -o nv.json`, then',
-    "Import `nv.json` on the relay's page.",
+    "Import `nv.json` on the relay's page (the relay: HclX/wyzesense_relay).",
     '',
     '## Without the repository: v1 sensors and the contact-board gateway',
     '',
@@ -126,15 +120,13 @@ QUICK_START = [
 ]
 UDEV = [
     ('99-wyze-dongle.rules', 'Wyze USB dongle'),
-    ('72-esp-usb-serial.rules', 'ESP32 / ESP8266 USB serial'),
     ('71-ti-xds110.rules', 'LaunchPad XDS110 (v1 sensor bench)'),
 ]
-RELAY_TAG = b'OWS-RELAY-VERSION:'  # the relay's own version in its image (esp32/idf/main/web.c, esp8266 main.cpp)
 MANIFEST_FORMAT = 'openwyzesense-release'
 NO_VERSION = {'boot-wyze_contact_v1.bin', 'boot-wyze_motion_v1.bin'}  # boot selectors carry no version string
 
 
-def bundle(version, firmware, out, esp32=None, esp8266=None, ows_flash=None):
+def bundle(version, firmware, out, ows_flash=None):
     out = pathlib.Path(out)
     out.mkdir(parents=True, exist_ok=True)
     rows, errors, files = [], [], []
@@ -175,38 +167,6 @@ def bundle(version, firmware, out, esp32=None, esp8266=None, ows_flash=None):
             src not in NO_VERSION,
             *PRODUCT_BOARD[src],
         )
-    if esp32:
-        for d, chip, label in ESP32:
-            b = pathlib.Path(esp32) / d
-            add(
-                b / 'ows_relay_full.bin',
-                f'ows-relay-{chip}-full-{version}.bin',
-                label,
-                'relay: first flash',
-                f'`esptool.py --chip {chip} write_flash 0x0 FILE` (also clears its settings: Wi-Fi set up '
-                'again via the OWS-relay-XXXX access point)',
-                versioned=RELAY_TAG,
-                product=f'relay-{chip}-full',
-            )
-            add(
-                b / 'ows_relay.bin',
-                f'ows-relay-{chip}-ota-{version}.bin',
-                label,
-                'relay: update',
-                'the relay page: Update, or `curl --data-binary @FILE http://<relay>/ota`',
-                versioned=RELAY_TAG,
-                product=f'relay-{chip}-ota',
-            )
-    if esp8266:
-        add(
-            esp8266,
-            f'ows-relay-esp8266-{version}.bin',
-            'ESP8266 (D1 mini, NodeMCU)',
-            'relay: first flash and update',
-            'first: `esptool.py --chip esp8266 write_flash 0x0 FILE`; then the relay page: Update',
-            versioned=RELAY_TAG,
-            product='relay-esp8266',
-        )
     if ows_flash:
         add(
             ows_flash,
@@ -217,7 +177,7 @@ def bundle(version, firmware, out, esp32=None, esp8266=None, ows_flash=None):
             versioned=False,
             product='ows-flash',
         )
-    # the udev rules (#46): the dongle, ESP serial chips and the LaunchPad's probe without root
+    # the udev rules (#46): the dongle and the LaunchPad's probe without root
     for rule, device in UDEV:
         add(
             ROOT / 'tools' / 'udev' / rule,
@@ -238,7 +198,8 @@ def bundle(version, firmware, out, esp32=None, esp8266=None, ows_flash=None):
     lines = [
         f'# OpenWyzeSense {version}',
         '',
-        'Firmware for Wyze Sense v1 hardware and the ESP32/ESP8266 IP relay, and the `ows-flash` tool. Step by step,',
+        'Firmware for Wyze Sense v1 hardware (the ESP32/ESP8266 IP relay: HclX/wyzesense_relay), and the `ows-flash`',
+        'tool. Step by step,',
         f'with only these files: the user guide, {GUIDE}/tree/{version}/docs/guide. Check the files with',
         "`sha256sum -c SHA256SUMS`; manifest.json lists the same with each file's board and product, for programs",
         '(crates/ows-host).',
@@ -260,12 +221,10 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--version', required=True)
     ap.add_argument('--firmware', required=True, help='build/fw/firmware (CI: the firmware artifact)')
-    ap.add_argument('--esp32', help='esp32/idf, holding build/ and build-esp32/ (CI: the esp32-relay artifact)')
-    ap.add_argument('--esp8266', help='the ESP8266 firmware.bin (CI: the esp8266-relay artifact)')
     ap.add_argument('--ows-flash', help='the ows-flash binary (cargo build --release -p ows-flash)')
     ap.add_argument('--out', required=True)
     a = ap.parse_args(argv)
-    names = bundle(a.version, a.firmware, a.out, a.esp32, a.esp8266, a.ows_flash)
+    names = bundle(a.version, a.firmware, a.out, a.ows_flash)
     print(f'{len(names)} files in {a.out}', file=sys.stderr)
 
 

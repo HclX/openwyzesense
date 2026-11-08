@@ -14,7 +14,8 @@ to clone the repository or build anything. (To build or change the firmware, see
 - **Sensor firmware for the v1 contact sensor** (door / window). Many v1 contacts died from a stock bug: once the
   battery runs low, they lose their address and send all zeros, and a new battery does not fix it. With our firmware
   they work again under their original MAC, which is still in the chip.
-- **A Wi-Fi gateway** built from a v1 contact board and an ESP32, ESP32-S3 or ESP8266 board.
+- **A Wi-Fi gateway** built from a v1 contact board and an ESP32, ESP32-S3 or ESP8266 board (the ESP side:
+  [wyzesense_relay](https://github.com/HclX/wyzesense_relay)).
 
 It works with stock devices **both ways**: stock sensors (all six types, v1 and v2) pair with our gateway, and our
 sensors pair with a stock dongle. Extras that change what goes over the air are **off unless the host turns them on**.
@@ -66,10 +67,9 @@ So that `ows-flash` can reach the hardware without root, install the udev rule f
 |---|---|
 | Wyze USB dongle | `99-wyze-dongle.rules` |
 | TI LaunchPad (levels 2-4) | `71-ti-xds110.rules` |
-| ESP32 / ESP8266 USB serial (level 4) | `72-esp-usb-serial.rules` |
 
 ```
-sudo cp 99-wyze-dongle.rules 71-ti-xds110.rules 72-esp-usb-serial.rules /etc/udev/rules.d/
+sudo cp 99-wyze-dongle.rules 71-ti-xds110.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
