@@ -65,7 +65,7 @@ typedef struct {
     uint8_t txPayloadPlus2Len;         /* +0x008 (0x200017d0): b2 - 1 */
     uint8_t txTotalLen;                /* +0x009 (0x200017d1): Total UART frame length (b2 + 6) */
     uint8_t joinApprovedFlag;          /* +0x00a (0x200017d2): 1 when 0x5323 approves sensor join */
-    uint8_t verifyTimeoutFlag;         /* +0x00b (0x200017d3): 1 when awaiting 0xA6 / 0xA7 completion */
+    uint8_t verifyTimeoutFlag;         /* +0x00b (0x200017d3): 1 when awaiting 0xA6 completion */
     uint8_t finishAuthDone;            /* +0x00c (0x200017d4): 1 after host sends 0x5314 with 0xFF */
     uint8_t diagLogReadOfs;            /* +0x00d (0x200017d5): Current byte offset in diagLogBuf */
     uint8_t uartRxState;               /* +0x00f (0x200017d7): 0=wait AA, 1=wait 55, 2=wait 53, 3=payload */
@@ -703,23 +703,34 @@ void Cllc_sendRfCmd_B5(uint16_t dstShortAddr, const uint8_t b5Payload[130],
  *      - In `Uart_buildAndSendReply` (`0x035ca..0x035dc`), calls `Csf_findDeviceByMac(&pt[1])`
  *        (`0x10460`). If it returns `-1` (MAC not in NV item 5), **silently drops**
  *        the report without sending `0xB0` or forwarding `0x5319` to the host.
- *   3. JOIN HANDSHAKE FORWARDING (J4):
- *      - `0xA3` (`0x0f194 -> 0x03542`): Forwards to host via `0x5320` if
- *        `scanInclusionEnable == 0xFF && permitJoinActive == 1`.
- *      - `0xA5` (`0x0f114 -> 0x03512`): Does NOT verify XXTEA on the gateway CC1310;
- *        forwards the 27-byte AES-decrypted `0xA5` payload to the host in `0x5322`
- *        (`len = 0x1E`) and waits for host `0x5323`.
- *      - `0xA7` (`0x0ef20 -> 0x03504`): Forwards join completion to host via `0x5329`.
+ *   3. THE DISPATCH (`0x03f4c..0x03fda`, re-checked against the binary 2026-11-06, #28): a compare / subtract
+ *      chain on `opcode`, every case below and nothing else. v1.4 (`gateway_2025-02-02_v1.4`, `0x06c72`) has only
+ *      the cases marked [v1.4]; the rest came with v1.8.
+ *        0x02 [v1.4] (len 13) -> 0x040ea  TI Collector example's config response (Smsgs_cmdIds_configRsp)
+ *        0x04 [v1.4] (len 1)  -> 0x040b0  TI Collector example's tracking response
+ *        0x08 [v1.4]          -> 0x0430e  TI Collector example's ramp data: only counts ([r4, #0x17c]++)
+ *        0xA1 [v1.4]          -> 0x0e7ec  report -> 0x5319 (Collector_handleReport)
+ *        0xA2 [v1.4]          -> 0x07b10  event -> 0x5319
+ *        0xA3 [v1.4]          -> 0x042b4  join announce -> 0x5320 (11 bytes, only while pairing)
+ *        0xA5 [v1.4]          -> 0x0f114  join response -> 0x5322 (XXTEA not checked here)
+ *        0xA9 [v1.4]          -> 0x09f5c  factory link-quality test reply
+ *        0xAB [v1.4]          -> 0x1226c  v1 motion PIR summary
+ *        0xAD [v1.4]          -> 0x0ad0c  v1 offline log record -> 0x5319 as an A2
+ *        0xAE [v1.4]          -> 0x0428c  forwarded to the host as 0x5338
+ *        0xAF [v1.4]          -> 0x12bc4  raw host packet 55 AA 53 0E 3B + pt[1..11] (template at 0x17104): 0x533B
+ *        0xB2                 -> 0x0406e  -> 0x5359 (17 bytes + -RSSI)
+ *        0xB4                 -> 0x03fdc  duplicate seq -> 0x535E (2-byte seq), else -> 0x535B
+ *        0xB6                 -> 0x0425c  -> 0x535D (18 bytes + -RSSI)
+ *        0xD1                 -> 0x041ee  a compact alarm (type, MAC, sensor type, pt[13..15]) -> 0x5319, MAC in NV only
+ *        0xD3, 0xE1, 0xE3     -> 0x041a0  a compact alarm (type, MAC, sensor type, pt[12..14]) -> 0x5319, MAC in NV only
+ *        0xE8                 -> 0x0424a  climate -> 0x5319 (as the captures show)
+ *        0xEA                 -> 0x04166  -> 0x5355: plaintext pt[0 .. 10 + pt[10]] + -RSSI (keypad: PR #76)
+ *      Not handled at all (an earlier reconstruction claimed them): 0xA7 (no `#0xa7` anywhere in the binary; the
+ *      cited 0x0ef20 / 0x03504 are unrelated), 0xAA, 0xDF, 0xE6. (0xE8 -> 0x5355 and 0xEA -> 0x5354 were swapped
+ *      readings: 0xEA is the one forwarded as 0x5355.)
  *   4. TIME-SYNC `0xB0` GATING (D1):
  *      - At `0x0e848..0x0e882`, queues `0xB0` after a sensor report ONLY when
  *        `sensorType != 0x0E && sensorType != 0x0F`.
- *   5. EXTENDED RF OPCODES (D2 & D5):
- *      - `0xE8` (`0x04166`): Forwards as `0x5355` (secondary leak/alarm report).
- *      - `0xEA` (`0x042d4`): Replies `0x5354` (`55 AA 53 04 54 FF <csum>`).
- *      - `0xB2` (`0x0406e`): Forwards as `0x5359`.
- *      - `0xB4` (`0x03fdc`): Checks duplicate `seqNum` (`0x0401a` sends `0x535E`
- *        with 2-byte seq on duplicate), forwards as `0x535B`.
- *      - `0xB6` (`0x0425c`): Forwards as `0x535D`.
  */
 void Collector_dataIndCb(uint16_t srcShortAddr, int8_t rssi, const uint8_t *pt, uint8_t len,
                          uint8_t (*apiMacDataReq)(uint16_t, const uint8_t *, uint8_t))
@@ -727,74 +738,40 @@ void Collector_dataIndCb(uint16_t srcShortAddr, int8_t rssi, const uint8_t *pt, 
     if (len < 16u) {
         return;
     }
-
     uint8_t opcode = pt[0];
+    /* unknown short address: only A3 / A5 go on (0x03f2a..0x03f40) */
+    switch (opcode) {
+        case 0xA3u: /* 0x042b4 */
+            g_gwCtx.pendingReplyCmd = 0x20u;
+            Uart_buildAndSendReply(pt);
+            return;
+        case 0xA5u: /* 0x0f114 */
+            g_gwCtx.pendingReplyCmd = 0x22u;
+            Uart_buildAndSendReply(pt);
+            return;
+        case 0xEAu: { /* 0x04166: -> 0x5355, pt[0 .. 10 + pt[10]] then -RSSI */
+            uint8_t out[40];
+            uint8_t n = (uint8_t)(pt[10] + 11u);
+            memcpy(out, pt, n);
+            out[n] = (uint8_t)(-rssi);
+            g_gwCtx.pendingReplyCmd = 0x55u;
+            Uart_buildAndSendReply(out);
+            return;
+        }
+        case 0xA1u: /* 0x0e7ec */
+        case 0xA2u: /* 0x07b10 */
+        case 0xABu: /* 0x1226c */
+        case 0xE8u: /* 0x0424a */
+            break;
+        default: /* 0x02, 0x04, 0x08, 0xA9, 0xAD, 0xAE, 0xAF, 0xB2, 0xB4, 0xB6, 0xD1, 0xD3, 0xE1, 0xE3: see above */
+            return;
+    }
 
-    /* 1. Join packets during inclusion mode */
-    if (opcode == 0xA3u) {
-        g_gwCtx.pendingReplyCmd = 0x20u;
-        Uart_buildAndSendReply(pt);
-        return;
-    }
-    if (opcode == 0xA5u) {
-        g_gwCtx.pendingReplyCmd = 0x22u;
-        Uart_buildAndSendReply(pt);
-        return;
-    }
-    if (opcode == 0xA7u) {
-        g_gwCtx.pendingReplyCmd = 0x29u;
-        Uart_buildAndSendReply(pt);
-        return;
-    }
-
-    /* 2. Unknown sensor check (D8, 0x035ca -> Csf_findDeviceByMac at 0x10460) */
+    /* the report path (D8: the MAC must be in NV item 5, 0x035ca -> Csf_findDeviceByMac at 0x10460) */
     int nvSlot = Csf_findDeviceByMac(&pt[1]);
     if (nvSlot < 0) {
         return;
     }
-
-    /* 3. Extended RF opcodes (D5 & D2) */
-    if (opcode == 0xE8u) {
-        /* 0x04166: Secondary leak / climate packet -> 0x5355 */
-        uint8_t out[32];
-        uint8_t copyLen = (uint8_t)(pt[10] + 11u);
-        if (copyLen <= 30u) {
-            memcpy(out, pt, copyLen);
-            out[copyLen] = (uint8_t)(-rssi);
-            Uart_send53(0x55u, out, (uint8_t)(copyLen + 1u));
-        }
-        return;
-    }
-    if (opcode == 0xEAu) {
-        /* 0x042d4: Sensor ACK for 0xE9 -> sends 0x5354 */
-        g_gwCtx.pendingReplyCmd = 0x54u;
-        Uart_buildAndSendReply(pt);
-        return;
-    }
-    if (opcode == 0xB4u) {
-        /* 0x03fdc: Check for duplicate sequence number (0x0401a -> 0x535E) */
-        uint16_t seq = (uint16_t)((pt[12] << 8) | pt[13]);
-        if (nvSlot < 110 && g_lastB4SeqNum[nvSlot] == seq && pt[14] >= 0x2Fu) {
-            uint8_t errPayload[2] = {(uint8_t)(seq & 0xFFu), (uint8_t)(seq >> 8)};
-            Uart_send53(0x5Eu, errPayload, 2);
-            return;
-        }
-        if (nvSlot < 110) {
-            g_lastB4SeqNum[nvSlot] = seq;
-        }
-        Uart_send53(0x5Bu, pt, len);
-        return;
-    }
-    if (opcode == 0xB2u) {
-        Uart_send53(0x59u, pt, len);
-        return;
-    }
-    if (opcode == 0xB6u) {
-        Uart_send53(0x5Du, pt, len);
-        return;
-    }
-
-    /* 4. Standard sensor reports (0xA1, 0xA2, 0xAA, 0xAB, 0xAD, 0xDF, 0xE1, 0xE6) */
     uint8_t sensorType = pt[9];
     if (sensorType != 0x0Eu && sensorType != 0x0Fu) {
         /* 0x0e848: Queue 0xB0 time sync for all types EXCEPT 0x0E and 0x0F (D1) */
@@ -1027,14 +1004,14 @@ bool Uart_rxRingRead(const uint8_t *rawFrame, uint8_t rawLen)
  *   - 0x15 (`0x03950`): `FINISH_AUTH` reply (`55 AA 53 03 15 <csum>`)
  *   - 0x17 (`0x0392c`): `GET_VERSION` reply (`55 AA 53 1D 17 "0.0.0.47 V1.8 Gateway GW3U" <csum>`)
  *   - 0x18 (`0x03888`): `RF_TEST_RX` reply (`AA 55 53 0F 18 <12B data> <csum>`)
- *   - 0x19 (`0x0359e`): `ASYNC_EVENT` for RF `0xA1`, `0xA2`, `0xAA`, `0xAB`, `0xAD`, `0xDF`, `0xE1`, `0xE6`
+ *   - 0x19 (`0x0359e`): `ASYNC_EVENT` for RF `0xA1`, `0xA2`, `0xAB`, `0xAD` (as an A2), `0xE8`, and compact alarms for `0xD1`, `0xD3`, `0xE1`, `0xE3`
  *   - 0x1D (`0x038bc`): `SET_SCAN` reply (`55 AA 53 03 1D <csum>`)
  *   - 0x20 (`0x03542`): `SEND_ENROLL` (`0xA3` join req -> `55 AA 53 0F 20 <8B MAC> <type> <ver> <bat> 00 <csum>`)
  *   - 0x22 (`0x03512`): `VERIFY_R1` (`0xA5` join rsp -> `55 AA 53 1E 22 <8B MAC> <16B R1'> <2B rnd> FF <csum>`)
  *   - 0x24 (`0x038bc`): `VERIFY_SENSOR` reply (`55 AA 53 03 24 <csum>`)
  *   - 0x26 (`0x034d2`): `DELETE_SENSOR` reply (`55 AA 53 0C 26 <8B MAC> <0xFF|0x00> <csum>`)
  *   - 0x28 (`0x03922`): `INQUIRY` reply (`55 AA 53 04 28 01 <csum>`)
- *   - 0x29 (`0x03504`): `SEND_DONE` (`0xA7` join ack -> `55 AA 53 0D 29 <8B MAC> <type> <ver> <csum>`)
+ *   - (no 0x29 / RF 0xA7: an earlier reading; the binary has no 0xA7 case)
  *   - 0x2B (`0x03918`): `RF_FACTORY_TEST` reply (`AA 55 53 03 2B <csum>`)
  *   - 0x2C (`0x03904`): `RF_FACTORY_DATA` (`AA 55 53 0D 2C <10B data> <csum>`)
  *   - 0x2F (`0x038ee`): `GET_SENSOR_COUNT` reply (`55 AA 53 04 2F <count> <csum>`)
@@ -1146,15 +1123,19 @@ void Uart_buildAndSendReply(const uint8_t *srcBuf)
                 memcpy(&out[8], srcBuf, 17);
                 Uart_send53(0x19u, out, 25);
                 memcpy(g_gwCtx.unackedA2AlarmPayload, &g_gwCtx.uartTxBuf[5], 25);
-            } else if (rfOp == 0xA1u || rfOp == 0xAAu || rfOp == 0xE1u) {
-                memcpy(&out[8], srcBuf, 17);
-                Uart_send53(0x19u, out, 25);
-            } else if (rfOp == 0xABu) {
-                memcpy(&out[8], srcBuf, 23);
-                Uart_send53(0x19u, out, 31);
-            } else if (rfOp == 0xDFu || rfOp == 0xE6u) {
-                memcpy(&out[8], srcBuf, 12);
-                Uart_send53(0x19u, out, 20);
+            } else {
+                /* the compare chain at 0x035f0 (re-checked 2026-11-06): plaintext bytes copied per type, then RSSI */
+                uint8_t n = rfOp == 0xA1u   ? 17u
+                            : rfOp == 0xABu ? 23u
+                            : rfOp == 0xD1u ? 18u
+                            : rfOp == 0xD3u ? 15u
+                            : rfOp == 0xE1u ? 21u
+                            : (rfOp == 0xE3u || rfOp == 0xE8u) ? 19u
+                                                              : 0u;
+                if (n) {
+                    memcpy(&out[8], srcBuf, n);
+                    Uart_send53(0x19u, out, (uint8_t)(8u + n));
+                }
             }
             break;
         }
@@ -1192,12 +1173,6 @@ void Uart_buildAndSendReply(const uint8_t *srcBuf)
             Uart_send53(0x28u, &status, 1);
             break;
         }
-
-        case 0x29u: /* 0x03504: SEND_DONE (0xA7 join ACK -> <8B MAC> <type> <ver>) */
-            if (srcBuf) {
-                Uart_send53(0x29u, &srcBuf[1], 10);
-            }
-            break;
 
         case 0x2Bu: /* 0x03918: RF_FACTORY_TEST reply */
             Uart_send53(0x2Bu, NULL, 0);
