@@ -175,7 +175,7 @@ reporting (#73).
   presses. **Range** (the same session, its counters tell lost frames): next to it -37 dBm; across the floor -76; the
   far end of the same floor -82 to -85 (one of five frames lost: counter 6428); downstairs nothing arrived. Its CCFG does
   not force VDDR HH (below the dongle's +14 dBm); not yet compared with the spare dongle on the same spots.
-- Left: a range comparison with the dongle, and running the ESP32 HIL regression (`test_hw_esp32.py`).
+- Left: a range comparison with the dongle, and running the ESP32 HIL regression (`test_hw_esp32.py`, now in HclX/wyzesense_relay).
 
 ## The ROM bootloader (issue #14)
 

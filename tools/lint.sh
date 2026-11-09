@@ -2,7 +2,7 @@
 # The project's lint and format checks (issue #52), the same locally and in CI; all tools pinned in uv.lock.
 #   tools/lint.sh          check: fails on any finding
 #   tools/lint.sh --fix    rewrite what the formatters can fix (clang-format, ruff format / --fix, shfmt), then check
-# C: clang-format (.clang-format) on firmware/ and esp32/; clang-tidy (.clang-tidy) on the files built for the host (it needs
+# C: clang-format (.clang-format) on firmware/; clang-tidy (.clang-tidy) on the files built for the host (it needs
 # build/host/compile_commands.json, configured here if missing). Python: ruff format + ruff check (pyproject.toml).
 # Shell: shfmt + shellcheck. Rust (crates/, #42): cargo fmt + clippy, when cargo is installed (CI's rust job always runs them). third_party/, ground_truth/ and .toolchain/ are never touched.
 set -uo pipefail
@@ -19,11 +19,11 @@ step() { # name command...
     "$@" || failed+=("$name")
 }
 
-mapfile -t c_files < <(git ls-files 'firmware/*.c' 'firmware/*.h' 'esp32/*.c' 'esp32/*.h' 'esp32/*.cpp')
+mapfile -t c_files < <(git ls-files 'firmware/*.c' 'firmware/*.h')
 mapfile -t sh_files < <(git ls-files '*.sh')
 # clang-tidy: the files in the host build (soc/cc13x0, the Wyze boards' files and the boot selector build for ARM
-# only; esp32/idf for the ESP32 only, under ESP-IDF's own warnings)
-mapfile -t tidy_files < <(git ls-files 'firmware/*.c' 'esp32/*.c' | grep -v -e '^firmware/soc/' -e '^firmware/boot/' -e '^esp32/idf/' \
+# only)
+mapfile -t tidy_files < <(git ls-files 'firmware/*.c' | grep -v -e '^firmware/soc/' -e '^firmware/boot/' \
     -e '^firmware/boards/launchxl' -e '^firmware/boards/wyze')
 
 if ((fix)); then

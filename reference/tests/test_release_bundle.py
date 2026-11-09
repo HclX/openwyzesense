@@ -17,24 +17,16 @@ def fake_build(tmp, version):
     for src, *_ in release_bundle.FIRMWARE:
         body = b'image ' + src.encode() + (b'' if src in release_bundle.NO_VERSION else b' ' + version.encode())
         (fw / src).write_bytes(body)
-    esp = tmp / 'idf'
-    for d, *_ in release_bundle.ESP32:
-        (esp / d).mkdir(parents=True)
-        (esp / d / 'ows_relay.bin').write_bytes(b'relay OWS-RELAY-VERSION:' + version.encode())
-        (esp / d / 'ows_relay_full.bin').write_bytes(b'boot+table+relay OWS-RELAY-VERSION:' + version.encode())
-    e8266 = tmp / 'firmware.bin'
-    e8266.write_bytes(b'esp8266 OWS-RELAY-VERSION:' + version.encode())
-    return fw, esp, e8266
+    return fw
 
 
 def test_bundle_renames_per_device_with_sums_and_readme(tmp_path):
-    fw, esp, e8266 = fake_build(tmp_path, 'v0.1.0')
-    names = release_bundle.bundle('v0.1.0', fw, tmp_path / 'dist', esp, e8266)
+    fw = fake_build(tmp_path, 'v0.1.0')
+    names = release_bundle.bundle('v0.1.0', fw, tmp_path / 'dist')
     out = tmp_path / 'dist'
-    assert len(names) == len(release_bundle.FIRMWARE) + 2 * len(release_bundle.ESP32) + 1 + len(release_bundle.UDEV)
+    assert len(names) == len(release_bundle.FIRMWARE) + len(release_bundle.UDEV)
     assert '99-wyze-dongle.rules' in names
-    assert 'ows-gateway-dongle-v0.1.0.bin' in names and 'ows-relay-esp32-full-v0.1.0.bin' in names
-    assert 'ows-relay-esp8266-v0.1.0.bin' in names
+    assert 'ows-gateway-dongle-v0.1.0.bin' in names and not any(n.startswith('ows-relay-') for n in names)
     sums = dict(reversed(line.split('  ')) for line in (out / 'SHA256SUMS').read_text().splitlines())
     assert set(sums) == set(names)
     for n, h in sums.items():
@@ -51,24 +43,18 @@ def test_bundle_renames_per_device_with_sums_and_readme(tmp_path):
 
 
 def test_bundle_refuses_mixed_builds_and_missing_files(tmp_path):
-    fw, esp, e8266 = fake_build(tmp_path, 'v0.1.0')
+    fw = fake_build(tmp_path, 'v0.1.0')
     (fw / 'gateway-dongle-app.bin').write_bytes(b'image built from another commit fa614db')
-    (esp / 'build-esp32' / 'ows_relay_full.bin').unlink()
+    (fw / 'boot-wyze_motion_v1.bin').unlink()
     with pytest.raises(SystemExit) as e:
-        release_bundle.bundle('v0.1.0', fw, tmp_path / 'dist', esp, e8266)
+        release_bundle.bundle('v0.1.0', fw, tmp_path / 'dist')
     assert 'gateway-dongle-app.bin: does not carry v0.1.0' in str(e.value)
-    assert 'missing:' in str(e.value) and 'ows_relay_full.bin' in str(e.value)
-
-
-def test_partial_bundle_without_the_relays(tmp_path):
-    fw, _, _ = fake_build(tmp_path, 'abc1234')
-    names = release_bundle.bundle('abc1234', fw, tmp_path / 'dist')
-    assert len(names) == len(release_bundle.FIRMWARE) + len(release_bundle.UDEV)
+    assert 'missing:' in str(e.value) and 'boot-wyze_motion_v1.bin' in str(e.value)
 
 
 def test_every_firmware_file_names_its_product_and_board(tmp_path):
     assert set(release_bundle.PRODUCT_BOARD) == {src for src, *_ in release_bundle.FIRMWARE}
-    fw, _, _ = fake_build(tmp_path, 'v0.2.0')
+    fw = fake_build(tmp_path, 'v0.2.0')
     tool = tmp_path / 'ows-flash'
     tool.write_bytes(b'ELF ows-flash 0.2.0')
     names = release_bundle.bundle('v0.2.0', fw, tmp_path / 'dist', ows_flash=tool)
@@ -82,12 +68,3 @@ def test_the_crate_version_is_one_a_tag_can_carry():
     text = (ROOT / 'Cargo.toml').read_text()
     version = text.split('[workspace.package]', 1)[1].split('version = "', 1)[1].split('"', 1)[0]
     assert all(p.isdigit() for p in version.split('.')) and version.count('.') == 2
-
-
-def test_a_relay_that_does_not_know_its_version_is_refused(tmp_path):
-    # #55: the gateway image a relay carries holds the version string, so the relay is checked by its own tag
-    fw, esp, e8266 = fake_build(tmp_path, 'v0.2.0')
-    (esp / 'build' / 'ows_relay.bin').write_bytes(b'gateway v0.2.0 OWS-RELAY-VERSION:unknown')
-    with pytest.raises(SystemExit) as e:
-        release_bundle.bundle('v0.2.0', fw, tmp_path / 'dist', esp, e8266)
-    assert 'ows_relay.bin: does not carry OWS-RELAY-VERSION:v0.2.0' in str(e.value)

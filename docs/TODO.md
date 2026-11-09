@@ -22,41 +22,16 @@ On 2026-11-03 (#67) this file took over what was open in `tasks.md` (the TASK-01
   provision` (a v1 contact on the LaunchPad) have only run against simulated hardware.
 - **The user guide on hardware** ([guide/](guide/README.md), #65): walk it through with release files only. Check the
   LaunchPad jumper-block order in `wiring-contact-launchpad.svg` (GND 5V 3V3 RXD TXD RST TMS TCK TDO TDI SWO, drawn
-  from memory of the silkscreen), the second `S` / `V−` pads in `contact_v1.jpg` (read from the photo's colours), an
-  ESP's first flash with plain `esptool`, and sensor OTA from the wyzesense2mqtt-rs dashboard.
+  from memory of the silkscreen), the second `S` / `V−` pads in `contact_v1.jpg` (read from the photo's colours), and
+  sensor OTA from the wyzesense2mqtt-rs dashboard.
 
 ## Bench checklist
 
 Hardware checks of changes so far tested only headless (DESIGN.md §10.4 as of 2026-10-29). Tick with the date and
 the evidence.
 
-- **#81 relay wiring**: done on the LOLIN32 B15C with contact 777B42DF, 2026-11-06 (the user wired it; console logs
-  of each run). `+` on GPIO27: starts and runs. Updates through `M`/`C`: ~20 s (four runs; the first build overflowed
-  the relay task's stack, fixed). Unchanged code is left alone. Fallback with `M`/`C` off: bootloader by a power cycle
-  with `R`/`W` low, ~10 s, with `S` and with `S` floating; the debug-port update with `S` floating too, so `S` is
-  optional; `W` only for the fallback on units with that backdoor. Trap: an ESP32's GPIO4 pulls down at reset, so `S` wired to it but unconfigured holds the
-  contact in reset. Station role on the same harness (fixed pins, 2026-11-06): a cJTAG dump of 777B42DF (powered from
-  GPIO27, M/C polarity found, 32 pages, ~27 s, equal to the carried gateway image) and an SBL dump with the pad search
-  (R/T/backdoor W found on GPIO17/18/23, chip ID 0x20018000), the two dumps byte-identical. 2026-11-07, Identify then
-  Dump/Flash as separate steps: dump refused before Identify; per transport Identify, Dump (equal) and Flash of the
-  running gateway image (10 pages verified, page 31 intact). `sbl2` (two hand probes on TX/RX, + and − clipped,
-  2026-11-07): touch seen on the soldered 777B42DF, one round, then waiting for a lift (its backdoor is W, not on the
-  probes). The leak sensor 77C685AE was dumped this way by the user (2026-11-07, `backups/`), so touch, lift and the
-  DIO1 backdoor work on a real sensor; dumped again at 10:55 after a run with + and - swapped by mistake, so it
-  survived that. Since: the station on four wires (two probes on GPIO17/18 for every mode) and the
-  W/S check (probe 1 on T or R as the witness, probe 2's pad held low across a power-up: S keeps the chip in reset):
-  on the leak sensor it called both remaining pads W (2026-11-07). Hypothesis to check: the board pulls its T line up,
-  so the witness reads high even with the chip held in reset; a fix could compare the witness against the chip
-  unpowered, or watch T for real UART activity instead of a level. Check on sensors whose pads are known; cJTAG
-  on the two probes; a slip during an SBL dump.
-  Left: a sensor that is not a v1 contact (the leak sensor), the user guide's level 4 and its wiring SVGs (`tools/wiring_svg.py`) on the new wiring; the
-  ESP32-S3 (GPIO7, 15/16); a stock-backdoor unit (`R`) on the bootloader path; transmit bursts on GPIO power.
-
-- `TASK-01` relays: the fallback access point closes as soon as Wi-Fi is back (watch it from a phone); with a
-  password set, every changing endpoint answers 401 without it, on ESP-IDF and ESP8266, and `GET /setup` shows no
-  secrets.
-- `TASK-02` outage buffer: 5 magnet events with wyzesense2mqtt-rs stopped, 2 more while it replays: all 7 arrive in
-  order. A cold-booted relay's buffered alarm (1970 clock) gets the current time after `0x5333`.
+- The relay's bench items (#81 wiring, `TASK-01`, `TASK-02`, the relay half of `TASK-08` and `TASK-11`): moved to
+  HclX/wyzesense_relay `docs/TODO.md` (2026-11-08).
 - `TASK-03`, `TASK-05`: `test_hw.py` and `test_hw_tx.py` on the LaunchPad.
 - `TASK-04`: `test_hw_sensor.py`; on a coin cell, fast magnet toggles while the gateway is out of reach: the settled
   state is never dropped or inverted.
@@ -64,13 +39,10 @@ the evidence.
   `BL_CONFIG`.
 - `TASK-07`: `test_hw_tx.py::test_gateway_keeps_its_table_in_flash` and a 35-cycle pair / delete loop (real page 30
   compactions).
-- `TASK-08`: `test_hw_boot.py`, `test_hw_ota.py`, `test_hw_contact_ota.py`; a sensor OTA through an ESP32 and an
-  ESP8266 relay with no poll timeouts; OTA refused at 2.45 V (5 blinks); a relay whose server vanishes without a FIN
-  goes down within ~40 s and buffers; `gwsync` and `/contact/flash` on all three ESP boards.
+- `TASK-08`: `test_hw_boot.py`, `test_hw_ota.py`, `test_hw_contact_ota.py`; OTA refused at 2.45 V (5 blinks).
 - `TASK-09`: `test_hw_contact_battery.py`; standby current on a coin cell with no wires (~1-2 µA expected).
 - `TASK-10`: every `0x53F0` sub-ID through the dongle's CH554 (no truncation of the 63-byte reports); `test_hw_ccfg.py`.
-- `TASK-11` / `TASK-21`: a 4-wire relay (no `W`, no `S`) enters the bootloader in software, flashes and comes back
-  through the ~15 s watchdog; `ENTER_SBL` with no bootloader traffic recovers by the watchdog; `sbl` on a sensor's
+- `TASK-11` / `TASK-21`: `ENTER_SBL` with no bootloader traffic recovers by the watchdog; `sbl` on a sensor's
   console, then `uart_sbl.py info` without touching `W` or `S`.
 - `TASK-12`: the LED and button patterns by eye (guide level 3 table, plus 2 × 100 ms / 3 × 250 ms around an OTA); a
   gateway's scan blink and RX pulse; stock sensors pair and report.

@@ -8,7 +8,8 @@
 # Checks: the dongle registers (handshake), pairing through w2m's API with the sensor's button, open/closed
 # reaching MQTT as Home Assistant sees them, both devices keeping the pairing across restarts (the gateway's
 # flash page in a file; w2m re-reads its sensor list), and a second sensor. Needs the wyzesense2mqtt-rs binary
-# (OWS_W2M=<path>, or on PATH) and mosquitto; builds: cmake --preset host && cmake --build --preset host.
+# (OWS_W2M=<path>, or on PATH) and mosquitto; optionally OWS_RELAY=<path> (HclX/wyzesense_relay's ows-relay);
+# builds: cmake --preset host && cmake --build --preset host.
 import json
 import os
 import pathlib
@@ -159,14 +160,15 @@ def sensor_mac(p):
     return banner.split('MAC ')[1][:8]
 
 
-RELAY = HOST_BUILD / 'esp32' / 'ows-relay'
+# ows-relay, the code the ESP32 relay runs, from HclX/wyzesense_relay's host build (OWS_RELAY=<path>)
+RELAY = pathlib.Path(os.environ.get('OWS_RELAY', '/nonexistent/ows-relay'))
 
 
-# the relay: tools/ws_bridge.py, and ows-relay (esp32/relay: the code the ESP32 firmware runs, #22)
+# the relay: tools/ws_bridge.py, and ows-relay when OWS_RELAY points at it (#22)
 @pytest.fixture(params=['ws_bridge.py', 'ows-relay'])
 def world(request):
     if request.param == 'ows-relay' and not RELAY.exists():
-        pytest.skip('build the host targets first (cmake --build --preset host): ows-relay')
+        pytest.skip('OWS_RELAY=<wyzesense_relay build/host/ows-relay> not set')
     tmp = pathlib.Path(tempfile.mkdtemp(prefix='ows-e2e-'))
     w = World(tmp)
     (tmp / 'mosquitto.conf').write_text(f'listener {w.mqtt} 127.0.0.1\nallow_anonymous true\npersistence false\n')
@@ -279,8 +281,8 @@ def test_wyzesense2mqtt_pairs_and_hears_our_sensor_over_ip(world):
     switch(w, s2, mac2, True)
     switch(w, s1, mac, True)
 
-    # an outage of wyzesense2mqtt-rs: ows-relay keeps the alarms (esp32/relay/buffer.c) and sends them on once it is
-    # back; the event made during the outage reaches MQTT (ws_bridge.py, a thin relay, loses it)
+    # an outage of wyzesense2mqtt-rs: ows-relay keeps the alarms (wyzesense_relay relay/buffer.c) and sends them on
+    # once it is back; the event made during the outage reaches MQTT (ws_bridge.py, a thin relay, loses it)
     if w.relay_kind == 'ows-relay':
         w.stop('w2m')
         time.sleep(1)

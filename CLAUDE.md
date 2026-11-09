@@ -81,22 +81,17 @@ decisions so far.
   always ends with a board reset with the debug domain released: no hands needed, a stuck unit comes back.
   `test_hw_contact_v1.py` (`OWS_HW=1 OWS_HW_TX=1 OWS_HW_CONTACT=1`, preset `fw`). While a sensor is wired to
   the LaunchPad's XDS110 (its jumpers pulled), the LaunchPad's own tests cannot run.
-- **ESP32 / ESP8266 IP relay** (#22, `esp32/README.md`): `esp32/relay` (WebSocket relay core, strict FIFO outage buffer,
-  `gwnv`), `esp32/contact` (`sbl.c` with `sbl_stream_*` pages 0-29, page 30 on request, page 31 never, plus `gwsync.c`),
-  and `esp32/web` (`multipart.c`, `http_auth.c`, `mdns.c`) are portable C, built on the host (`esp32/host`: `ows-relay`,
-  `ows-sbl`, `ows-gwsync`, and CTest suites `test_relay`, `test_buffer` / `relay_buffer`, `test_gwnv`,
-  `test_multipart`, `test_http_auth`, `test_mdns`; tested by `test_host_e2e.py`, `test_ows_sbl.py`, `test_gwsync.py`),
-  for **ESP32-S3** and **classic ESP32 (LOLIN32)** (`esp32/idf`, `tools/idf.sh build` with ESP-IDF pinned in
-  `tools/toolchain.lock`; CI job `esp32`), and for **ESP8266 (D1 mini / NodeMCU)** (`esp32/esp8266`, `tools/pio.sh run`;
-  CI job `esp8266`). The relay itself never transmits on 906.8 MHz; its contact board's gateway image does (the TX rules
-  apply to that image). On hardware: `test_hw_esp32.py`.
+- **ESP32 / ESP8266 IP relay** (#22): its own repository since 2026-11-08, **HclX/wyzesense_relay** (local
+  `~/git/wyzesense_relay`: its code, tests, ESP builds, level-4 guide and wiring). This repository builds the gateway
+  image it carries (`gateway-contact-v1`) and owns the host protocol (`firmware/common/host_proto.*`, copied there:
+  keep the two in step). `test_host_e2e.py` runs that repository's `ows-relay` when `OWS_RELAY=<path>` is set.
 - The stock dongle firmware does not start on the LaunchPad (7x7 package; the dongle's CC1310 is 5x5): RTOS error
   4 at start-up. Not pursued further.
 - Everything builds from the repo: `tools/toolchain.sh` (pinned in `tools/toolchain.lock`; `tools/toolchain.sh uniflash`
   adds TI UniFlash, only for the v1 contact bench), CMake presets `host` (native tests), `fw` (CC1310 firmware), and
   `coverage` (`tools/coverage.sh` for `clang` + `llvm-cov` host coverage reports).
-- Standard headless test sequence (run in order so `test_ows_sbl.py`, `test_gwsync.py`, and `test_firmware.py` do not
-  skip for missing builds):
+- Standard headless test sequence (run in order so `test_firmware.py` and the host-program tests do not skip for
+  missing builds):
   1. `cmake --preset host && cmake --build --preset host && ctest --preset host` (12 C unit suites + host binaries)
   2. `cmake --preset fw && cmake --build --preset fw` (CC1310 firmware images)
   3. `uv run pytest` (reference, ground-truth replay, host-tool PTY tests, and `test_firmware.py` ELF checks)
@@ -110,7 +105,7 @@ decisions so far.
   `reference/tests/hw.py` (retries the XDS110's flaky JTAG). If every OpenOCD scan reads "all zeroes", the XDS110's JTAG
   side has hung: `hw.usb_reset()` (USBDEVFS_RESET on the probe) brings it back without a replug; the target was fine
   every time. See `docs/development.md` and `docs/design/DESIGN.md` §10.1 for the full HIL opt-in matrix (`OWS_HW=1`, `OWS_HW_TX=1`,
-  `OWS_HW_CONTACT=1`, `OWS_HW_ESP32=<ip>`).
+  `OWS_HW_CONTACT=1`).
 - Receive-only LaunchPad tests (`OWS_HW=1`):
   - `test_hw.py`: flashes `sniffer-launchpad.elf` (`fw`) and compares what the LaunchPad receives with an RTL-SDR
     recording (`OWS_HW_SECONDS`, default 180s).

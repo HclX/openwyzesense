@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""The user guide's wiring diagrams (docs/guide/, #65): a v1 contact's pad side wired to a LaunchPad or to an ESP relay.
+"""The user guide's wiring diagram (docs/guide/, #65): a v1 contact's pad side wired to a LaunchPad.
+
+The ESP relays' diagrams are in HclX/wyzesense_relay.
 
     uv run tools/wiring_svg.py [--out docs/img]
 
 The pads sit where they are in docs/img/contact_v1.jpg (pixel positions below, scaled down), in the photo's colours,
-so a diagram and the photo read the same way. Pin assignments: docs/design/v1-contact.md (LaunchPad) and esp32/README.md
-(relays). Each SVG has its own light background, so it reads on GitHub's light and dark themes alike.
+so a diagram and the photo read the same way. Pin assignments: docs/design/v1-contact.md.
+Each SVG has its own light background, so it reads on GitHub's light and dark themes alike.
 """
 
 import argparse
@@ -26,45 +28,6 @@ PADS = {
 BOARD = (180, 95, 1530, 1035)  # the board's outline in the photo
 # The LaunchPad's jumper block between its XDS110 (debugger) and its own CC1310, in the silkscreen's order
 LAUNCHPAD_BLOCK = ['GND', '5V', '3V3', 'RXD', 'TXD', 'RST', 'TMS', 'TCK', 'TDO', 'TDI', 'SWO']
-# board: (title, subtitle, [(pad, pin label as printed on the board, note)])
-RELAYS = {
-    'esp32s3': (
-        'ESP32-S3 DevKit',
-        'relay image ows-relay-esp32s3-*',
-        [
-            ('+', '3V3', ''),
-            ('-', 'GND', ''),
-            ('R', 'GPIO17', 'UART1 TX'),
-            ('T', 'GPIO18', 'UART1 RX'),
-            ('S', 'GPIO4', 'reset'),
-            ('W', 'GPIO5', 'bootloader'),
-        ],
-    ),
-    'lolin32': (
-        'Classic ESP32 (LOLIN32)',
-        'relay image ows-relay-esp32-*',
-        [
-            ('+', '3V', ''),
-            ('-', 'GND', ''),
-            ('R', '17', 'UART1 TX'),
-            ('T', '18', 'UART1 RX'),
-            ('S', '4', 'reset'),
-            ('W', '23', 'bootloader'),
-        ],
-    ),
-    'd1mini': (
-        'ESP8266 (D1 mini / NodeMCU)',
-        'relay image ows-relay-esp8266-*',
-        [
-            ('+', '3V3', ''),
-            ('-', 'G', 'GND'),
-            ('R', 'D4', 'GPIO2, UART1 TX'),
-            ('T', 'D7', 'GPIO13, UART0 RX'),
-            ('S', 'D2', 'GPIO4, reset'),
-            ('W', 'D1', 'GPIO5, bootloader'),
-        ],
-    ),
-}
 FONT = 'font-family="Helvetica, Arial, sans-serif"'
 INK, FAINT, PAPER = '#1f2328', '#8c959f', '#ffffff'
 
@@ -170,45 +133,12 @@ def launchpad():
     return svg(900, 545, body, 'Wiring a Wyze v1 contact to a LaunchPad (LAUNCHXL-CC1310)')
 
 
-def relay(key):
-    title, subtitle, pins = RELAYS[key]
-    ox, oy = 40, 70
-    body = contact(ox, oy, {p for p, _, _ in pins})
-    order = sorted(pins, key=lambda p: pad_xy(p[0], ox, oy)[1])
-    bx, by, step = 640, 70, 50
-    body += [
-        f'<rect x="{bx}" y="{by - 40}" width="220" height="{step * len(order) + 70}" rx="10" fill="#1b4f72"/>',
-        f'<text x="{bx + 110}" y="{by - 16}" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffffff" '
-        f'{FONT}>{title}</text>',
-        f'<text x="{bx + 110}" y="{by + step * len(order) + 22}" text-anchor="middle" font-size="11" fill="#d0d7de" '
-        f'{FONT}>{subtitle}</text>',
-    ]
-    for i, (pad, pin, note) in enumerate(order):
-        y = by + 25 + i * step
-        x, py = pad_xy(pad, ox, oy)
-        body.append(wire(x, py, bx + 14, y, PADS[pad][1]))
-        body.append(f'<circle cx="{bx + 14}" cy="{y}" r="7" fill="#d4b483" stroke="#ffffff" stroke-width="2"/>')
-        body.append(
-            f'<text x="{bx + 30}" y="{y + 5}" font-size="14" font-weight="bold" fill="#ffffff" {FONT}>{pin}</text>'
-        )
-        if note:
-            body.append(f'<text x="{bx + 100}" y="{y + 5}" font-size="11" fill="#d0d7de" {FONT}>{note}</text>')
-    body += [
-        f'<text x="40" y="440" font-size="12" fill="{INK}" {FONT}>Six wires; pin names as printed on the ESP board. '
-        "R is the contact's input (the ESP transmits), T its output.</text>",
-        f'<text x="40" y="460" font-size="12" fill="{INK}" {FONT}>The ESP powers the contact from its 3.3 V pin '
-        '(battery out). S and W let the relay reset and reflash the contact by itself.</text>',
-    ]
-    return svg(900, 480, body, f'Wiring a Wyze v1 contact to an {title} relay')
-
-
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--out', default=str(pathlib.Path(__file__).resolve().parents[1] / 'docs' / 'img'))
     a = ap.parse_args()
     out = pathlib.Path(a.out)
     files = {'wiring-contact-launchpad.svg': launchpad()}
-    files |= {f'wiring-contact-{k}.svg': relay(k) for k in RELAYS}
     for name, text in files.items():
         (out / name).write_text(text)
         print(out / name)
