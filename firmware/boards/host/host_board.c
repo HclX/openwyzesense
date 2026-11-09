@@ -581,6 +581,12 @@ static void rx_off(host_dev_t *d)
     d->rx_on = false;
 }
 
+bool radio_rx_check(void)
+{
+    radio_rx_stop();
+    return radio_rx_start();
+}
+
 void radio_rx_stop(void)
 {
     rx_off(cur);
@@ -804,6 +810,20 @@ bool boot_update_ok(uint32_t version)
 {
     boot_flash_t f = flash_of(cur);
     return cur->slot >= 0 && boot_written_ok(&f, 1 - cur->slot, boot_board(), version);
+}
+
+void chip_watchdog_start(uint32_t timeout_ms)
+{
+    (void)timeout_ms;
+}
+
+void chip_watchdog_feed(void)
+{
+}
+
+uint32_t radio_tx_stuck(void)
+{
+    return 0;
 }
 
 void chip_reset(void)

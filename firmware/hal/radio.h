@@ -22,6 +22,10 @@ bool radio_rx_start(void);
 // Stops receiving; the RF core then powers down. radio_tx() turns the receiver on again after sending.
 void radio_rx_stop(void);
 
+// The receiver stopped and started again, as a check that the radio core answers (#85): false if it did not stop
+// (a frozen radio core, which only a chip restart resets).
+bool radio_rx_check(void);
+
 // Takes the oldest received frame, if any. Call from the main loop.
 bool radio_poll(radio_frame_t *out);
 
@@ -35,3 +39,7 @@ bool radio_tx(const uint8_t *frame, size_t len, uint32_t gap_us);
 // The lowest supply voltage (mV) measured while the last radio_tx() frame was on the air, 0 if none: the battery
 // under its heaviest load, which an old coin cell's idle reading hides (#75, docs/design/low-battery.md).
 uint32_t radio_tx_min_mv(void);
+
+// Transmits the radio core never finished since the start, each aborted (#85). A core that ignores even the abort
+// restarts the chip.
+uint32_t radio_tx_stuck(void);

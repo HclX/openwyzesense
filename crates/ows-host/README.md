@@ -5,7 +5,7 @@ dongle (wyzesense2mqtt-rs's dashboard). A port of the Python `dongle_sbl.py` (re
 safety checks; `ows-flash` (crates/ows-flash) is its command line.
 
 ```toml
-ows-host = { git = "https://github.com/HclX/openwyzesense", tag = "v0.2.5" }
+ows-host = { git = "https://github.com/HclX/openwyzesense", tag = "v0.2.7" }
 ```
 
 The tag `vX.Y.Z` is the crate's version, and its GitHub release holds the firmware and `manifest.json`.

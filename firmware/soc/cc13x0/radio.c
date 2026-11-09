@@ -24,6 +24,8 @@ static RF_Handle rf;
 static uint32_t tx_min_raw = UINT32_MAX;  // BATMON's lowest reading during the last frame (3.8 fixed-point V)
 static RF_CmdHandle rx_cmd;
 static bool rx_on;
+static volatile bool rx_ended;  // the receive command has ended (stopped, aborted, cancelled): rx_callback
+static uint32_t tx_stuck;       // transmits the radio core never finished (#85), since the start
 static uint8_t rx_buf[RX_ENTRIES * RX_ENTRY_SIZE] __attribute__((aligned(4)));
 static dataQueue_t rx_queue;
 static rfc_dataEntryGeneral_t *rx_current;
@@ -61,7 +63,10 @@ static void rx_queue_init(void)
 // RF driver callback (software interrupt context): move finished entries into the FIFO.
 static void rx_callback(RF_Handle h, RF_CmdHandle ch, RF_EventMask e)
 {
-    (void)h, (void)ch;
+    (void)h;
+    if (ch == rx_cmd && (e & (RF_EventLastCmdDone | RF_EventCmdCancelled | RF_EventCmdAborted | RF_EventCmdStopped))) {
+        rx_ended = true;  // only the current receive command's end counts, not a late event of an earlier one
+    }
     if (!(e & RF_EventRxEntryDone)) {
         return;
     }
@@ -111,23 +116,65 @@ bool radio_rx_start(void)
     phy_cmd_rx.pktConf.bRepeatOk = 1;  // keep receiving after each frame
     phy_cmd_rx.pktConf.bRepeatNok = 1;
     phy_cmd_rx.endTrigger.triggerType = TRIG_NEVER;
-    rx_cmd = RF_postCmd(rf, (RF_Op *)&phy_cmd_rx, RF_PriorityNormal, rx_callback, RF_EventRxEntryDone);
+    rx_ended = false;
+    rx_cmd = RF_postCmd(rf, (RF_Op *)&phy_cmd_rx, RF_PriorityNormal, rx_callback,
+                        RF_EventRxEntryDone | RF_EventLastCmdDone | RF_EventCmdCancelled | RF_EventCmdAborted |
+                            RF_EventCmdStopped);
     rx_on = rx_cmd >= 0;
     return rx_on;
 }
 
-void radio_rx_stop(void)
+// True once the receive command has ended, within max_us (radio timer: 4 ticks per µs)
+static bool rx_wait_ended(uint32_t max_us)
+{
+    uint32_t t0 = RF_getCurrentTime();
+    while (!rx_ended && RF_getCurrentTime() - t0 < 4u * max_us) {
+    }
+    return rx_ended;
+}
+
+// The receiver stopped gracefully (a frame being received is finished first) and waited for until its command has
+// ended, before anything else is given to the radio. #85: a hard abort followed at once by a transmit (posted while
+// the receive command had not ended yet) now and then left the transmit ACTIVE for hours without it ever going on
+// the air (the SDR: no carrier, and no other frame arriving at the time); a beacon hit it within ~10-30 tries, on the
+// gateway and on a sensor alike. Bounded: a frame on the air is at most ~45 ms long; then a hard abort.
+static bool rx_stop_ended(void)
 {
     if (!rx_on) {
-        return;
+        return true;
     }
-    RF_cancelCmd(rf, rx_cmd, 0);
+    RF_cancelCmd(rf, rx_cmd, 1);  // 1: stop gracefully
+    bool ended = rx_wait_ended(50000);
+    if (!ended) {
+        RF_cancelCmd(rf, rx_cmd, 0);  // 0: abort
+        ended = rx_wait_ended(10000);
+    }
     rx_on = false;
+    return ended;
+}
+
+void radio_rx_stop(void)
+{
+    (void)rx_stop_ended();
+}
+
+// #85: the radio core also froze in receive (the house dongle, once in ~8 h: the receive command ACTIVE, nothing
+// received for 18 minutes, the host link alive). A live core ends a graceful stop within ms; a frozen one never.
+bool radio_rx_check(void)
+{
+    if (!rx_stop_ended()) {
+        return false;
+    }
+    return radio_rx_start();
 }
 
 
 bool radio_poll(radio_frame_t *out)
 {
+    if (rx_on && rx_ended) {  // the receive command ended by itself (an error): receiving again
+        rx_on = false;
+        (void)radio_rx_start();
+    }
     if (fifo_tail == fifo_head) {
         return false;
     }
@@ -139,6 +186,11 @@ bool radio_poll(radio_frame_t *out)
 uint32_t radio_overruns(void)
 {
     return overruns;
+}
+
+uint32_t radio_tx_stuck(void)
+{
+    return tx_stuck;
 }
 
 bool radio_tx(const uint8_t *frame, size_t len, uint32_t gap_us)
@@ -192,7 +244,19 @@ bool radio_tx(const uint8_t *frame, size_t len, uint32_t gap_us)
             }
         }
         HWREG(AON_BATMON_BASE + AON_BATMON_O_MEASCFG) = meascfg;
-        ok = RF_pendCmd(rf, h, RF_EventLastCmdDone) & RF_EventLastCmdDone;
+        if (*status < 0x0400) {
+            // the radio core never finished it (#85: a beacon stuck ACTIVE for hours, RF_pendCmd waiting with it):
+            // aborted; if the core does not answer even that, a restart, whose start-up resets the RF core (board.c)
+            tx_stuck++;
+            RF_cancelCmd(rf, h, 0);
+            t0 = RF_getCurrentTime();
+            while (*status < 0x0400 && RF_getCurrentTime() - t0 < 4u * 20000u) {
+            }
+            if (*status < 0x0400) {
+                chip_reset();
+            }
+        }
+        ok = RF_pendCmd(rf, h, RF_EventLastCmdDone) & RF_EventLastCmdDone;  // the command has ended: no wait
     } else {
         ok = false;
     }
